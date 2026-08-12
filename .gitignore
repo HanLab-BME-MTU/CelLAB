@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+Untitled.ipynb
+
+# Visual Studio
+.vs/
+
+# CelLAB project data (user-specific, created per project)
+cache/
+data/
+workspaces/
+exports/
+.cellab/
+*.cellab
+*.cellab.zip
+
+# Analysis results (large binary files)
+*.pkl
+*.npy
+**/results/
+**/plots/
+
+# Package-specific large files
+backend/cornealia/batch_results/
+backend/celliai/models/
+backend/celliai/documents/.chroma/
+*.gguf
+*.pdf
+
+# Backups
+**/Backups/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
+
+# Misc
+tree_.txt
+folder_making.bat
+HowToRunGui.txt
+
+# Old v2 files (if any remain)
+static/
+Test/

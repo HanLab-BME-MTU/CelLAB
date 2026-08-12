@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CELLAB - Cellular Analysis Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/frontend/workbench.css">
+</head>
+<body>
+<div class="title-bar">
+    <svg class="app-brand-svg" width="88" height="18" viewBox="-4 -4 180 46" fill="none">
+        <!-- C = Computation (chip + neural network) -->
+        <path d="M22 3 C14 0 4 5 2 16 C0 27 5 35 14 37 C18 38 22 36 25 33" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="2" y1="12" x2="-3" y2="12" stroke="currentColor" stroke-width="1" opacity="0.5"/><circle cx="-3" cy="12" r="1" fill="currentColor" opacity="0.4"/>
+        <line x1="1" y1="19" x2="-3" y2="19" stroke="currentColor" stroke-width="1" opacity="0.5"/><circle cx="-3" cy="19" r="1" fill="currentColor" opacity="0.4"/>
+        <line x1="1" y1="26" x2="-3" y2="26" stroke="currentColor" stroke-width="1" opacity="0.5"/><circle cx="-3" cy="26" r="1" fill="currentColor" opacity="0.4"/>
+        <line x1="2" y1="33" x2="-3" y2="33" stroke="currentColor" stroke-width="1" opacity="0.5"/><circle cx="-3" cy="33" r="1" fill="currentColor" opacity="0.4"/>
+        <line x1="10" y1="1" x2="10" y2="-3" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+        <line x1="17" y1="1" x2="17" y2="-3" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+        <line x1="8" y1="37" x2="8" y2="41" stroke="currentColor" stroke-width="1" opacity="0.5"/><circle cx="8" cy="41" r="1" fill="currentColor" opacity="0.4"/>
+        <line x1="16" y1="37" x2="16" y2="41" stroke="currentColor" stroke-width="1" opacity="0.5"/><circle cx="16" cy="41" r="1" fill="currentColor" opacity="0.4"/>
+        <line x1="8" y1="14" x2="15" y2="12" stroke="currentColor" stroke-width="0.6" opacity="0.3"/><line x1="8" y1="14" x2="15" y2="26" stroke="currentColor" stroke-width="0.6" opacity="0.3"/>
+        <line x1="8" y1="26" x2="15" y2="12" stroke="currentColor" stroke-width="0.6" opacity="0.3"/><line x1="8" y1="26" x2="15" y2="26" stroke="currentColor" stroke-width="0.6" opacity="0.3"/>
+        <line x1="15" y1="12" x2="21" y2="19" stroke="currentColor" stroke-width="0.6" opacity="0.3"/><line x1="15" y1="26" x2="21" y2="19" stroke="currentColor" stroke-width="0.6" opacity="0.3"/>
+        <circle cx="8" cy="14" r="1.5" fill="currentColor" opacity="0.3"/><circle cx="8" cy="26" r="1.5" fill="currentColor" opacity="0.3"/>
+        <circle cx="15" cy="12" r="1.5" fill="currentColor" opacity="0.3"/><circle cx="15" cy="26" r="1.5" fill="currentColor" opacity="0.3"/>
+        <circle cx="21" cy="19" r="1.8" fill="currentColor" opacity="0.35"/>
+        <!-- E = Engineering (gear) -->
+        <g transform="translate(30,0)">
+            <line x1="5" y1="2" x2="5" y2="36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="5" y1="2" x2="24" y2="2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="5" y1="19" x2="20" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="5" y1="36" x2="24" y2="36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="12" y1="2" x2="12" y2="-1" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <line x1="18" y1="2" x2="18" y2="-1" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <line x1="12" y1="36" x2="12" y2="39" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <line x1="18" y1="36" x2="18" y2="39" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <circle cx="14" cy="19" r="3" fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.3"/>
+            <circle cx="14" cy="19" r="1" fill="currentColor" opacity="0.2"/>
+        </g>
+        <!-- L² = Laboratory (microscope + power 2) -->
+        <g transform="translate(62,0)">
+            <line x1="7" y1="2" x2="7" y2="35" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="7" y1="35" x2="28" y2="35" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <rect x="3" y="0" width="8" height="4" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="7" y1="22" x2="17" y2="28" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="19" cy="29" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/>
+            <line x1="13" y1="32" x2="25" y2="32" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+            <circle cx="2" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <text x="26" y="8" fill="currentColor" font-family="Inter,sans-serif" font-size="10" font-weight="800" opacity="0.6">2</text>
+            <path d="M34 2 L32 5 L33.5 5 L31 9 L35 5 L33.5 5 L36 2Z" fill="currentColor" opacity="0.3"/>
+        </g>
+        <!-- A = Automation (checkmark) -->
+        <g transform="translate(102,0)">
+            <path d="M2 35 L17 2 L32 35" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="8" y1="22" x2="26" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M10 14 L16 20 L25 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+            <circle cx="27" cy="30" r="2.5" fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.3"/>
+        </g>
+        <!-- B = Biology (two cells) -->
+        <g transform="translate(138,0)">
+            <line x1="5" y1="2" x2="5" y2="36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <ellipse cx="20" cy="11" rx="13" ry="8" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.55"/>
+            <circle cx="20" cy="11" r="2.5" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <circle cx="20" cy="11" r="1" fill="currentColor" opacity="0.35"/>
+            <circle cx="15" cy="8" r="0.8" fill="currentColor" opacity="0.2"/>
+            <ellipse cx="21" cy="27" rx="14" ry="9" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.55"/>
+            <circle cx="21" cy="27" r="3" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.4"/>
+            <circle cx="21" cy="27" r="1.2" fill="currentColor" opacity="0.35"/>
+            <circle cx="15" cy="24" r="0.8" fill="currentColor" opacity="0.2"/>
+            <circle cx="28" cy="30" r="0.8" fill="currentColor" opacity="0.2"/>
+        </g>
+        <!-- Cell membrane swoosh -->
+        <path d="M-2 35 C-5 20 -3 5 10 -2 C30 -8 60 -5 85 -2 C120 2 155 10 170 25 C175 32 172 38 165 40" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+        <!-- Organelle dots -->
+        <circle cx="-1" cy="30" r="1.2" fill="currentColor" opacity="0.12"/>
+        <circle cx="168" cy="35" r="1" fill="currentColor" opacity="0.12"/>
+    </svg>
+    <span class="title-separator">—</span>
+    <span class="title-sub">Cellular Analysis Workbench</span>
+    <div class="title-spacer"></div>
+    <span class="title-version">v3.1</span>
+</div>
+<div class="menu-bar">
+    <div class="menu-item" data-menu="file">File</div>
+    <div class="menu-item" data-menu="view">View</div>
+    <div class="menu-item" data-menu="tools">Tools</div>
+    <div class="menu-item" data-menu="extensions">Extensions</div>
+    <div class="menu-item" data-menu="help">Help</div>
+</div>
+<div class="toolbar">
+    <div class="toolbar-group">
+        <button class="toolbar-btn" onclick="newProject()" title="New Project"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 1h7l3 3v8a1 1 0 01-1 1H2a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2"/><path d="M5 7h4M7 5v4" stroke="currentColor" stroke-width="1.2"/></svg></button>
+        <button class="toolbar-btn" onclick="openProject()" title="Open"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 4l2-2h4l1 1h4a1 1 0 011 1v7a1 1 0 01-1 1H2a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.2"/></svg></button>
+        <button class="toolbar-btn" onclick="saveProject()" title="Save"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 13H3a1 1 0 01-1-1V2a1 1 0 011-1h6l3 3v8a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v4h5V1M4 13v-4h6v4" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    </div>
+    <div class="toolbar-group">
+        <button class="toolbar-btn" onclick="zoomIn()" title="Zoom In"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M9 9l4 4M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.2"/></svg></button>
+        <button class="toolbar-btn" onclick="zoomOut()" title="Zoom Out"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.2"/><path d="M9 9l4 4M4 6h4" stroke="currentColor" stroke-width="1.2"/></svg></button>
+        <button class="toolbar-btn" onclick="fitToWindow()" title="Fit"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/></svg></button>
+        <button class="toolbar-btn" onclick="resetLayout()" title="Reset Layout"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7a6 6 0 0111.5-2" stroke="currentColor" stroke-width="1.2"/><path d="M13 7A6 6 0 011.5 9" stroke="currentColor" stroke-width="1.2"/><path d="M10 5l2.5 0 0-2.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 9l-2.5 0 0 2.5" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    </div>
+    <div class="toolbar-group toolbar-panels" id="toolbarPanels">
+        <div class="vc-toolbar-btn" id="tmToolbarBtn" onclick="openTaskManager()" title="Task Manager">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="4" y="4" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 2.5 L7 5.5 L13 5.5 L13 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M7 13 A4 4 0 0 1 13 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="13" x2="12" y2="9" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><circle cx="10" cy="13" r="1" fill="currentColor"/><rect x="7" y="8" width="4" height="1" rx="0.5" fill="currentColor" opacity="0.4"/></svg>
+            <span class="vc-toolbar-text">Task Manager</span>
+        </div>
+        <div class="vc-toolbar-btn" id="vcToolbarBtn" onclick="toggleVersionPanel()" title="Version Control (Ctrl+Shift+H)">
+            <span class="vc-toolbar-icon">⏱</span><span class="vc-toolbar-text">CelLAB Git</span><span class="vc-dirty-dot" id="vcDirtyDot"></span>
+        </div>
+        <div class="vc-toolbar-btn cintelia-toolbar-btn" id="cinteliaToolbarBtn" onclick="togglecinteliaPanel()" title="cintelia">
+            <svg width="14" height="14" viewBox="0 0 22 22" fill="none"><path d="M7 3 C4 2 1 5 2 9 C0 10 0 13 2 14 C2 18 5 20 9 20 C13 21 17 19 19 16 C21 13 21 9 19 6 C20 4 18 2 15 2 C13 1 10 1 7 3Z" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><path d="M2 9 L0 8.5 L0 10.5" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><path d="M19 6 L21 5 L21.5 7" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><line x1="6" y1="8" x2="11" y2="7" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><line x1="6" y1="14" x2="11" y2="7" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><line x1="6" y1="8" x2="11" y2="15" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><line x1="6" y1="14" x2="11" y2="15" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><line x1="11" y1="7" x2="16" y2="11" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><line x1="11" y1="15" x2="16" y2="11" stroke="currentColor" stroke-width="0.7" opacity="0.5"/><circle cx="6" cy="8" r="1.5" fill="currentColor"/><circle cx="6" cy="14" r="1.5" fill="currentColor"/><circle cx="11" cy="7" r="1.5" fill="currentColor"/><circle cx="11" cy="15" r="1.5" fill="currentColor"/><circle cx="16" cy="11" r="2" fill="currentColor"/></svg>
+            <span class="vc-toolbar-text">cintelia</span>
+        </div>
+        <div class="vc-toolbar-btn" id="aristoliaToolbarBtn" onclick="openAristolia()" title="Aristolia — Interactive Learning">
+            <svg width="14" height="14" viewBox="0 0 22 22" fill="none"><rect x="3" y="18" width="16" height="2" rx="0.5" stroke="currentColor" stroke-width="1" fill="currentColor" opacity="0.3"/><rect x="4" y="16" width="14" height="2.5" rx="0.5" stroke="currentColor" stroke-width="0.8"/><rect x="5" y="6" width="2" height="10" stroke="currentColor" stroke-width="0.8"/><rect x="10" y="6" width="2" height="10" stroke="currentColor" stroke-width="0.8"/><rect x="15" y="6" width="2" height="10" stroke="currentColor" stroke-width="0.8"/><path d="M4 6 L11 2 L18 6" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="4" r="1" fill="currentColor" opacity="0.5"/></svg>
+            <span class="vc-toolbar-text">Aristolia</span>
+        </div>
+    </div>
+    <div class="toolbar-spacer"></div>
+</div>
+<div class="workspace-tab-bar" id="workspaceTabBar">
+    <div class="workspace-tabs-scroll" id="workspaceTabsScroll"></div>
+    <button class="ws-new-tab-btn" onclick="createWorkspace()" title="New Workspace"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+</div>
+<div class="main-container" id="mainContainer">
+    <div class="left-panel" id="leftPanel"></div>
+    <div class="panel-resizer" id="leftResizer"></div>
+    <div class="center-area" id="centerArea">
+        <div class="subtab-bar" id="subtabBar"><div class="subtab-scroll" id="subtabScroll"></div></div>
+        <div class="viewport" id="viewport"></div>
+    </div>
+    <div class="panel-resizer" id="rightResizer"></div>
+    <div class="right-panel" id="rightPanel">
+        <div class="right-panel-header"><div class="lab-brand"><div class="lab-brand-name">HAN LAB</div><div class="lab-brand-sub">Mechanobiology · Dry Lab</div></div></div>
+        <div class="right-panel-section"><div class="section-head"><span>ℹ</span><span>Properties</span></div><div class="section-body" id="propsContent"><p class="placeholder-text">Select a module to view properties</p></div></div>
+        <div class="right-panel-section"><div class="section-head"><span>📋</span><span>Open Modules</span></div><div class="section-body" id="openModulesList"><p class="placeholder-text">No modules open</p></div></div>
+    </div>
+</div>
+<div class="status-bar">
+    <div class="status-indicator" id="statusIndicator"></div>
+    <span class="status-text" id="statusText">Ready</span>
+    <div class="status-spacer"></div>
+    <span class="status-info" id="statusWorkspace">Workspace 1</span>
+    <span class="status-divider">|</span>
+    <span class="status-info">CELLAB v3.1</span>
+    <span class="status-divider">|</span>
+    <span class="status-info">Han Mechanobiology Lab</span>
+    <span class="status-divider">|</span>
+    <span class="status-coffee" onclick="showSupportDialog()" title="Support our research">☕</span>
+</div>
+<script src="/frontend/workbench.js"></script>
+
+<!-- ═══ SPLASH SCREEN ═══ -->
+<div id="splashScreen" style="position:fixed;inset:0;z-index:10000;background:#0b1622;display:flex;align-items:center;justify-content:center;flex-direction:column;opacity:1;transition:opacity 0.8s ease;overflow:hidden">
+<style>
+@keyframes wordIn{0%{opacity:0;transform:translateY(10px)}20%{opacity:1;transform:translateY(0)}}
+@keyframes lettersFade{0%,40%{opacity:1;max-width:200px;margin-right:0}100%{opacity:0;max-width:0;margin-right:0;font-size:0}}
+@keyframes iconDraw{0%{stroke-dashoffset:200;opacity:0}30%{opacity:1}100%{stroke-dashoffset:0;opacity:1}}
+@keyframes iconFadeIn{0%{opacity:0}100%{opacity:1}}
+@keyframes subtitleIn{0%{opacity:0;letter-spacing:8px}100%{opacity:0.4;letter-spacing:3px}}
+@keyframes stampIn{0%{transform:scale(3);opacity:0}60%{transform:scale(0.95);opacity:1}80%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+@keyframes membraneGlow{0%{filter:brightness(1)}50%{filter:brightness(1.8)}100%{filter:brightness(1)}}
+.splash-word{display:inline-flex;align-items:baseline;font-family:'Inter',system-ui,sans-serif;font-size:80px;font-weight:800;color:#5b9bd5;white-space:nowrap;margin-bottom:0}
+.splash-first{display:inline-block}
+.splash-rest{display:inline-block;overflow:hidden;opacity:1;color:rgba(91,155,213,0.45);font-size:90px;line-height:1}
+.splash-icon-wrap{position:relative;display:inline-block;width:100px;height:100px;vertical-align:middle;margin-right:0}
+.splash-icon-wrap svg{position:absolute;top:0;left:0}
+.splash-icon-wrap svg path,.splash-icon-wrap svg line,.splash-icon-wrap svg ellipse,.splash-icon-wrap svg circle,.splash-icon-wrap svg rect{stroke-dasharray:200;stroke-dashoffset:200}
+.splash-line{display:flex;align-items:center;height:110px;overflow:hidden}
+.splash-stamp{position:relative;display:flex;align-items:center;justify-content:center}
+.splash-membrane{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity 0.8s ease}
+.splash-membrane svg{overflow:visible}
+.splash-impact{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;opacity:0}
+.splash-subtitle{font-family:'Inter',system-ui,sans-serif;font-size:18px;color:rgba(255,255,255,0.4);letter-spacing:3px;margin-top:24px;opacity:0}
+.splash-lab{font-family:'Inter',system-ui,sans-serif;font-size:12px;color:rgba(255,255,255,0.2);margin-top:12px;opacity:0}
+.splash-pkg{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 20px;min-width:120px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
+.splash-pkg:hover{background:rgba(255,255,255,0.08);border-color:var(--pkg-color,rgba(255,255,255,0.2));transform:translateY(-2px)}
+.splash-pkg-icon{font-size:20px}
+.splash-pkg-name{font-size:13px;font-weight:700;color:rgba(255,255,255,0.85)}
+.splash-pkg-desc{font-size:10px;color:rgba(255,255,255,0.35)}
+</style>
+<div class="splash-stamp" id="splashStamp">
+    <!-- Cell membrane ellipse -->
+    <div class="splash-membrane" id="splashMembrane">
+        <svg width="620" height="180" viewBox="-10 -10 640 200">
+            <ellipse cx="310" cy="90" rx="300" ry="85" fill="none" stroke="#5b9bd5" stroke-width="1.8" opacity="0.4" stroke-dasharray="600" stroke-dashoffset="600" id="membraneEllipse"/>
+            <!-- Organelle dots inside membrane -->
+            <circle cx="40" cy="50" r="4" fill="#5b9bd5" opacity="0" id="org1"/>
+            <circle cx="580" cy="130" r="3.5" fill="#5b9bd5" opacity="0" id="org2"/>
+            <circle cx="55" cy="140" r="3" fill="#5b9bd5" opacity="0" id="org3"/>
+            <circle cx="560" cy="45" r="2.5" fill="#5b9bd5" opacity="0" id="org4"/>
+            <circle cx="90" cy="80" r="2" fill="#5b9bd5" opacity="0" id="org5"/>
+            <circle cx="530" cy="95" r="2.5" fill="#5b9bd5" opacity="0" id="org6"/>
+        </svg>
+    </div>
+    <!-- Impact rings (stamp effect) -->
+    <div class="splash-impact" id="splashImpact">
+        <svg width="700" height="220" viewBox="-10 -10 720 240">
+            <ellipse cx="350" cy="110" rx="340" ry="105" fill="none" stroke="#5b9bd5" stroke-width="0.5" opacity="0.3" id="impact1"/>
+            <ellipse cx="350" cy="110" rx="348" ry="112" fill="none" stroke="#5b9bd5" stroke-width="0.3" opacity="0.15" id="impact2"/>
+        </svg>
+    </div>
+    <!-- Letters content -->
+    <div id="splashContent" style="display:flex;gap:4px;align-items:flex-end;position:relative;z-index:2">
+    <!-- C = Computation -->
+    <div class="splash-line" id="sp-c">
+        <div class="splash-icon-wrap" id="sp-c-icon">
+            <svg width="100" height="100" viewBox="-6 -6 60 72" fill="none">
+                <path class="sp-draw" d="M40 5 C26 0 6 7 4 24 C2 41 8 56 22 60 C30 62 38 58 42 52" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <!-- Left traces -->
+                <line class="sp-draw" x1="4" y1="18" x2="-4" y2="18" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="3" y1="28" x2="-4" y2="28" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="3" y1="38" x2="-4" y2="38" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="4" y1="48" x2="-4" y2="48" stroke="#5b9bd5" stroke-width="1.2"/>
+                <circle class="sp-draw" cx="-4" cy="18" r="1.5" fill="#5b9bd5" stroke="none"/>
+                <circle class="sp-draw" cx="-4" cy="28" r="1.5" fill="#5b9bd5" stroke="none"/>
+                <circle class="sp-draw" cx="-4" cy="38" r="1.5" fill="#5b9bd5" stroke="none"/>
+                <circle class="sp-draw" cx="-4" cy="48" r="1.5" fill="#5b9bd5" stroke="none"/>
+                <!-- Top traces -->
+                <line class="sp-draw" x1="14" y1="2" x2="14" y2="-4" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="24" y1="1" x2="24" y2="-4" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="34" y1="2" x2="34" y2="-4" stroke="#5b9bd5" stroke-width="1.2"/>
+                <!-- Bottom traces -->
+                <line class="sp-draw" x1="12" y1="59" x2="12" y2="66" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="22" y1="61" x2="22" y2="66" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="32" y1="60" x2="36" y2="66" stroke="#5b9bd5" stroke-width="1.2"/>
+                <circle class="sp-draw" cx="12" cy="66" r="1.5" fill="#5b9bd5" stroke="none"/>
+                <circle class="sp-draw" cx="22" cy="66" r="1.5" fill="#5b9bd5" stroke="none"/>
+                <circle class="sp-draw" cx="36" cy="66" r="1.5" fill="#5b9bd5" stroke="none"/>
+                <!-- Internal neural network -->
+                <line class="sp-draw" x1="14" y1="20" x2="24" y2="16" stroke="#5b9bd5" stroke-width="0.7" opacity="0.4"/>
+                <line class="sp-draw" x1="14" y1="20" x2="24" y2="36" stroke="#5b9bd5" stroke-width="0.7" opacity="0.4"/>
+                <line class="sp-draw" x1="14" y1="40" x2="24" y2="16" stroke="#5b9bd5" stroke-width="0.7" opacity="0.4"/>
+                <line class="sp-draw" x1="14" y1="40" x2="24" y2="36" stroke="#5b9bd5" stroke-width="0.7" opacity="0.4"/>
+                <line class="sp-draw" x1="24" y1="16" x2="34" y2="26" stroke="#5b9bd5" stroke-width="0.7" opacity="0.4"/>
+                <line class="sp-draw" x1="24" y1="36" x2="34" y2="26" stroke="#5b9bd5" stroke-width="0.7" opacity="0.4"/>
+                <circle class="sp-draw" cx="14" cy="20" r="2.5" fill="#5b9bd5" stroke="none" opacity="0.4"/>
+                <circle class="sp-draw" cx="14" cy="40" r="2.5" fill="#5b9bd5" stroke="none" opacity="0.4"/>
+                <circle class="sp-draw" cx="24" cy="16" r="2.5" fill="#5b9bd5" stroke="none" opacity="0.4"/>
+                <circle class="sp-draw" cx="24" cy="36" r="2.5" fill="#5b9bd5" stroke="none" opacity="0.4"/>
+                <circle class="sp-draw" cx="34" cy="26" r="3" fill="#5b9bd5" stroke="none" opacity="0.5"/>
+            </svg>
+        </div>
+        <span class="splash-rest" id="sp-c-rest">omputation</span>
+    </div>
+    <!-- E = Engineering (gear) -->
+    <div class="splash-line" id="sp-e">
+        <div class="splash-icon-wrap" id="sp-e-icon">
+            <svg width="100" height="100" viewBox="-4 -4 56 68" fill="none">
+                <!-- E shape with gear teeth -->
+                <line class="sp-draw" x1="8" y1="2" x2="8" y2="58" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <!-- Top arm -->
+                <line class="sp-draw" x1="8" y1="2" x2="38" y2="2" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <!-- Middle arm -->
+                <line class="sp-draw" x1="8" y1="30" x2="32" y2="30" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <!-- Bottom arm -->
+                <line class="sp-draw" x1="8" y1="58" x2="38" y2="58" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <!-- Gear teeth on top arm -->
+                <line class="sp-draw" x1="18" y1="2" x2="18" y2="-3" stroke="#5b9bd5" stroke-width="1.2" opacity="0.5"/>
+                <line class="sp-draw" x1="28" y1="2" x2="28" y2="-3" stroke="#5b9bd5" stroke-width="1.2" opacity="0.5"/>
+                <line class="sp-draw" x1="38" y1="2" x2="38" y2="-3" stroke="#5b9bd5" stroke-width="1.2" opacity="0.5"/>
+                <!-- Gear teeth on bottom arm -->
+                <line class="sp-draw" x1="18" y1="58" x2="18" y2="63" stroke="#5b9bd5" stroke-width="1.2" opacity="0.5"/>
+                <line class="sp-draw" x1="28" y1="58" x2="28" y2="63" stroke="#5b9bd5" stroke-width="1.2" opacity="0.5"/>
+                <line class="sp-draw" x1="38" y1="58" x2="38" y2="63" stroke="#5b9bd5" stroke-width="1.2" opacity="0.5"/>
+                <!-- Slight curve on vertical (gear body hint) -->
+                <path class="sp-draw" d="M8 16 C4 20 4 24 8 28" fill="none" stroke="#5b9bd5" stroke-width="0.8" opacity="0.3"/>
+                <!-- Gear hub -->
+                <circle class="sp-draw" cx="22" cy="30" r="5" fill="none" stroke="#5b9bd5" stroke-width="0.8" opacity="0.35"/>
+                <circle class="sp-draw" cx="22" cy="30" r="2" fill="#5b9bd5" stroke="none" opacity="0.25"/>
+            </svg>
+        </div>
+        <span class="splash-rest" id="sp-e-rest">ngineering</span>
+    </div>
+    <!-- L = Laboratory (microscope) with ² superscript -->
+    <div class="splash-line" id="sp-l">
+        <div class="splash-icon-wrap" id="sp-l-icon" style="position:relative">
+            <svg width="100" height="100" viewBox="-2 -2 58 62" fill="none">
+                <line class="sp-draw" x1="10" y1="2" x2="10" y2="52" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <line class="sp-draw" x1="10" y1="52" x2="42" y2="52" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <rect class="sp-draw" x="4" y="0" width="12" height="5" rx="2" fill="none" stroke="#5b9bd5" stroke-width="1.8"/>
+                <line class="sp-draw" x1="10" y1="32" x2="24" y2="40" stroke="#5b9bd5" stroke-width="2" stroke-linecap="round"/>
+                <circle class="sp-draw" cx="26" cy="41" r="3" fill="none" stroke="#5b9bd5" stroke-width="1.2"/>
+                <line class="sp-draw" x1="18" y1="45" x2="34" y2="45" stroke="#5b9bd5" stroke-width="1.2" stroke-linecap="round"/>
+                <circle class="sp-draw" cx="4" cy="26" r="3" fill="none" stroke="#5b9bd5" stroke-width="0.8"/>
+                <!-- ² superscript as power icon -->
+                <text class="sp-draw" x="34" y="16" fill="#5b9bd5" font-family="Inter,sans-serif" font-size="22" font-weight="800" opacity="0.7" style="stroke-dasharray:none;stroke-dashoffset:0">2</text>
+                <!-- Tiny lightning bolt next to ² -->
+                <path class="sp-draw" d="M50 2 L46 10 L49 10 L44 20 L52 10 L49 10 L53 2Z" fill="#5b9bd5" stroke="none" opacity="0.35"/>
+            </svg>
+        </div>
+        <span class="splash-rest" id="sp-l-rest">aboratory</span>
+    </div>
+    <!-- A = Automation -->
+    <div class="splash-line" id="sp-a">
+        <div class="splash-icon-wrap" id="sp-a-icon">
+            <svg width="100" height="100" viewBox="-2 -2 62 62" fill="none">
+                <path class="sp-draw" d="M4 55 L28 2 L52 55" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <line class="sp-draw" x1="14" y1="36" x2="42" y2="36" stroke="#5b9bd5" stroke-width="2" stroke-linecap="round"/>
+                <path class="sp-draw" d="M18 22 L27 32 L42 12" fill="none" stroke="#5b9bd5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                <circle class="sp-draw" cx="44" cy="48" r="3.5" fill="none" stroke="#5b9bd5" stroke-width="0.8" opacity="0.4"/>
+            </svg>
+        </div>
+        <span class="splash-rest" id="sp-a-rest">utomation</span>
+    </div>
+    <!-- B = Biology -->
+    <div class="splash-line" id="sp-b">
+        <div class="splash-icon-wrap" id="sp-b-icon">
+            <svg width="100" height="100" viewBox="-2 -2 55 66" fill="none">
+                <line class="sp-draw" x1="8" y1="2" x2="8" y2="58" stroke="#5b9bd5" stroke-width="3" stroke-linecap="round"/>
+                <ellipse class="sp-draw" cx="28" cy="17" rx="18" ry="13" fill="none" stroke="#5b9bd5" stroke-width="1.8" opacity="0.6"/>
+                <circle class="sp-draw" cx="28" cy="17" r="3.5" fill="none" stroke="#5b9bd5" stroke-width="0.8" opacity="0.5"/>
+                <circle class="sp-draw" cx="28" cy="17" r="1.5" fill="#5b9bd5" stroke="none" opacity="0.4"/>
+                <circle class="sp-draw" cx="20" cy="13" r="1" fill="#5b9bd5" stroke="none" opacity="0.25"/>
+                <ellipse class="sp-draw" cx="30" cy="44" rx="20" ry="14" fill="none" stroke="#5b9bd5" stroke-width="1.8" opacity="0.6"/>
+                <circle class="sp-draw" cx="30" cy="44" r="4" fill="none" stroke="#5b9bd5" stroke-width="0.8" opacity="0.5"/>
+                <circle class="sp-draw" cx="30" cy="44" r="1.8" fill="#5b9bd5" stroke="none" opacity="0.4"/>
+                <circle class="sp-draw" cx="22" cy="40" r="1" fill="#5b9bd5" stroke="none" opacity="0.25"/>
+                <circle class="sp-draw" cx="38" cy="48" r="1.2" fill="#5b9bd5" stroke="none" opacity="0.25"/>
+            </svg>
+        </div>
+        <span class="splash-rest" id="sp-b-rest">iology</span>
+    </div>
+</div>
+</div>
+<div class="splash-subtitle" id="splashSubtitle">Cellular Analysis Workbench</div>
+<div class="splash-lab" id="splashLab">Han Mechanobiology Lab — Michigan Tech</div>
+<div id="splashSkipHint" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.28);letter-spacing:2px;text-transform:uppercase;opacity:0;transition:opacity 0.4s ease;pointer-events:none;user-select:none">
+    Press <span style="display:inline-block;padding:2px 6px;border:1px solid rgba(255,255,255,0.25);border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0;margin:0 4px">Enter</span> to skip
+</div>
+<!-- Welcome buttons (shown after animation) -->
+<div id="splashActions" style="display:flex;gap:16px;margin-top:32px;opacity:0;transform:translateY(10px);transition:all 0.6s ease;position:relative;z-index:10">
+    <button onclick="splashToNewProject()" style="padding:14px 32px;background:rgba(91,155,213,0.15);border:1px solid rgba(91,155,213,0.3);border-radius:8px;color:#5b9bd5;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(91,155,213,0.25)'" onmouseout="this.style.background='rgba(91,155,213,0.15)'">
+        <span style="font-size:16px">+</span> New Project
+    </button>
+    <button onclick="splashToOpenProject()" style="padding:14px 32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.6);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <span style="font-size:16px">📂</span> Open Project
+    </button>
+    <button onclick="dismissSplash()" style="padding:14px 32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.6);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+        <span style="font-size:16px">→</span> Continue
+    </button>
+</div>
+<!-- Package selection (hidden initially) -->
+<div id="splashPackages" style="display:none;margin-top:28px;opacity:0;transform:translateY(10px);transition:all 0.5s ease">
+    <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;text-align:center">Select a pipeline</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button onclick="dismissSplash();createPipelineOnCanvas('cornealia')" class="splash-pkg" style="--pkg-color:#66bb6a">
+            <span class="splash-pkg-icon">🟢</span>
+            <span class="splash-pkg-name">Cornealia</span>
+            <span class="splash-pkg-desc">Single Image</span>
+        </button>
+        <button onclick="dismissSplash();createPipelineOnCanvas('cornealia_batch')" class="splash-pkg" style="--pkg-color:#66bb6a">
+            <span class="splash-pkg-icon">🟢</span>
+            <span class="splash-pkg-name">Cornealia Batch</span>
+            <span class="splash-pkg-desc">Multi-image Analysis</span>
+        </button>
+        <button onclick="dismissSplash();createPipelineOnCanvas('fastia')" class="splash-pkg" style="--pkg-color:#ab47bc">
+            <span class="splash-pkg-icon">🟣</span>
+            <span class="splash-pkg-name">FASTIA</span>
+            <span class="splash-pkg-desc">Focal Adhesion</span>
+        </button>
+        <button onclick="dismissSplash();createPipelineOnCanvas('immunia')" class="splash-pkg" style="--pkg-color:#ef5350">
+            <span class="splash-pkg-icon">🔴</span>
+            <span class="splash-pkg-name">IMMUNIA</span>
+            <span class="splash-pkg-desc">Immune Cell</span>
+        </button>
+        <button onclick="dismissSplash();createPipelineOnCanvas('cellfade')" class="splash-pkg" style="--pkg-color:#42a5f5">
+            <span class="splash-pkg-icon">🔵</span>
+            <span class="splash-pkg-name">CellFADE</span>
+            <span class="splash-pkg-desc">FA Deep Learning</span>
+        </button>
+    </div>
+    <button onclick="hideSplashPackages()" style="margin-top:16px;background:none;border:none;color:rgba(255,255,255,0.3);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;padding:4px 8px">← Back</button>
+</div>
+</div>
+<script>
+function playSplashAnimation() {
+    // Cancel any timers from a previous play (e.g. user clicked to replay)
+    if (window._splashTimers) window._splashTimers.forEach(id => clearTimeout(id));
+    window._splashTimers = [];
+    // Local helper: like setTimeout but tracks ids so skipSplashAnimation() can cancel them
+    const _sch = (fn, t) => { const id = setTimeout(fn, t); window._splashTimers.push(id); return id; };
+
+    // Bind Enter-to-skip (unbind first in case of replay)
+    if (window._splashKeydownHandler) {
+        document.removeEventListener('keydown', window._splashKeydownHandler);
+    }
+    window._splashKeydownHandler = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); skipSplashAnimation(); }
+    };
+    document.addEventListener('keydown', window._splashKeydownHandler);
+
+    // Show skip hint, fade it out once actions appear
+    const hint = document.getElementById('splashSkipHint');
+    if (hint) { hint.style.transition = 'opacity 0.4s ease'; hint.style.opacity = '0.35'; }
+
+    const letters = ['c','e','l','a','b'];
+    const delay = 900;
+    const stamp = document.getElementById('splashStamp');
+    const membrane = document.getElementById('splashMembrane');
+    const impact = document.getElementById('splashImpact');
+    const ellipse = document.getElementById('membraneEllipse');
+
+    // Reset stamp
+    stamp.style.transform = 'scale(1)';
+    stamp.style.animation = 'none';
+    membrane.style.opacity = '0';
+    impact.style.opacity = '0';
+    if (ellipse) { ellipse.style.strokeDashoffset = '600'; ellipse.style.transition = 'none'; }
+    ['org1','org2','org3','org4','org5','org6'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.opacity = '0'; el.style.transition = 'none'; }
+    });
+
+    // Reset letters
+    letters.forEach(l => {
+        const line = document.getElementById('sp-'+l);
+        line.style.opacity = '0';
+        line.style.transform = 'translateY(16px)';
+        line.style.transition = 'opacity 0.5s ease, transform 0.5s ease, max-width 0.5s ease';
+        line.style.maxWidth = '0';
+        line.style.overflow = 'hidden';
+        const rest = document.getElementById('sp-'+l+'-rest');
+        rest.style.opacity = '1';
+        rest.style.maxWidth = '900px';
+        rest.style.fontSize = '90px';
+        rest.style.transition = 'none';
+        document.querySelectorAll('#sp-'+l+'-icon .sp-draw').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transition = 'opacity 0.6s ease, stroke-dashoffset 0.8s ease-out';
+            if (el.tagName === 'circle' && !el.getAttribute('stroke')) {
+                el.style.strokeDasharray = 'none';
+            } else {
+                el.style.strokeDasharray = '200';
+                el.style.strokeDashoffset = '200';
+            }
+        });
+    });
+    document.getElementById('splashSubtitle').style.opacity = '0';
+    document.getElementById('splashLab').style.opacity = '0';
+
+    // === ACT 1: Letter sequence ===
+    letters.forEach((l, i) => {
+        _sch(() => {
+            const line = document.getElementById('sp-'+l);
+            line.style.opacity = '1';
+            line.style.transform = 'translateY(0)';
+            line.style.maxWidth = '900px';
+        }, i * delay);
+
+        _sch(() => {
+            const rest = document.getElementById('sp-'+l+'-rest');
+            rest.style.transition = 'opacity 0.5s ease, max-width 0.6s ease-in-out, font-size 0.6s ease-in-out';
+            rest.style.opacity = '0';
+            rest.style.maxWidth = '0';
+            rest.style.fontSize = '0';
+            const line = document.getElementById('sp-'+l);
+            line.style.maxWidth = '110px';
+            document.querySelectorAll('#sp-'+l+'-icon .sp-draw').forEach(el => {
+                el.style.opacity = el.getAttribute('opacity') || '1';
+                el.style.strokeDashoffset = '0';
+            });
+        }, i * delay + delay * 0.55);
+    });
+
+    const afterLetters = letters.length * delay + 300;
+
+    // === ACT 2: Membrane draws ===
+    _sch(() => {
+        membrane.style.opacity = '1';
+        if (ellipse) {
+            ellipse.style.transition = 'stroke-dashoffset 1.2s ease-out';
+            ellipse.style.strokeDashoffset = '0';
+        }
+        // Organelles fade in staggered
+        ['org1','org2','org3','org4','org5','org6'].forEach((id, i) => {
+            _sch(() => {
+                const el = document.getElementById(id);
+                if (el) { el.style.transition = 'opacity 0.5s ease'; el.style.opacity = '0.15'; }
+            }, i * 100);
+        });
+    }, afterLetters);
+
+    // === ACT 3: STAMP — outside-in ===
+    _sch(() => {
+        stamp.style.animation = 'stampIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards';
+        // Impact rings flash
+        impact.style.opacity = '1';
+        impact.style.transition = 'opacity 0.8s ease';
+        _sch(() => { impact.style.opacity = '0'; }, 400);
+        // Brief screen flash
+        const flash = document.createElement('div');
+        flash.style.cssText = 'position:fixed;inset:0;background:rgba(91,155,213,0.06);z-index:10001;pointer-events:none;transition:opacity 0.4s';
+        document.body.appendChild(flash);
+        _sch(() => { flash.style.opacity = '0'; _sch(() => flash.remove(), 400); }, 50);
+    }, afterLetters + 1400);
+
+    // === ACT 4: Subtitle + buttons ===
+    _sch(() => {
+        const sub = document.getElementById('splashSubtitle');
+        sub.style.transition = 'opacity 0.8s ease, letter-spacing 0.8s ease';
+        sub.style.opacity = '0.4';
+        sub.style.letterSpacing = '3px';
+        const lab = document.getElementById('splashLab');
+        lab.style.transition = 'opacity 0.8s ease';
+        lab.style.opacity = '1';
+    }, afterLetters + 2000);
+
+    _sch(() => {
+        const actions = document.getElementById('splashActions');
+        if (actions) { actions.style.opacity = '1'; actions.style.transform = 'translateY(0)'; }
+        const hint = document.getElementById('splashSkipHint');
+        if (hint) hint.style.opacity = '0';
+        // Animation completed naturally — unbind Enter handler
+        if (window._splashKeydownHandler) {
+            document.removeEventListener('keydown', window._splashKeydownHandler);
+            window._splashKeydownHandler = null;
+        }
+    }, afterLetters + 2600);
+}
+
+// Skip the splash animation and jump straight to the welcome actions.
+// Called on Enter keypress. Cancels all pending timers and sets the final
+// visual state instantly (no transitions).
+function skipSplashAnimation() {
+    if (window._splashTimers) {
+        window._splashTimers.forEach(id => clearTimeout(id));
+        window._splashTimers = [];
+    }
+    if (window._splashKeydownHandler) {
+        document.removeEventListener('keydown', window._splashKeydownHandler);
+        window._splashKeydownHandler = null;
+    }
+
+    const letters = ['c','e','l','a','b'];
+
+    // Letters: collapsed to their icon form
+    letters.forEach(l => {
+        const line = document.getElementById('sp-'+l);
+        if (line) {
+            line.style.transition = 'none';
+            line.style.opacity = '1';
+            line.style.transform = 'translateY(0)';
+            line.style.maxWidth = '110px';
+        }
+        const rest = document.getElementById('sp-'+l+'-rest');
+        if (rest) {
+            rest.style.transition = 'none';
+            rest.style.opacity = '0';
+            rest.style.maxWidth = '0';
+            rest.style.fontSize = '0';
+        }
+        document.querySelectorAll('#sp-'+l+'-icon .sp-draw').forEach(el => {
+            el.style.transition = 'none';
+            el.style.opacity = el.getAttribute('opacity') || '1';
+            el.style.strokeDashoffset = '0';
+        });
+    });
+
+    // Membrane + organelles
+    const membrane = document.getElementById('splashMembrane');
+    const ellipse = document.getElementById('membraneEllipse');
+    if (membrane) membrane.style.opacity = '1';
+    if (ellipse) { ellipse.style.transition = 'none'; ellipse.style.strokeDashoffset = '0'; }
+    ['org1','org2','org3','org4','org5','org6'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.transition = 'none'; el.style.opacity = '0.15'; }
+    });
+
+    // Stamp settled (no bounce)
+    const stamp = document.getElementById('splashStamp');
+    if (stamp) { stamp.style.animation = 'none'; stamp.style.transform = 'scale(1)'; }
+    const impact = document.getElementById('splashImpact');
+    if (impact) impact.style.opacity = '0';
+
+    // Subtitle + Lab
+    const sub = document.getElementById('splashSubtitle');
+    if (sub) { sub.style.transition = 'none'; sub.style.opacity = '0.4'; sub.style.letterSpacing = '3px'; }
+    const lab = document.getElementById('splashLab');
+    if (lab) { lab.style.transition = 'none'; lab.style.opacity = '1'; }
+
+    // Welcome buttons
+    const actions = document.getElementById('splashActions');
+    if (actions) { actions.style.transition = 'none'; actions.style.opacity = '1'; actions.style.transform = 'translateY(0)'; }
+
+    // Hide the skip hint
+    const hint = document.getElementById('splashSkipHint');
+    if (hint) hint.style.opacity = '0';
+}
+
+// Make CELLAB clickable for replay
+document.getElementById('splashStamp').style.cursor = 'pointer';
+document.getElementById('splashStamp').title = 'Click to replay';
+document.getElementById('splashStamp').addEventListener('click', playSplashAnimation);
+
+// Play on load
+playSplashAnimation();
+
+function showSplashPackages() {
+    document.getElementById('splashActions').style.display = 'none';
+    const pkg = document.getElementById('splashPackages');
+    pkg.style.display = 'block';
+    setTimeout(() => { pkg.style.opacity = '1'; pkg.style.transform = 'translateY(0)'; }, 30);
+}
+function hideSplashPackages() {
+    const pkg = document.getElementById('splashPackages');
+    pkg.style.opacity = '0';
+    pkg.style.transform = 'translateY(10px)';
+    setTimeout(() => {
+        pkg.style.display = 'none';
+        const actions = document.getElementById('splashActions');
+        actions.style.display = 'flex';
+        actions.style.opacity = '1';
+    }, 300);
+}
+function dismissSplash() {
+    if (window._splashTimers) { window._splashTimers.forEach(id => clearTimeout(id)); window._splashTimers = []; }
+    if (window._splashKeydownHandler) {
+        document.removeEventListener('keydown', window._splashKeydownHandler);
+        window._splashKeydownHandler = null;
+    }
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 600);
+    }
+}
+function splashToNewProject() {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => {
+            splash.remove();
+            const overlay = document.getElementById('startupOverlay');
+            if (overlay) overlay.style.display = 'flex';
+            showNewProjectForm();
+        }, 500);
+    }
+}
+function splashToOpenProject() {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => {
+            splash.remove();
+            showOpenProjectForm();
+        }, 500);
+    }
+}
+</script>
+
+<!-- ═══ STARTUP DIALOG (hidden until splash transitions) ═══ -->
+<div class="modal-overlay" id="startupOverlay" style="display:none">
+    <div class="modal-dialog" id="startupDialog">
+        <div class="modal-header">
+            <span style="font-weight:700;letter-spacing:1px">CELLAB</span>
+            <span style="opacity:.5;margin-left:6px">— Cellular Analysis Workbench</span>
+        </div>
+        <div class="modal-body" id="startupBody">
+            <div class="startup-buttons">
+                <button class="startup-btn" onclick="showNewProjectForm()">
+                    <div class="startup-btn-icon">+</div>
+                    <div class="startup-btn-label">New Project</div>
+                    <div class="startup-btn-desc">Create a new analysis project</div>
+                </button>
+                <button class="startup-btn" onclick="showOpenProjectForm()">
+                    <div class="startup-btn-icon">📂</div>
+                    <div class="startup-btn-label">Open Project</div>
+                    <div class="startup-btn-desc">Open an existing .cellab project</div>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ FILE BROWSER DIALOG ═══ -->
+<div class="modal-overlay" id="browserOverlay" style="display:none">
+    <div class="modal-dialog modal-wide">
+        <div class="modal-header">
+            <span id="browserTitle">Select Folder</span>
+            <button class="modal-close" onclick="closeBrowser()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="browser-path-bar">
+                <button class="btn btn-default" onclick="browserUp()" title="Up">↑</button>
+                <input class="form-input" id="browserPathInput" style="flex:1" placeholder="Type a path and press Go..." onkeydown="if(event.key==='Enter')browserGo()">
+                <button class="btn btn-default" onclick="browserGo()">Go</button>
+            </div>
+            <div class="browser-list" id="browserList">
+                <p class="placeholder-text">Loading...</p>
+            </div>
+            <div class="browser-footer">
+                <span class="browser-selected" id="browserSelected"></span>
+                <div style="display:flex;gap:6px">
+                    <button class="btn btn-default" onclick="closeBrowser()">Cancel</button>
+                    <button class="btn btn-primary" id="browserSelectBtn" onclick="browserConfirm()">Select</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
