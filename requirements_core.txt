@@ -1,0 +1,10 @@
+numpy
+scipy
+opencv-python
+scikit-image
+matplotlib
+pandas
+seaborn
+flask
+tqdm
+requests

@@ -1,0 +1,7 @@
+-r requirements_core.txt
+scikit-fuzzy
+chromadb
+sentence-transformers
+easyocr
+PyPDF2
+llama-cpp-python
