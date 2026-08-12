@@ -1,5 +1,5 @@
 """
-cintelia Local - CPU-based AI Assistant
+CellIntella Local - CPU-based AI Assistant
 =======================================
 
 Local AI assistant powered by Llama 3.2 3B.
@@ -47,16 +47,16 @@ except ImportError:
     print("Install with: pip install llama-cpp-python")
 
 # Get paths
-cintelia_DIR = Path(__file__).parent
-MODELS_DIR = cintelia_DIR / "models"
+CellIntella_DIR = Path(__file__).parent
+MODELS_DIR = CellIntella_DIR / "models"
 MODEL_PATH = MODELS_DIR / "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 
 
 # ============================================================================
-# cintelia LOCAL CLASS
+# CellIntella LOCAL CLASS
 # ============================================================================
 
-class cinteliaLocal:
+class CellIntellaLocal:
     """
     Local AI assistant using Llama 3.2 3B
     
@@ -64,7 +64,7 @@ class cinteliaLocal:
     responses for IMMUNIA, FASTIA, and general CELLAB queries.
     
     Usage:
-        ai = cinteliaLocal()
+        ai = CellIntellaLocal()
         response = ai.query(
             "How do I fix NK cell segmentation?",
             context_type='immunia'
@@ -86,7 +86,7 @@ class cinteliaLocal:
         verbose: bool = False
     ):
         """
-        Initialize cintelia Local
+        Initialize CellIntella Local
         
         Args:
             model_path: Path to GGUF model file (default: auto-detect)
@@ -104,7 +104,7 @@ class cinteliaLocal:
         # Check if llama-cpp-python is available
         if not LLAMA_CPP_AVAILABLE:
             raise ImportError(
-                "llama-cpp-python is required for cinteliaLocal.\n"
+                "llama-cpp-python is required for CellIntellaLocal.\n"
                 "Install with: pip install llama-cpp-python"
             )
         
@@ -119,7 +119,7 @@ class cinteliaLocal:
             raise FileNotFoundError(
                 f"Model not found: {model_path}\n\n"
                 f"Download the model:\n"
-                f"1. Run: python -m backend.cintelia.model_downloader\n"
+                f"1. Run: python -m backend.cellintella.model_downloader\n"
                 f"2. Or manually download from:\n"
                 f"   https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF\n"
                 f"3. Place in: {MODELS_DIR}"
@@ -160,12 +160,12 @@ class cinteliaLocal:
                 
         # Initialize RAG system
         try:
-            from backend.cintelia.cintelia_rag import cinteliaDocumentStore
-            # self.doc_store = cinteliaDocumentStore(verbose=self.verbose)
+            from backend.cellintella.cellintella_rag import CellIntellaDocumentStore
+            # self.doc_store = CellIntellaDocumentStore(verbose=self.verbose)
             
             
             docs_path = Path(__file__).parent / "documents"
-            self.doc_store = cinteliaDocumentStore(docs_folder=str(docs_path), verbose=self.verbose)
+            self.doc_store = CellIntellaDocumentStore(docs_folder=str(docs_path), verbose=self.verbose)
             
             if self.verbose:
                 if self.doc_store.has_documents():
@@ -253,7 +253,7 @@ class cinteliaLocal:
             Formatted prompt
         """
         
-        system_prompt = f"""You are cintelia, an AI assistant for CELLAB - a cellular analysis workbench.
+        system_prompt = f"""You are CellIntella, an AI assistant for CELLAB - a cellular analysis workbench.
 
 You help with:
 - IMMUNIA pipeline (immune cell analysis)
@@ -398,17 +398,17 @@ Provide concise, technical, helpful answers."""
 # STANDALONE TESTING
 # ============================================================================
 
-def test_cintelia_local():
-    """Test cintelia Local with sample queries"""
+def test_cellintella_local():
+    """Test CellIntella Local with sample queries"""
     
     print("\n" + "="*60)
-    print("🤖 cintelia Local - Test Suite")
+    print("🤖 CellIntella Local - Test Suite")
     print("="*60 + "\n")
     
     try:
         # Initialize
-        print("Initializing cintelia Local...")
-        ai = cinteliaLocal(verbose=True)
+        print("Initializing CellIntella Local...")
+        ai = CellIntellaLocal(verbose=True)
         
         print("\n" + "="*60)
         print("Model Info:")
@@ -456,7 +456,7 @@ def test_cintelia_local():
         # Export conversation
         print("\n" + "="*60)
         print("Exporting conversation...")
-        ai.export_conversation('cintelia_test_conversation.json')
+        ai.export_conversation('CellIntella_test_conversation.json')
         print("="*60)
         
         print("\n✅ All tests completed successfully!")
@@ -464,7 +464,7 @@ def test_cintelia_local():
     except FileNotFoundError as e:
         print(f"\n❌ Model not found: {e}")
         print("\nTo download the model:")
-        print("1. Run: python -m backend.cintelia.model_downloader")
+        print("1. Run: python -m backend.cellintella.model_downloader")
         print("2. Or manually download from:")
         print("   https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF")
         print(f"3. Place in: {MODELS_DIR}")
@@ -481,4 +481,4 @@ def test_cintelia_local():
 
 if __name__ == '__main__':
     """Run test suite"""
-    test_cintelia_local()
+    test_cellintella_local()

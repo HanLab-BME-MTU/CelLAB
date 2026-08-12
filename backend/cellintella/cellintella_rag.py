@@ -1,5 +1,5 @@
 """
-cintelia RAG System - FIXED for Python 3.8 + Windows paths
+CellIntella RAG System - FIXED for Python 3.8 + Windows paths
 ===========================================================
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ import chromadb
 from chromadb.config import Settings
 
 
-class cinteliaDocumentStore:
+class CellIntellaDocumentStore:
     """RAG system - FIXED for Python 3.8 and Windows paths with spaces"""
     
     def __init__(
@@ -67,12 +67,12 @@ class cinteliaDocumentStore:
         
         # Get or create collection
         try:
-            self.collection = self.client.get_collection(name="cintelia_docs")
+            self.collection = self.client.get_collection(name="CellIntella_docs")
             if self.verbose:
                 print(f"✅ Loaded existing collection ({self.collection.count()} chunks)")
         except:
             self.collection = self.client.create_collection(
-                name="cintelia_docs",
+                name="CellIntella_docs",
                 metadata={"hnsw:space": "cosine"}
             )
             if self.verbose:

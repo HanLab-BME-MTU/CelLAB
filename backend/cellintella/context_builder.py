@@ -1,5 +1,5 @@
 """
-cintelia Context Builder
+CellIntella Context Builder
 =======================
 
 Intelligently retrieves relevant documentation for user queries.
@@ -24,8 +24,8 @@ from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 
 # Get paths
-cintelia_DIR = Path(__file__).parent
-DOCS_DIR = cintelia_DIR / "docs"
+CellIntella_DIR = Path(__file__).parent
+DOCS_DIR = CellIntella_DIR / "docs"
 
 
 # ============================================================================
@@ -34,7 +34,7 @@ DOCS_DIR = cintelia_DIR / "docs"
 
 class ContextBuilder:
     """
-    Build relevant context for cintelia queries
+    Build relevant context for CellIntella queries
     
     Uses keyword-based retrieval to find relevant documentation
     without requiring embeddings or vector databases.
@@ -52,7 +52,7 @@ class ContextBuilder:
         Initialize context builder
         
         Args:
-            docs_dir: Path to documentation directory (default: backend/cintelia/docs)
+            docs_dir: Path to documentation directory (default: backend/CellIntella/docs)
         """
         
         self.docs_dir = docs_dir if docs_dir else DOCS_DIR
@@ -463,7 +463,7 @@ Key parameters:
 - Tracking: `search_range`, `memory`, `min_frames`
 - Analysis: `pixel_to_um`, `frame_to_min`
 
-*Note: Run `python -m backend.cintelia.documentation_parser` to generate full documentation.*
+*Note: Run `python -m backend.cellintella.documentation_parser` to generate full documentation.*
 """
         
         elif pipeline == 'fastia':
@@ -479,7 +479,7 @@ Key parameters:
 - Detection: `sigma`, `threshold`, `min_area`, `max_area`
 - Tracking: `max_displacement`, `memory`, `min_lifetime`
 
-*Note: Run `python -m backend.cintelia.documentation_parser` to generate full documentation.*
+*Note: Run `python -m backend.cellintella.documentation_parser` to generate full documentation.*
 """
         
         return "Documentation not available for this pipeline."

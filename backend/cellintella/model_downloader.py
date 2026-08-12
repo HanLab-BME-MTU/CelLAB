@@ -1,5 +1,5 @@
 """
-cintelia Model Downloader
+CellIntella Model Downloader
 ========================
 
 Automated download and verification of Llama 3.2 3B model.
@@ -11,15 +11,15 @@ This module:
 - Handles resume on interrupted downloads
 - Validates model compatibility
 
-The model is downloaded to: backend/cintelia/models/
+The model is downloaded to: backend/CellIntella/models/
 Total size: ~2GB (Q4_K_M quantization)
 
 Usage:
     # Automated download
-    python -m backend.cintelia.model_downloader
+    python -m backend.cellintella.model_downloader
     
     # Programmatic usage
-    from backend.cintelia.model_downloader import download_model
+    from backend.cellintella.model_downloader import download_model
     success = download_model(show_progress=True)
 
 Author: Han Lab - Mechanobiology Dry Lab
@@ -34,8 +34,8 @@ from tqdm import tqdm
 import hashlib
 
 # Get paths
-cintelia_DIR = Path(__file__).parent
-MODELS_DIR = cintelia_DIR / "models"
+CellIntella_DIR = Path(__file__).parent
+MODELS_DIR = CellIntella_DIR / "models"
 MODEL_NAME = "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 MODEL_URL = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 MODEL_SIZE_GB = 2.0
@@ -59,7 +59,7 @@ def download_model(
     Download Llama 3.2 3B model from HuggingFace
     
     Args:
-        output_dir: Output directory (default: backend/cintelia/models)
+        output_dir: Output directory (default: backend/CellIntella/models)
         show_progress: Show progress bar
         verify_checksum: Verify SHA256 checksum after download
         chunk_size: Download chunk size in bytes
@@ -305,7 +305,7 @@ def print_banner():
     banner = """
     ╔══════════════════════════════════════════════════════════╗
     ║                                                          ║
-    ║   📥  cintelia Model Downloader                          ║
+    ║   📥  CellIntella Model Downloader                          ║
     ║                                                          ║
     ║   Downloading: Llama 3.2 3B Instruct (Q4_K_M)           ║
     ║   Size: ~2GB                                            ║
@@ -359,9 +359,9 @@ def interactive_download():
         print("\n" + "="*60)
         print("✅ DOWNLOAD COMPLETED SUCCESSFULLY!")
         print("="*60)
-        print("\nYou can now use cintelia Local:")
-        print("  from backend.cintelia import cintelia")
-        print("  ai = cintelia()")
+        print("\nYou can now use CellIntella Local:")
+        print("  from backend.cellintella import CellIntella")
+        print("  ai = CellIntella()")
         print("  response = ai.query('What is IMMUNIA?')")
         print("\n" + "="*60)
     else:
@@ -382,7 +382,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="cintelia Model Downloader - Download Llama 3.2 3B",
+        description="CellIntella Model Downloader - Download Llama 3.2 3B",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     

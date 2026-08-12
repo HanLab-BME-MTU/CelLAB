@@ -1,11 +1,11 @@
 """
-cintelia Prompt Templates
+CellIntella Prompt Templates
 ========================
 
 System prompts and templates for context-aware responses.
 
 This module defines:
-- Base system prompts for cintelia personality
+- Base system prompts for CellIntella personality
 - Context-specific prompts (IMMUNIA, FASTIA, error handling)
 - Response formatting templates
 - Few-shot examples for better responses
@@ -22,7 +22,7 @@ from datetime import datetime
 # BASE SYSTEM PROMPT
 # ============================================================================
 
-BASE_SYSTEM_PROMPT = """You are cintelia, an AI assistant embedded in CELLAB - a cellular analysis workbench developed by the Han Mechanobiology Lab.
+BASE_SYSTEM_PROMPT = """You are CellIntella, an AI assistant embedded in CELLAB - a cellular analysis workbench developed by the Han Mechanobiology Lab.
 
 ## Your Role
 You help researchers analyze cellular imaging data through two main pipelines:

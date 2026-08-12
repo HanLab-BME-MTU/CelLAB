@@ -1,5 +1,5 @@
 """
-cintelia Manager - Unified AI Interface (FIXED - Lazy Loading)
+CellIntella Manager - Unified AI Interface (FIXED - Lazy Loading)
 =======================================
 
 Routes queries between Local (Llama 3.2 3B) and Server (Llama 3.3 70B) AI.
@@ -18,32 +18,32 @@ import warnings
 
 # Import AI components
 try:
-    from .cintelia_local import cinteliaLocal
+    from .cellintella_local import CellIntellaLocal
     LOCAL_AVAILABLE = True
 except ImportError as e:
     LOCAL_AVAILABLE = False
-    cinteliaLocal = None
-    print(f"Warning: cinteliaLocal not available: {e}")
+    CellIntellaLocal = None
+    print(f"Warning: CellIntellaLocal not available: {e}")
 
 try:
-    from .cintelia_server import cinteliaServer
+    from .cellintella_server import CellIntellaServer
     SERVER_AVAILABLE = True
 except ImportError as e:
     SERVER_AVAILABLE = False
-    cinteliaServer = None
-    print(f"Warning: cinteliaServer not available: {e}")
+    CellIntellaServer = None
+    print(f"Warning: CellIntellaServer not available: {e}")
 
 # Get paths
-cintelia_DIR = Path(__file__).parent
+CellIntella_DIR = Path(__file__).parent
 
 
 # ============================================================================
-# cintelia MANAGER CLASS
+# CellIntella MANAGER CLASS
 # ============================================================================
 
-class cintelia:
+class CellIntella:
     """
-    Unified cintelia interface with Local/Server mode switching
+    Unified CellIntella interface with Local/Server mode switching
     
     This is the main class that CELLAB frontend interacts with.
     It routes queries to either Local AI (default) or Server AI (optional).
@@ -56,7 +56,7 @@ class cintelia:
     
     Usage:
         # Initialize with default (local) mode
-        ai = cintelia()
+        ai = CellIntella()
         
         # Query
         response = ai.query("How do I segment NK cells?")
@@ -85,7 +85,7 @@ class cintelia:
         verbose: bool = False
     ):
         """
-        Initialize cintelia Manager
+        Initialize CellIntella Manager
         
         Args:
             mode: Starting mode ('local' or 'server', default: 'local')
@@ -116,7 +116,7 @@ class cintelia:
         # Initialize server AI (placeholder by default)
         self.server_ai = None
         if SERVER_AVAILABLE:
-            self.server_ai = cinteliaServer(
+            self.server_ai = CellIntellaServer(
                 server_url=server_url,
                 api_key=api_key
             )
@@ -153,10 +153,10 @@ class cintelia:
                 print("Loading Local AI model in separate process...")
             
             # Import process wrapper
-            from .cintelia_process_wrapper import cinteliaProcessWrapper
+            from .cellintella_process_wrapper import CellIntellaProcessWrapper
             
             # Initialize in separate process
-            self.local_ai = cinteliaProcessWrapper(
+            self.local_ai = CellIntellaProcessWrapper(
                 n_threads=10,      # Use 4 threads (was 2)
                 n_ctx=2048,       # Keep context window
                 verbose=self.verbose,
@@ -543,28 +543,28 @@ class cintelia:
     def __repr__(self) -> str:
         """String representation"""
         mode_emoji = "💻" if self.mode == 'local' else "🌐"
-        return f"cintelia({mode_emoji} mode={self.mode}, queries={self.usage_stats['local_queries'] + self.usage_stats['server_queries']})"
+        return f"CellIntella({mode_emoji} mode={self.mode}, queries={self.usage_stats['local_queries'] + self.usage_stats['server_queries']})"
 
 
 # ============================================================================
 # CONVENIENCE FUNCTIONS
 # ============================================================================
 
-def create_cintelia(
+def create_CellIntella(
     mode: str = 'local',
     verbose: bool = False
-) -> cintelia:
+) -> CellIntella:
     """
-    Convenience function to create cintelia instance
+    Convenience function to create CellIntella instance
     
     Args:
         mode: Starting mode ('local' or 'server')
         verbose: Print debug info
     
     Returns:
-        cintelia instance
+        CellIntella instance
     """
-    return cintelia(mode=mode, verbose=verbose)
+    return CellIntella(mode=mode, verbose=verbose)
 
 
 def check_availability() -> Dict[str, bool]:
@@ -584,11 +584,11 @@ def check_availability() -> Dict[str, bool]:
 # TESTING
 # ============================================================================
 
-def test_cintelia_manager():
-    """Test cintelia manager with mode switching"""
+def test_cellintella_manager():
+    """Test CellIntella manager with mode switching"""
     
     print("\n" + "="*60)
-    print("🤖 cintelia Manager - Test Suite")
+    print("🤖 CellIntella Manager - Test Suite")
     print("="*60 + "\n")
     
     # Check availability
@@ -600,8 +600,8 @@ def test_cintelia_manager():
     try:
         # Initialize in local mode (default)
         print("\n" + "-"*60)
-        print("Initializing cintelia (default: local mode)...")
-        ai = cintelia(verbose=True)
+        print("Initializing CellIntella (default: local mode)...")
+        ai = CellIntella(verbose=True)
         
         print("\n" + "-"*60)
         print("Current mode info:")
@@ -641,7 +641,7 @@ def test_cintelia_manager():
         # Export session
         print("\n" + "-"*60)
         print("Exporting session...")
-        ai.export_session('cintelia_test_session.json')
+        ai.export_session('CellIntella_test_session.json')
         
         print("\n" + "="*60)
         print("✅ All tests completed!")
@@ -659,4 +659,4 @@ def test_cintelia_manager():
 
 if __name__ == '__main__':
     """Run test suite"""
-    test_cintelia_manager()
+    test_cellintella_manager()

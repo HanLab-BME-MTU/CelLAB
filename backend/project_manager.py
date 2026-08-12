@@ -15,7 +15,7 @@ Project Structure:
     ├── 📁 .cellab/                 ← internal state
     │   ├── gui_state.json
     │   ├── preferences.json
-    │   ├── 📁 cintelia/
+    │   ├── 📁 CellIntella/
     │   │   ├── conversations.db
     │   │   └── 📁 rag_index/
     │   ├── 📁 history/             ← git-like versioning
@@ -120,8 +120,8 @@ class CellabProject:
         return self.internal_dir / "history"
 
     @property
-    def cintelia_dir(self) -> Path:
-        return self.internal_dir / "cintelia"
+    def CellIntella_dir(self) -> Path:
+        return self.internal_dir / "CellIntella"
 
     # ─── Relative Path Helpers ────────────────────
 
@@ -184,7 +184,7 @@ class CellabProject:
         project.history_dir.mkdir(exist_ok=True)
         (project.history_dir / "commits").mkdir(exist_ok=True)
         (project.history_dir / "tags").mkdir(exist_ok=True)
-        project.cintelia_dir.mkdir(exist_ok=True)
+        project.CellIntella_dir.mkdir(exist_ok=True)
 
         # Create manifest
         project._manifest = {
@@ -213,8 +213,8 @@ class CellabProject:
         project._preferences = {
             "theme": "light",
             "auto_save_interval": 0,  # 0 = manual only
-            "cintelia_model": "llama-3.1-8b-instruct",
-            "cintelia_enabled": True,
+            "CellIntella_model": "llama-3.1-8b-instruct",
+            "CellIntella_enabled": True,
             "default_data_import_mode": DATA_COPY,
         }
 

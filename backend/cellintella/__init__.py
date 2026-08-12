@@ -1,8 +1,8 @@
 """
-cintelia - Context-aware AI Assistant for CELLAB
+CellIntella - Context-aware AI Assistant for CELLAB
 ================================================
 
-cintelia is an embedded AI assistant that helps researchers with:
+CellIntella is an embedded AI assistant that helps researchers with:
 - IMMUNIA pipeline (immune cell analysis)
 - FASTIA pipeline (focal adhesion analysis)
 - Image processing and troubleshooting
@@ -13,10 +13,10 @@ Architecture:
 - SERVER: Llama 3.3 70B (Future - university server with GPU)
 
 Usage:
-    from backend.cintelia import cintelia
+    from backend.cellintella import CellIntella
     
     # Initialize local AI
-    ai = cintelia(mode='local')
+    ai = CellIntella(mode='local')
     
     # Query with context
     response = ai.query(
@@ -40,9 +40,9 @@ __author__ = "Han Lab - Mechanobiology Dry Lab"
 __license__ = "MIT"
 
 # Get package directory
-cintelia_DIR = Path(__file__).parent
-MODELS_DIR = cintelia_DIR / "models"
-DOCS_DIR = cintelia_DIR / "docs"
+CellIntella_DIR = Path(__file__).parent
+MODELS_DIR = CellIntella_DIR / "models"
+DOCS_DIR = CellIntella_DIR / "docs"
 
 # Ensure directories exist
 MODELS_DIR.mkdir(exist_ok=True)
@@ -75,26 +75,26 @@ def check_model_installed():
 
 # Initialize availability flags
 SERVER_AVAILABLE = False
-cintelia = None
-cinteliaLocal = None
-cinteliaServer = None
+CellIntella = None
+CellIntellaLocal = None
+CellIntellaServer = None
 
 # Import main interface
 try:
-    from .cintelia_manager import cintelia
-    from .cintelia_local import cinteliaLocal
+    from .cellintella_manager import CellIntella
+    from .cellintella_local import CellIntellaLocal
     
     # Only import server if dependencies available
     try:
-        from .cintelia_server import cinteliaServer
+        from .cellintella_server import CellIntellaServer
         SERVER_AVAILABLE = True
     except ImportError:
         SERVER_AVAILABLE = False
-        cinteliaServer = None
+        CellIntellaServer = None
     
 except ImportError as e:
     # Graceful degradation if dependencies missing
-    print(f"Warning: cintelia core not available: {e}")
+    print(f"Warning: CellIntella core not available: {e}")
 
 # Import utilities (with graceful degradation)
 try:
@@ -120,16 +120,16 @@ except ImportError:
 
 # Public API
 __all__ = [
-    'cintelia',
-    'cinteliaLocal',
-    'cinteliaServer',
+    'CellIntella',
+    'CellIntellaLocal',
+    'CellIntellaServer',
     'DocumentationParser',
     'ContextBuilder',
     'ConversationManager',
     'download_model',
     'verify_model',
     'check_model_installed',
-    'cintelia_DIR',
+    'CellIntella_DIR',
     'MODELS_DIR',
     'DOCS_DIR',
     'MODEL_CONFIG',
@@ -140,19 +140,19 @@ __all__ = [
 if __name__ != '__main__':
     # Model status check on import
     if check_model_installed():
-        print(f"✅ cintelia Local model found: {MODEL_CONFIG['local']['name']}")
+        print(f"✅ CellIntella Local model found: {MODEL_CONFIG['local']['name']}")
     else:
-        print(f"⚠️  cintelia Local model not found!")
-        print(f"   Run: python -m backend.cintelia.model_downloader")
+        print(f"⚠️  CellIntella Local model not found!")
+        print(f"   Run: python -m backend.cellintella.model_downloader")
         print(f"   Or download manually from:")
         print(f"   {MODEL_CONFIG['local']['url']}")
         print(f"   Place in: {MODELS_DIR}")
 
     # Server availability
     if SERVER_AVAILABLE:
-        print("🌐 cintelia Server mode available")
+        print("🌐 CellIntella Server mode available")
     else:
-        print("💻 cintelia Local mode only")
+        print("💻 CellIntella Local mode only")
 
-    print(f"📦 cintelia v{__version__} initialized")
-    print(f"📁 Package directory: {cintelia_DIR}")
+    print(f"📦 CellIntella v{__version__} initialized")
+    print(f"📁 Package directory: {CellIntella_DIR}")

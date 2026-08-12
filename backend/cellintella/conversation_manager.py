@@ -1,5 +1,5 @@
 """
-cintelia Conversation Manager
+CellIntella Conversation Manager
 =============================
 
 Manages conversation history, context pruning, and session persistence.

@@ -1,5 +1,5 @@
 """
-cintelia Documentation Parser
+CellIntella Documentation Parser
 =============================
 
 Automatically extracts documentation from IMMUNIA and FASTIA codebases.
@@ -8,7 +8,7 @@ This module:
 - Parses Python docstrings from pipeline modules
 - Extracts function signatures and parameters
 - Builds searchable documentation database
-- Exports to JSON for cintelia context building
+- Exports to JSON for CellIntella context building
 
 The parser handles:
 - Module-level docstrings
@@ -430,7 +430,7 @@ def build_all_documentation(output_dir: Optional[str] = None):
     Build complete documentation for IMMUNIA and FASTIA
     
     Args:
-        output_dir: Output directory (default: backend/cintelia/docs)
+        output_dir: Output directory (default: backend/CellIntella/docs)
     """
     
     if output_dir is None:
@@ -493,7 +493,7 @@ def build_all_documentation(output_dir: Optional[str] = None):
                 'Docked configuration panels',
                 'Real-time visualization',
                 'Export to various formats',
-                'AI assistant (cintelia)'
+                'AI assistant (CellIntella)'
             ]
         }
     }

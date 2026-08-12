@@ -1,5 +1,5 @@
 """
-cintelia Process Wrapper
+CellIntella Process Wrapper
 ========================
 
 Runs Local AI in a separate process to avoid threading conflicts with PyWebView.
@@ -35,13 +35,13 @@ def _ai_worker(
     
     try:
         # Import here (inside the worker process)
-        from backend.cintelia.cintelia_local import cinteliaLocal
+        from backend.cellintella.cellintella_local import CellIntellaLocal
         
         # Initialize model
         if verbose:
             print(f"[Worker Process] Loading model...")
         
-        ai = cinteliaLocal(
+        ai = CellIntellaLocal(
             model_path=model_path,
             n_ctx=n_ctx,
             n_threads=n_threads,
@@ -96,14 +96,14 @@ def _ai_worker(
         })
 
 
-class cinteliaProcessWrapper:
+class CellIntellaProcessWrapper:
     """
-    Process-isolated wrapper for cintelia Local AI
+    Process-isolated wrapper for CellIntella Local AI
     
     This runs the model in a separate process to avoid Flask/PyWebView threading issues.
     
     Usage:
-        wrapper = cinteliaProcessWrapper()
+        wrapper = CellIntellaProcessWrapper()
         response = wrapper.query("What is IMMUNIA?")
     """
     
@@ -131,8 +131,8 @@ class cinteliaProcessWrapper:
         
         # Get model path
         if model_path is None:
-            cintelia_dir = Path(__file__).parent
-            model_path = cintelia_dir / 'models' / 'Llama-3.2-3B-Instruct-Q4_K_M.gguf'
+            CellIntella_dir = Path(__file__).parent
+            model_path = CellIntella_dir / 'models' / 'Llama-3.2-3B-Instruct-Q4_K_M.gguf'
         
         # Create communication channels
         self.command_queue = Queue()
@@ -279,12 +279,12 @@ def test_process_wrapper():
     """Test the process wrapper"""
     
     print("\n" + "="*60)
-    print("🧪 Testing cintelia Process Wrapper")
+    print("🧪 Testing CellIntella Process Wrapper")
     print("="*60 + "\n")
     
     try:
         print("Initializing wrapper...")
-        wrapper = cinteliaProcessWrapper(verbose=True)
+        wrapper = CellIntellaProcessWrapper(verbose=True)
         
         print("\n" + "-"*60)
         print("Test Query 1:")

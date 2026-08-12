@@ -1,5 +1,5 @@
 """
-cintelia Server - GPU-accelerated AI Assistant (FUTURE)
+CellIntella Server - GPU-accelerated AI Assistant (FUTURE)
 =======================================================
 
 Server-based AI assistant powered by Llama 3.3 70B.
@@ -35,14 +35,14 @@ from datetime import datetime
 import warnings
 
 # Get paths
-cintelia_DIR = Path(__file__).parent
+CellIntella_DIR = Path(__file__).parent
 
 
 # ============================================================================
-# cintelia SERVER CLASS (PLACEHOLDER)
+# CellIntella SERVER CLASS (PLACEHOLDER)
 # ============================================================================
 
-class cinteliaServer:
+class CellIntellaServer:
     """
     Server-based AI assistant (PLACEHOLDER)
     
@@ -56,7 +56,7 @@ class cinteliaServer:
     Current Status: Returns placeholder responses
     
     Future Usage:
-        ai = cinteliaServer(
+        ai = CellIntellaServer(
             server_url='https://cellab-ai.university.edu',
             api_key='your_api_key'
         )
@@ -79,7 +79,7 @@ class cinteliaServer:
         timeout: int = 300
     ):
         """
-        Initialize cintelia Server connection
+        Initialize CellIntella Server connection
         
         Args:
             server_url: Server endpoint URL (None = not configured)
@@ -99,7 +99,7 @@ class cinteliaServer:
         
         # Warn that this is a placeholder
         warnings.warn(
-            "cinteliaServer is currently a PLACEHOLDER. "
+            "CellIntellaServer is currently a PLACEHOLDER. "
             "It returns mock responses until the university server is deployed.",
             FutureWarning
         )
@@ -168,7 +168,7 @@ class cinteliaServer:
             return {
                 'success': False,
                 'error': 'Server not configured',
-                'message': 'cinteliaServer requires server_url configuration'
+                'message': 'CellIntellaServer requires server_url configuration'
             }
         
         if not self.is_authenticated:
@@ -219,7 +219,7 @@ class cinteliaServer:
         
         response = f"[MOCK RESPONSE - Server AI Not Yet Deployed]\n\n"
         response += f"Your query: '{query}'\n\n"
-        response += "When the cintelia Server is deployed, this will provide:\n"
+        response += "When the CellIntella Server is deployed, this will provide:\n"
         response += "• Deep analysis using Llama 3.3 70B (near-GPT-4 quality)\n"
         response += "• Extended context window (128K tokens)\n"
         
@@ -231,7 +231,7 @@ class cinteliaServer:
             response += "• Lab protocol recommendations\n"
             response += "• Step-by-step experimental guidance\n"
         
-        response += "\nFor now, please use cinteliaLocal for basic assistance.\n"
+        response += "\nFor now, please use CellIntellaLocal for basic assistance.\n"
         
         return response
     
@@ -375,7 +375,7 @@ class cinteliaServer:
 
 class ServerConfig:
     """
-    Configuration helper for cintelia Server deployment
+    Configuration helper for CellIntella Server deployment
     
     This class provides templates and guidance for setting up
     the university server infrastructure.
@@ -388,7 +388,7 @@ class ServerConfig:
         guide = """
 ╔══════════════════════════════════════════════════════════════════╗
 ║                                                                  ║
-║  cintelia SERVER - DEPLOYMENT GUIDE (For IT Administrators)      ║
+║  CellIntella SERVER - DEPLOYMENT GUIDE (For IT Administrators)      ║
 ║                                                                  ║
 ╚══════════════════════════════════════════════════════════════════╝
 
@@ -415,8 +415,8 @@ Operating System:
 
 Python Environment:
 ```bash
-conda create -n cintelia-server python=3.10
-conda activate cintelia-server
+conda create -n CellIntella-server python=3.10
+conda activate CellIntella-server
 pip install vllm torch transformers
 pip install fastapi uvicorn
 pip install chromadb langchain  # For literature search
@@ -541,15 +541,15 @@ Total: ~$47,000-$82,000/year (after initial investment)
 
 For deployment assistance:
 - Email: han-lab-it@university.edu
-- Docs: https://docs.cintelia.university.edu
-- Support: Slack #cintelia-server
+- Docs: https://docs.CellIntella.university.edu
+- Support: Slack #CellIntella-server
 
 ═══════════════════════════════════════════════════════════════════
 """
         return guide
     
     @staticmethod
-    def save_deployment_guide(output_path: str = "cintelia_SERVER_DEPLOYMENT.md"):
+    def save_deployment_guide(output_path: str = "cellintella_server_DEPLOYMENT.md"):
         """Save deployment guide to file"""
         guide = ServerConfig.generate_deployment_guide()
         
@@ -564,15 +564,15 @@ For deployment assistance:
 # TESTING
 # ============================================================================
 
-def test_cintelia_server():
-    """Test cintelia Server placeholder"""
+def test_cellintella_server():
+    """Test CellIntella Server placeholder"""
     
     print("\n" + "="*60)
-    print("🌐 cintelia Server - Placeholder Test")
+    print("🌐 CellIntella Server - Placeholder Test")
     print("="*60 + "\n")
     
     # Initialize (without server URL - placeholder mode)
-    ai = cinteliaServer()
+    ai = CellIntellaServer()
     
     # Check status
     status = ai.get_server_status()
@@ -612,12 +612,12 @@ if __name__ == '__main__':
     """Run tests and generate deployment guide"""
     
     # Run placeholder tests
-    test_cintelia_server()
+    test_cellintella_server()
     
     # Generate deployment guide
     print("\n" + "="*60)
     print("Generating deployment guide...")
     ServerConfig.save_deployment_guide(
-        cintelia_DIR / "cintelia_SERVER_DEPLOYMENT.md"
+        CellIntella_DIR / "cellintella_server_DEPLOYMENT.md"
     )
     print("="*60)
