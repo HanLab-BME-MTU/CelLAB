@@ -1,0 +1,18 @@
+{
+  "cellab": {
+    "name": "CELLAB",
+    "description": "Cellular Analysis Workbench",
+    "version": "2.0",
+    "pipelines": {
+      "IMMUNIA": "Immune cell analysis pipeline",
+      "FASTIA": "Focal adhesion analysis pipeline"
+    },
+    "features": [
+      "Multi-tab workspace",
+      "Docked configuration panels",
+      "Real-time visualization",
+      "Export to various formats",
+      "AI assistant (CELLIAI)"
+    ]
+  }
+}

@@ -1,0 +1,4128 @@
+{
+  "immunia": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "main": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "orchestrator": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA"
+  ],
+  "for": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.ResultsContainer",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods._get_default_config",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_source_field",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_comparison_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_tumor_contours",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_boundary_statistics"
+  ],
+  "immune": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA_tracker"
+  ],
+  "cell": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution",
+    "modules.particle_tracking_analyzer"
+  ],
+  "analysis": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.ResultsContainer",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_keller_segel_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_graph_theory_config",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods._get_default_config",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_graph_theory_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_particle_tracking_analysis",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._analyze_steady_state",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_steady_state_fields",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_enhanced_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_spatial_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_summary",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions"
+  ],
+  "pipeline": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.print_summary",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.graph_theory_analyzer"
+  ],
+  "location": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "drive": [
+    "modules.IMMUNIA"
+  ],
+  "projects": [
+    "modules.IMMUNIA"
+  ],
+  "cel_s_lab": [
+    "modules.IMMUNIA"
+  ],
+  "ackend": [
+    "modules.IMMUNIA"
+  ],
+  "clean": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.__init__",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "policies": [
+    "modules.IMMUNIA"
+  ],
+  "minimal": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor"
+  ],
+  "initialization": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "step": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.particle_tracking_analyzer"
+  ],
+  "execution": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA"
+  ],
+  "centralized": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track"
+  ],
+  "data": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.ResultsContainer.methods.get_block",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._save_block_data",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._extract_measurements",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._presence_from_trajectories",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "management": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track"
+  ],
+  "components": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.graph_theory_analyzer"
+  ],
+  "only": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_graph_theory_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_particle_tracking_analysis",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "return": [
+    "modules.IMMUNIA",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel_labeled"
+  ],
+  "saving": [
+    "modules.IMMUNIA"
+  ],
+  "container": [
+    "modules.IMMUNIA.classes.ResultsContainer"
+  ],
+  "modular": [
+    "modules.IMMUNIA.classes.ResultsContainer"
+  ],
+  "results": [
+    "modules.IMMUNIA.classes.ResultsContainer",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.save_results",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.load_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_steady_state_fields",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_gc_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "gui": [
+    "modules.IMMUNIA.classes.ResultsContainer",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "friendly": [
+    "modules.IMMUNIA.classes.ResultsContainer"
+  ],
+  "block": [
+    "modules.IMMUNIA.classes.ResultsContainer",
+    "modules.IMMUNIA.classes.ResultsContainer.methods.add_block",
+    "modules.IMMUNIA.classes.ResultsContainer.methods.get_block",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._save_block_data",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "system": [
+    "modules.IMMUNIA.classes.ResultsContainer"
+  ],
+  "resultscontainer": [
+    "modules.IMMUNIA.classes.ResultsContainer"
+  ],
+  "__init__": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.__init__",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.__init__",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.__init__",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.__init__"
+  ],
+  "add": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.add_block",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "result": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.add_block"
+  ],
+  "with": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.add_block",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segmentor",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.tracker",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyzer",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.__init__",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.__init__",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_enhanced_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_spatial_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_spatial_context",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_boundary_interaction",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.__init__",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "dependency": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.add_block"
+  ],
+  "tracking": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.add_block",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_particle_tracking_analysis",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "add_block": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.add_block"
+  ],
+  "get": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.get_block",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._get_default_config",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "empty": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.get_block"
+  ],
+  "dict": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.get_block",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "get_block": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.get_block",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "block_exists": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.block_exists"
+  ],
+  "list": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.list_blocks",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "blocks": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.list_blocks",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "optionally": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.list_blocks"
+  ],
+  "filtered": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.list_blocks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics"
+  ],
+  "type": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.list_blocks",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._get_channel_type",
+    "modules.IMMUNIA_analyzer",
+    "modules.particle_tracking_analyzer"
+  ],
+  "list_blocks": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.list_blocks"
+  ],
+  "save": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.save",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._save_block_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._generate_plots",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "load": [
+    "modules.IMMUNIA.classes.ResultsContainer.methods.load",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segmentor",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.tracker",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyzer",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.load_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.pca_compressor"
+  ],
+  "init": [
+    "modules.IMMUNIA.classes.IMMUNIA",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment"
+  ],
+  "parameters": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_keller_segel_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_graph_theory_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_segmentation_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._get_default_config",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "movie_path": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "str": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "path": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyzer",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer"
+  ],
+  "multi": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "channel": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel_labeled",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._get_channel_type"
+  ],
+  "microscopy": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "movie": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame"
+  ],
+  "channel_names": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "names": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "order": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "405": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "sytox": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "488": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "cancer": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "594": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "647": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "workspace_manager": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "workspacemanager": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "optional": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.__init__",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.__init__"
+  ],
+  "workspace": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "manager": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "instance": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "workspace_id": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "identifier": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "workspace_20250423_143022": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "tab_id": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "tab": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "tab_1": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "module_id": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "module": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_tracker.classes.Tracker"
+  ],
+  "output_dir": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results"
+  ],
+  "output": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results",
+    "modules.particle_tracking_analyzer"
+  ],
+  "directory": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._save_block_data",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results"
+  ],
+  "legacy": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "backward": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "compatibility": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format"
+  ],
+  "overrides": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "paths": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.__init__"
+  ],
+  "basic": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._setup_logging",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis"
+  ],
+  "logging": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._setup_logging"
+  ],
+  "setup": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._setup_logging"
+  ],
+  "_setup_logging": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._setup_logging"
+  ],
+  "lazy": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segmentor",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.tracker",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyzer"
+  ],
+  "segmentor": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__"
+  ],
+  "correct": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segmentor",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.tracker"
+  ],
+  "class": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segmentor",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.tracker",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_motion_distribution"
+  ],
+  "name": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segmentor",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.tracker",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._get_channel_type",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "tracker": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.tracker",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__"
+  ],
+  "analyzer": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyzer",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.__init__"
+  ],
+  "new": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyzer",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "import": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyzer"
+  ],
+  "run": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_graph_theory_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_particle_tracking_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._analyze_steady_state",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_enhanced_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_spatial_analysis"
+  ],
+  "segmentation": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_segmentation_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_segmentation_config",
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_segmentation_data"
+  ],
+  "and": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel_labeled",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._generate_plots",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between"
+  ],
+  "input": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track"
+  ],
+  "from": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.load_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._get_channel_type",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.pca_compressor",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._extract_measurements",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._presence_from_trajectories",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_ccm_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_gc_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_correlation_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._generate_metric_fields",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_line_distance",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "flat": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track"
+  ],
+  "structure": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._save_block_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "returns": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix"
+  ],
+  "block_name": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "chaining": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track"
+  ],
+  "segment": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.segment",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel_labeled",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_line_distance"
+  ],
+  "mask": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.separate_touching_objects",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_boundary_interaction"
+  ],
+  "trajectory": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_trajectory_plots",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._presence_from_trajectories",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_trajectory_distance"
+  ],
+  "track": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.track",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_boundary_interaction"
+  ],
+  "signal": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "association": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "ccm": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_enhanced_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_ccm_networks"
+  ],
+  "granger": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_gc_networks"
+  ],
+  "pearson": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "follows": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "same": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer"
+  ],
+  "pattern": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._grid_otsu_threshold"
+  ],
+  "analyze_keller_segel": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "consistency": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "tracking_block": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "analyze": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_boundary_interaction",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_boundary_interactions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_dynamics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_pairs"
+  ],
+  "methods": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_analyzer",
+    "modules.particle_tracking_analyzer"
+  ],
+  "default": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_graph_theory_config",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._get_default_config",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods._get_default_config",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "mutual_info": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "config": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "method": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.particle_tracking_analyzer"
+  ],
+  "specific": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "configuration": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._get_default_config",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.__init__",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods._get_default_config"
+  ],
+  "bidirectional": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "true": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "time_lag": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "max_lag": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "surrogate_test": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "surrogate_method": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "trend_iaaft": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "n_surr": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "100": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer"
+  ],
+  "min_overlap": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "maxlag": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "n_neighbors": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "alpha": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "pca_variance_threshold": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "pca": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis"
+  ],
+  "compression": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis"
+  ],
+  "quality": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "max_trajectories": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "105": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "limit": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "efficiency": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "auto": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode"
+  ],
+  "generated": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "none": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "example": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "ccm_block": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "analyze_signal_association": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "tracking_001": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "advanced": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "sa_block": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "multi_method_analysis": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "access": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "sa_data": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "influence_matrix_ccm": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association"
+  ],
+  "influence_matrices": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "statistics": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_signal_association",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._compute_contact_statistics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._summarize_spatial_interactions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_boundary_statistics"
+  ],
+  "standard": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_keller_segel_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_segmentation_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config"
+  ],
+  "matches": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config"
+  ],
+  "_get_default_keller_segel_config": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_keller_segel_config"
+  ],
+  "_get_default_signal_association_config": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_signal_association_config"
+  ],
+  "keller": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_keller_segel_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._analyze_steady_state"
+  ],
+  "segel": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_keller_segel_config",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._analyze_steady_state"
+  ],
+  "proper": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "preparation": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel"
+  ],
+  "updated": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.graph_theory_analyzer"
+  ],
+  "handle": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel"
+  ],
+  "enforce_tissue_mask": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis"
+  ],
+  "parameter": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_keller_segel",
+    "modules.particle_tracking_analyzer"
+  ],
+  "prepare": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data"
+  ],
+  "passes": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data"
+  ],
+  "format": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "expected": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data"
+  ],
+  "segmentation_block": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data"
+  ],
+  "formatted": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output"
+  ],
+  "_prepare_keller_segel_data": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._prepare_keller_segel_data"
+  ],
+  "graph": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_graph_theory_config",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_graph_theory_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_graph_metrics"
+  ],
+  "theory": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_graph_theory_config",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_graph_theory_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_validation",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "networks": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_ccm_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_gc_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_correlation_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_dynamics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_pairs"
+  ],
+  "signal_association_block": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "will": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "detect": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "the": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics"
+  ],
+  "most": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "recent": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "one": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "spatial": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_spatial_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_spatial_context",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._summarize_spatial_interactions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_proximity_graphs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._generate_metric_fields"
+  ],
+  "temporal": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_cooccurrence_graphs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_dynamics"
+  ],
+  "network_types": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "network": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_node_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics"
+  ],
+  "types": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods._get_default_config",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics"
+  ],
+  "build": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_ccm_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_gc_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_correlation_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_proximity_graphs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_cooccurrence_graphs"
+  ],
+  "correlation": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_validation",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_correlation_networks"
+  ],
+  "analysis_modes": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "metrics": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_spatial_context",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_comparison_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_node_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_graph_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._generate_metric_fields"
+  ],
+  "regions": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._get_tumor_regions",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer"
+  ],
+  "modes": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "dynamics": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_dynamics"
+  ],
+  "pairs": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_pairs"
+  ],
+  "boundary": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_spatial_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_boundary_statistics"
+  ],
+  "distance_pairs": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "distance_mode": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "remote": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "nearby": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "min_distance": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "250": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "mode": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode"
+  ],
+  "max_distance": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "max_pairs": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "max_pairs_plot": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "save_plots": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "gt_block": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "analyze_graph_theory": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory"
+  ],
+  "distance": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_graph_theory",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_line_distance",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_min_trajectory_distance",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_trajectory_distance"
+  ],
+  "particle": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_particle_tracking_analysis",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "analyze_particle_tracking": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.analyze_particle_tracking"
+  ],
+  "generate": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_segmentation_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_trajectory_plots",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._generate_plots",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_comparison_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_summary",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._generate_metric_fields"
+  ],
+  "visualization": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_trajectory_plots",
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._generate_plots",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer"
+  ],
+  "plots": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_trajectory_plots",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._generate_plots",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "using": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_segmentation_plot",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions"
+  ],
+  "masterplotter": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot",
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_segmentation_plot"
+  ],
+  "_generate_tracking_plot": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_tracking_plot"
+  ],
+  "_generate_keller_segel_plot": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_keller_segel_plot"
+  ],
+  "_generate_particle_tracking_plot": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_particle_tracking_plot"
+  ],
+  "_get_default_graph_theory_config": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_graph_theory_config"
+  ],
+  "organized": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._save_block_data"
+  ],
+  "_save_block_data": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._save_block_data"
+  ],
+  "overview": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_segmentation_plot"
+  ],
+  "plot": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_segmentation_plot",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_steady_state_fields",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_validation"
+  ],
+  "_generate_segmentation_plot": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_segmentation_plot"
+  ],
+  "_generate_trajectory_plots": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._generate_trajectory_plots"
+  ],
+  "_get_default_segmentation_config": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_segmentation_config"
+  ],
+  "match": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config"
+  ],
+  "nested": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config"
+  ],
+  "_get_default_tracking_config": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods._get_default_tracking_config"
+  ],
+  "all": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods._get_default_config",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.graph_theory_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics"
+  ],
+  "file": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.save_results",
+    "modules.IMMUNIA.classes.IMMUNIA.methods.load_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_movie"
+  ],
+  "save_results": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.save_results",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results"
+  ],
+  "load_results": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.load_results"
+  ],
+  "print": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.print_summary"
+  ],
+  "summary": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.print_summary",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_summary"
+  ],
+  "print_summary": [
+    "modules.IMMUNIA.classes.IMMUNIA.methods.print_summary"
+  ],
+  "preprocessor_segmentor": [
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor"
+  ],
+  "core": [
+    "modules.IMMUNIA_preprocessor_segmentor"
+  ],
+  "functionality": [
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.particle_tracking_analyzer"
+  ],
+  "cells": [
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_boundary_interactions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "microenvironment": [
+    "modules.IMMUNIA_preprocessor_segmentor",
+    "modules.IMMUNIA_tracker",
+    "modules.particle_tracking_analyzer"
+  ],
+  "handles": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor"
+  ],
+  "batch": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis"
+  ],
+  "processing": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks"
+  ],
+  "multiple": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "movies": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "initialize": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.__init__",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.__init__",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.__init__",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.__init__",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.__init__"
+  ],
+  "_get_default_config": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._get_default_config",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._get_default_config",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods._get_default_config"
+  ],
+  "tiff": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "stack": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "channels": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks"
+  ],
+  "ndarray": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "shape": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "frames": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.particle_tracking_analyzer"
+  ],
+  "height": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "width": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "load_movie": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.load_movie"
+  ],
+  "preprocessing": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame"
+  ],
+  "single": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix"
+  ],
+  "image": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "frame": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.particle_tracking_analyzer"
+  ],
+  "array": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "channel_type": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame"
+  ],
+  "preprocessed": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame"
+  ],
+  "preprocess_frame": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.preprocess_frame"
+  ],
+  "simple": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold"
+  ],
+  "threshold": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._grid_otsu_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold",
+    "modules.particle_tracking_analyzer"
+  ],
+  "based": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_proximity_graphs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_cooccurrence_graphs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions"
+  ],
+  "min_size": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold"
+  ],
+  "int": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "minimum": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_min_trajectory_distance"
+  ],
+  "object": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "size": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "keep": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold"
+  ],
+  "threshold_factor": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold"
+  ],
+  "float": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "multiplier": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold"
+  ],
+  "otsu": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._grid_otsu_threshold"
+  ],
+  "binary": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.separate_touching_objects",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "segment_simple_threshold": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_simple_threshold"
+  ],
+  "apply": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._grid_otsu_threshold"
+  ],
+  "locally": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._grid_otsu_threshold"
+  ],
+  "grid": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._grid_otsu_threshold"
+  ],
+  "_grid_otsu_threshold": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._grid_otsu_threshold"
+  ],
+  "separate": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.separate_touching_objects",
+    "modules.particle_tracking_analyzer"
+  ],
+  "touching": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.separate_touching_objects",
+    "modules.particle_tracking_analyzer"
+  ],
+  "objects": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.separate_touching_objects",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel_labeled"
+  ],
+  "separate_touching_objects": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.separate_touching_objects"
+  ],
+  "adaptive": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "separation": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel"
+  ],
+  "segment_adaptive_threshold": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_adaptive_threshold"
+  ],
+  "across": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_pairs"
+  ],
+  "segment_channel": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel"
+  ],
+  "labeled": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel_labeled",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "segment_channel_labeled": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.segment_channel_labeled"
+  ],
+  "determine": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._get_channel_type",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode"
+  ],
+  "_get_channel_type": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods._get_channel_type"
+  ],
+  "create": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._presence_from_trajectories",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_source_field",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution"
+  ],
+  "averaged": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks"
+  ],
+  "time": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_temporal_overlap"
+  ],
+  "masks": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_segmentation_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions"
+  ],
+  "mean": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer"
+  ],
+  "median": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask"
+  ],
+  "averaging": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask"
+  ],
+  "create_averaged_mask": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.create_averaged_mask"
+  ],
+  "process": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_movie",
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "process_movie": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_movie"
+  ],
+  "movie_list": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "dictionaries": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "keys": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "movie1": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "tif": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "ch1": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "ch2": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "movie2": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "base_output_dir": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "base": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "outputs": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "process_batch": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.process_batch"
+  ],
+  "visualize": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "movie_data": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame"
+  ],
+  "original": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame",
+    "modules.particle_tracking_analyzer"
+  ],
+  "frame_idx": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame"
+  ],
+  "index": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame"
+  ],
+  "visualize_frame": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.visualize_frame"
+  ],
+  "plot_averaged_masks": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.plot_averaged_masks"
+  ],
+  "disk": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.save_results",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.save_results"
+  ],
+  "integration": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_analyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "nkcellsmicroenvironmentanalyzer": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output"
+  ],
+  "raw": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output"
+  ],
+  "compatible": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "existing": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output"
+  ],
+  "get_integration_output": [
+    "modules.IMMUNIA_preprocessor_segmentor.classes.Preprocessor_Segmentor.methods.get_integration_output"
+  ],
+  "component": [
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.keller_segel_analyzer"
+  ],
+  "part": [
+    "modules.IMMUNIA_tracker"
+  ],
+  "interaction": [
+    "modules.IMMUNIA_tracker",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_boundary_interaction",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._summarize_spatial_interactions"
+  ],
+  "uses": [
+    "modules.IMMUNIA_tracker",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "trackpy": [
+    "modules.IMMUNIA_tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images"
+  ],
+  "robust": [
+    "modules.IMMUNIA_tracker"
+  ],
+  "integrated": [
+    "modules.IMMUNIA_tracker.classes.Tracker"
+  ],
+  "tracks": [
+    "modules.IMMUNIA_tracker.classes.Tracker",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "through": [
+    "modules.IMMUNIA_tracker.classes.Tracker"
+  ],
+  "series": [
+    "modules.IMMUNIA_tracker.classes.Tracker"
+  ],
+  "features": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "dataframe": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "columns": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories"
+  ],
+  "mass": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks"
+  ],
+  "detect_features_from_masks": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_masks"
+  ],
+  "directly": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images"
+  ],
+  "grayscale": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "images": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "detect_features_from_images": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.detect_features_from_images"
+  ],
+  "link": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories"
+  ],
+  "trajectories": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._filter_by_velocity",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_min_trajectory_distance"
+  ],
+  "linked": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories"
+  ],
+  "ids": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories"
+  ],
+  "link_trajectories": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.link_trajectories"
+  ],
+  "filter": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._filter_by_velocity"
+  ],
+  "length": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.particle_tracking_analyzer"
+  ],
+  "velocity": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._filter_by_velocity",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.particle_tracking_analyzer"
+  ],
+  "criteria": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs"
+  ],
+  "filter_trajectories": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.filter_trajectories"
+  ],
+  "constraints": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._filter_by_velocity"
+  ],
+  "_filter_by_velocity": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods._filter_by_velocity"
+  ],
+  "compute": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._compute_contact_statistics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_boundary_statistics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_line_distance",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_min_trajectory_distance",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_trajectory_distance",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_temporal_overlap"
+  ],
+  "each": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics",
+    "modules.IMMUNIA_analyzer",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_tumor_contours"
+  ],
+  "compute_track_statistics": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.compute_track_statistics"
+  ],
+  "nk_masks": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "nk_images": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "use_masks": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "bool": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "false": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "use": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "track_cells": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.track_cells"
+  ],
+  "various": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data"
+  ],
+  "coloring": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "options": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "background": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "first": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.particle_tracking_analyzer"
+  ],
+  "show_all": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "show": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer"
+  ],
+  "color_by": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "directionality": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.particle_tracking_analyzer"
+  ],
+  "figsize": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "tuple": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "figure": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "save_path": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "whether": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "display": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "matplotlib": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "visualize_trajectories": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_trajectories"
+  ],
+  "stat_type": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics"
+  ],
+  "displacement": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer"
+  ],
+  "duration": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics",
+    "modules.particle_tracking_analyzer"
+  ],
+  "visualize_statistics": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_statistics"
+  ],
+  "squared": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "curves": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "maximum": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.particle_tracking_analyzer"
+  ],
+  "lag": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "visualize_msd": [
+    "modules.IMMUNIA_tracker.classes.Tracker.methods.visualize_msd"
+  ],
+  "immunia_analyzer": [
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "complete": [
+    "modules.IMMUNIA_analyzer",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "simplified": [
+    "modules.IMMUNIA_analyzer",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer",
+    "modules.keller_segel_analyzer"
+  ],
+  "dedicated": [
+    "modules.IMMUNIA_analyzer"
+  ],
+  "conversion": [
+    "modules.IMMUNIA_analyzer"
+  ],
+  "interfaces": [
+    "modules.IMMUNIA_analyzer"
+  ],
+  "error": [
+    "modules.IMMUNIA_analyzer"
+  ],
+  "handling": [
+    "modules.IMMUNIA_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "version": [
+    "modules.IMMUNIA_analyzer",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "pcatrajectorycompressor": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.pca_compressor"
+  ],
+  "shared_utils": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.pca_compressor"
+  ],
+  "pca_compressor": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.pca_compressor"
+  ],
+  "graph_theory_analyzer": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.graph_theory_analyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "keller_segel_analyzer": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.keller_segel_analyzer",
+    "modules.keller_segel_analyzer"
+  ],
+  "particle_tracking_analyzer": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer"
+  ],
+  "fixed": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.particle_tracking_analyzer"
+  ],
+  "properly": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis",
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis"
+  ],
+  "imports": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis"
+  ],
+  "reloads": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis"
+  ],
+  "run_signal_association_analysis": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_signal_association_analysis"
+  ],
+  "interface": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "pass": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis"
+  ],
+  "including": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis"
+  ],
+  "run_keller_segel_analysis": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_keller_segel_analysis"
+  ],
+  "run_graph_theory_analysis": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_graph_theory_analysis"
+  ],
+  "run_particle_tracking_analysis": [
+    "modules.IMMUNIA_analyzer.classes.IMMUNIA_Analyzer.methods.run_particle_tracking_analysis"
+  ],
+  "analyzes": [
+    "modules.keller_segel_analyzer"
+  ],
+  "chemotaxis": [
+    "modules.keller_segel_analyzer"
+  ],
+  "model": [
+    "modules.keller_segel_analyzer"
+  ],
+  "ensure": [
+    "modules.keller_segel_analyzer"
+  ],
+  "propagation": [
+    "modules.keller_segel_analyzer"
+  ],
+  "fields": [
+    "modules.keller_segel_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._generate_metric_fields"
+  ],
+  "source": [
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_source_field",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "modified": [
+    "modules.keller_segel_analyzer"
+  ],
+  "make": [
+    "modules.keller_segel_analyzer"
+  ],
+  "tissue": [
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions"
+  ],
+  "enforcement": [
+    "modules.keller_segel_analyzer",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "laplacian": [
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "finite": [
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba"
+  ],
+  "differences": [
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba",
+    "modules.particle_tracking_analyzer"
+  ],
+  "numba": [
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba"
+  ],
+  "accelerated": [
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba"
+  ],
+  "compute_laplacian_numba": [
+    "modules.keller_segel_analyzer.functions.compute_laplacian_numba"
+  ],
+  "kellersegelanalyzer": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer"
+  ],
+  "entry": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "point": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_line_distance"
+  ],
+  "run_analysis": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "extract": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._extract_measurements",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._get_tumor_regions",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_segmentation_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_regionwise_values",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_tumor_contours"
+  ],
+  "cumulative": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._extract_measurements"
+  ],
+  "presence": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._extract_measurements",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._presence_from_trajectories",
+    "modules.particle_tracking_analyzer"
+  ],
+  "experimental": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._extract_measurements",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution"
+  ],
+  "_extract_measurements": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._extract_measurements"
+  ],
+  "field": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._presence_from_trajectories"
+  ],
+  "_presence_from_trajectories": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._presence_from_trajectories"
+  ],
+  "individual": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._get_tumor_regions"
+  ],
+  "tumor": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._get_tumor_regions",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_regionwise_values",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_boundary_interactions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_tumor_contours",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "_get_tumor_regions": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._get_tumor_regions"
+  ],
+  "expand": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "region": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_speed_distributions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_regionwise_values",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_tumor_contours"
+  ],
+  "percentage": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer"
+  ],
+  "its": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "radius": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "tumor_mask": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "tumor_id": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "expansion_percent": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "larger": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "boolean": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "expanded": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "_expand_tumor_region": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._expand_tumor_region"
+  ],
+  "term": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_source_field"
+  ],
+  "chemoattractant": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_source_field"
+  ],
+  "_create_source_field": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_source_field"
+  ],
+  "steady": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._analyze_steady_state",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_steady_state_fields"
+  ],
+  "state": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._analyze_steady_state",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde",
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_steady_state_fields",
+    "modules.particle_tracking_analyzer"
+  ],
+  "_analyze_steady_state": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._analyze_steady_state"
+  ],
+  "solve": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "pde": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "d_c": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "implementation": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "computation": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "now": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "_solve_chemoattractant_pde": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._solve_chemoattractant_pde"
+  ],
+  "initial": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution",
+    "modules.particle_tracking_analyzer"
+  ],
+  "distribution": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution",
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_motion_distribution"
+  ],
+  "_create_initial_distribution": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._create_initial_distribution"
+  ],
+  "validate": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._validate_theory"
+  ],
+  "theoretical": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._validate_theory"
+  ],
+  "predictions": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._validate_theory"
+  ],
+  "against": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._validate_theory"
+  ],
+  "measurements": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._validate_theory"
+  ],
+  "_validate_theory": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._validate_theory"
+  ],
+  "_generate_plots": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._generate_plots"
+  ],
+  "_plot_steady_state_fields": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_steady_state_fields"
+  ],
+  "measurement": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_validation"
+  ],
+  "_plot_validation": [
+    "modules.keller_segel_analyzer.classes.KellerSegelAnalyzer.methods._plot_validation"
+  ],
+  "modifications": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "comprehensive": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_summary",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics"
+  ],
+  "capabilities": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer"
+  ],
+  "technical": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics"
+  ],
+  "improvements": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer"
+  ],
+  "accuracy": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer"
+  ],
+  "robustness": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer"
+  ],
+  "enhanced": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_spatial_context",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "recommended": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "improved": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "msd": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "calculations": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics"
+  ],
+  "revisit": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "detection": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "statistical": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "validation": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "thresholds": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "preserved": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "documentation": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "sqrt": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "pixels": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "instantaneous": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "speed": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_speed_distributions"
+  ],
+  "real": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "units": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "pixel_to_um": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "frame_to_min": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "min": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "velocities": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "directedness": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "net": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "d_net": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "x_final": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "x_initial": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "y_final": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "y_initial": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "total": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "d_total": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "displacements": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "dir": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "perfectly": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "straight": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "starting": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "random": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "walk": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "diffusivity": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "power": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "law": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "fit": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "subdiffusion": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "confined": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "normal": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "diffusion": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "brownian": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "superdiffusion": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "directed": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "coefficient": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "μm²": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "log": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "transform": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "stable": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "fitting": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "avoids": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "effects": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "angular": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "direction": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "angle": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "atan2": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "radians": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "change": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "wraparound": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "correction": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "directional": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "degrees": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "confinement": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "ratio": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "origin": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "d_max": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "max": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "start": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between"
+  ],
+  "high": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "motion": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_motion_distribution"
+  ],
+  "low": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "local": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "exploration": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "classification": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "free": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "drift": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "percentiles": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "25th": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "50th": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "75th": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "instead": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "contact": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._compute_contact_statistics"
+  ],
+  "inside": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions"
+  ],
+  "checking": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions"
+  ],
+  "crossings": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "transitions": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "diff": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "inside_mask": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "entries": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "exits": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "after": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "gap": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "configurable": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "count": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "number": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_temporal_overlap"
+  ],
+  "visit": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "consecutive": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "before": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "split": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "compare": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "test": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "welch": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "unequal": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "variance": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "samples": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "required": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "validity": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "points": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_temporal_overlap"
+  ],
+  "gaps": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "reliability": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "score": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "warnings": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "fraction": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "entering": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "unit": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "conversions": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "pixel": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "distances": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "converted": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "times": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "minutes": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "allowed": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "good": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "two": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_min_trajectory_distance"
+  ],
+  "complementary": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "approaches": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "this": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "implements": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics"
+  ],
+  "distinct": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "analyzing": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "interactions": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_spatial_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_boundary_statistics"
+  ],
+  "answering": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "different": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "biological": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "questions": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "changes": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "question": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "how": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "does": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "behavior": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "encountering": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "identifies": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "that": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "least": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "once": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "splits": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "compares": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "paired": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "tests": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "compared": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "before_speed": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "after_speed": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "before_diffusivity": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "after_diffusivity": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "requires": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "values": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_regionwise_values"
+  ],
+  "effect": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "cohen": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "includes": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "sufficient": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "insight": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "reveals": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "encounter": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "can": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "indicate": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "attraction": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "repulsion": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "arrest": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "response": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "outside": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "behave": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "differently": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "non": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "classifies": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "aggregates": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "speeds": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "populations": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "not": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer"
+  ],
+  "average": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_trajectory_distance"
+  ],
+  "distributions": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_speed_distributions"
+  ],
+  "percentages": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "histograms": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "ratios": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "available": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_segmentation_data",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "affects": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "motility": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "shows": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "preferential": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "localization": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "population": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "level": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_graph_metrics"
+  ],
+  "behavioral": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "key": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "aspect": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "comparison": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_comparison_metrics"
+  ],
+  "unpaired": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "sequential": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "simultaneous": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "sample": [
+    "modules.particle_tracking_analyzer",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "limited": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "crossing": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_boundary_interactions"
+  ],
+  "independent": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "null": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "hypothesis": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "difference": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "regional": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "patterns": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "interpretation": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "guide": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "but": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "doesn": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "adapt": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "then": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "normally": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "persistent": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "environmental": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "triggered": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "both": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "immediate": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "sustained": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "neither": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "significantly": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "affect": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "usage": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "notes": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "long": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "enough": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "have": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "sides": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "even": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "those": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "always": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "differs": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "typically": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "has": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "more": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "consider": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "analyses": [
+    "modules.particle_tracking_analyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "understanding": [
+    "modules.particle_tracking_analyzer"
+  ],
+  "particletrackinganalyzer": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer"
+  ],
+  "parent": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.__init__",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.__init__"
+  ],
+  "reference": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.__init__"
+  ],
+  "safely": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "check": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between"
+  ],
+  "coordinate": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "coordinates": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "_safe_check_mask": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._safe_check_mask"
+  ],
+  "potentially": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "unreliable": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "calculated": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "params": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "added": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "_add_reliability_warnings": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_reliability_warnings"
+  ],
+  "dataset_name": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "dataset": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "dictionary": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "containing": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "analysis_mode": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "show_plots": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "override": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods.run_analysis"
+  ],
+  "best": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode"
+  ],
+  "_determine_analysis_mode": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._determine_analysis_mode"
+  ],
+  "possible": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data"
+  ],
+  "formats": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data"
+  ],
+  "_extract_tracks_data": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_tracks_data"
+  ],
+  "_extract_segmentation_data": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._extract_segmentation_data"
+  ],
+  "without": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis"
+  ],
+  "context": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_spatial_context"
+  ],
+  "_run_basic_analysis": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_basic_analysis"
+  ],
+  "enhancement": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_enhanced_analysis"
+  ],
+  "_run_enhanced_analysis": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_enhanced_analysis"
+  ],
+  "_run_spatial_analysis": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_spatial_analysis"
+  ],
+  "standardized": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_comparison_metrics"
+  ],
+  "cross": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis"
+  ],
+  "_run_comparison_ready_analysis": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._run_comparison_ready_analysis"
+  ],
+  "calculate": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_motion_distribution",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_speed_distributions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_node_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_graph_metrics"
+  ],
+  "checks": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "documented": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics"
+  ],
+  "description": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics"
+  ],
+  "_calculate_track_metrics": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_track_metrics"
+  ],
+  "calculation": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "stability": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "_calculate_msd": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_msd"
+  ],
+  "unclassified": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "_classify_motion": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._classify_motion"
+  ],
+  "continuous": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_spatial_context"
+  ],
+  "_add_spatial_context": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._add_spatial_context"
+  ],
+  "find": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "where": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions"
+  ],
+  "safe": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions"
+  ],
+  "_find_tumor_positions": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._find_tumor_positions"
+  ],
+  "detailed": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits",
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._compute_contact_statistics"
+  ],
+  "information": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "just": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "_detect_tumor_revisits": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._detect_tumor_revisits"
+  ],
+  "significance": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "testing": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "_analyze_before_after_tumor_contact": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_before_after_tumor_contact"
+  ],
+  "boundaries": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_boundary_interaction",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_boundary_interactions"
+  ],
+  "_analyze_boundary_interaction": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._analyze_boundary_interaction"
+  ],
+  "_calculate_motion_distribution": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_motion_distribution"
+  ],
+  "influence": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_ccm_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix"
+  ],
+  "matrix": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_ccm_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_correlation_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix"
+  ],
+  "_calculate_network_metrics": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_network_metrics"
+  ],
+  "_calculate_speed_distributions": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._calculate_speed_distributions"
+  ],
+  "_compute_contact_statistics": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._compute_contact_statistics"
+  ],
+  "summarize": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._summarize_spatial_interactions"
+  ],
+  "_summarize_spatial_interactions": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._summarize_spatial_interactions"
+  ],
+  "_generate_comparison_metrics": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_comparison_metrics"
+  ],
+  "_generate_summary": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._generate_summary"
+  ],
+  "convert": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format"
+  ],
+  "old": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format",
+    "modules.graph_theory_analyzer"
+  ],
+  "_convert_old_tracks_format": [
+    "modules.particle_tracking_analyzer.classes.ParticleTrackingAnalyzer.methods._convert_old_tracks_format"
+  ],
+  "backend": [
+    "modules.graph_theory_analyzer"
+  ],
+  "work": [
+    "modules.graph_theory_analyzer"
+  ],
+  "accepts": [
+    "modules.graph_theory_analyzer"
+  ],
+  "preprocessed_data": [
+    "modules.graph_theory_analyzer"
+  ],
+  "plotting": [
+    "modules.graph_theory_analyzer"
+  ],
+  "handled": [
+    "modules.graph_theory_analyzer"
+  ],
+  "graph_theory_plotter": [
+    "modules.graph_theory_analyzer"
+  ],
+  "integrates": [
+    "modules.graph_theory_analyzer"
+  ],
+  "removed": [
+    "modules.graph_theory_analyzer"
+  ],
+  "see": [
+    "modules.graph_theory_analyzer"
+  ],
+  "plotters": [
+    "modules.graph_theory_analyzer"
+  ],
+  "builds": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "matrices": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "proximity": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_proximity_graphs"
+  ],
+  "occurrence": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_networks",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_cooccurrence_graphs"
+  ],
+  "performs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "over": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "graphtheoryanalyzer": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer"
+  ],
+  "prepared_data": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "signal_association_results": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "pairwise_results": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "track_ids": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "tracking_data": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "trajectories_list": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "track_ids_list": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "tracks_df": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "segmentation_data": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "tissue_mask": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "field_shape": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "kwargs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "additional": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods.run_analysis"
+  ],
+  "organize": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "converts": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "internal": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "_extract_immunia_data": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_immunia_data"
+  ],
+  "_build_ccm_networks": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_ccm_networks"
+  ],
+  "causality": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_gc_networks"
+  ],
+  "_build_gc_networks": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_gc_networks"
+  ],
+  "_build_correlation_networks": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_correlation_networks"
+  ],
+  "_build_spatial_networks": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_networks"
+  ],
+  "_build_temporal_networks": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_networks"
+  ],
+  "networkx": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix"
+  ],
+  "graphs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_proximity_graphs",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_cooccurrence_graphs"
+  ],
+  "_build_graphs_from_matrix": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_graphs_from_matrix"
+  ],
+  "_build_spatial_proximity_graphs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_spatial_proximity_graphs"
+  ],
+  "_build_temporal_cooccurrence_graphs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._build_temporal_cooccurrence_graphs"
+  ],
+  "per": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_node_metrics"
+  ],
+  "node": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_node_metrics",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._generate_metric_fields"
+  ],
+  "_calculate_node_metrics": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_node_metrics"
+  ],
+  "_calculate_graph_metrics": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._calculate_graph_metrics"
+  ],
+  "_compute_network_metrics": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_network_metrics"
+  ],
+  "perform": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions"
+  ],
+  "_analyze_regions": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_regions"
+  ],
+  "_generate_metric_fields": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._generate_metric_fields"
+  ],
+  "_extract_regionwise_values": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_regionwise_values"
+  ],
+  "_analyze_boundary_interactions": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_boundary_interactions"
+  ],
+  "contours": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_tumor_contours"
+  ],
+  "_extract_tumor_contours": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._extract_tumor_contours"
+  ],
+  "categorize": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "they": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "interact": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "_categorize_tracks_by_boundary": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._categorize_tracks_by_boundary"
+  ],
+  "_compute_boundary_statistics": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_boundary_statistics"
+  ],
+  "your": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "important": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "_analyze_distance_pairs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_distance_pairs"
+  ],
+  "meeting": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs"
+  ],
+  "them": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs"
+  ],
+  "_find_distance_pairs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_distance_pairs"
+  ],
+  "lie": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "spatially": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "between": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_min_trajectory_distance",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_trajectory_distance"
+  ],
+  "target": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "_find_intermediate_paths": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._find_intermediate_paths"
+  ],
+  "lies": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between"
+  ],
+  "approximately": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between"
+  ],
+  "line": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between",
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_line_distance"
+  ],
+  "end": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between"
+  ],
+  "_point_between": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_between"
+  ],
+  "_point_line_distance": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._point_line_distance"
+  ],
+  "optimal": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "pairwise": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "_get_optimal_lag": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._get_optimal_lag"
+  ],
+  "_analyze_dynamics": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_dynamics"
+  ],
+  "significant": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_pairs"
+  ],
+  "_analyze_pairs": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._analyze_pairs"
+  ],
+  "_compute_min_trajectory_distance": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_min_trajectory_distance"
+  ],
+  "centroids": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_trajectory_distance"
+  ],
+  "_compute_trajectory_distance": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_trajectory_distance"
+  ],
+  "overlapping": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_temporal_overlap"
+  ],
+  "_compute_temporal_overlap": [
+    "modules.graph_theory_analyzer.classes.GraphTheoryAnalyzer.methods._compute_temporal_overlap"
+  ]
+}

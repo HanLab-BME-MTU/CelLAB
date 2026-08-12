@@ -1,0 +1,2776 @@
+{
+  "IMMUNIA.ResultsContainer.add_block.name": {
+    "name": "name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "add_block",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.add_block.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "add_block",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.add_block.block_type": {
+    "name": "block_type",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "add_block",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.add_block.inputs": {
+    "name": "inputs",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "add_block",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.get_block.name": {
+    "name": "name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "get_block",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.block_exists.name": {
+    "name": "name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "block_exists",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.list_blocks.block_type": {
+    "name": "block_type",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "list_blocks",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.save.filepath": {
+    "name": "filepath",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "save",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.ResultsContainer.load.filepath": {
+    "name": "filepath",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "load",
+    "class": "ResultsContainer",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.__init__.movie_path": {
+    "name": "movie_path",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.__init__.channel_names": {
+    "name": "channel_names",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.__init__.workspace_manager": {
+    "name": "workspace_manager",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.__init__.workspace_id": {
+    "name": "workspace_id",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.__init__.tab_id": {
+    "name": "tab_id",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.__init__.module_id": {
+    "name": "module_id",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.__init__.output_dir": {
+    "name": "output_dir",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.segment.config": {
+    "name": "config",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "segment",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.segment.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "segment",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.track.segmentation_block": {
+    "name": "segmentation_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "track",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.track.mask_type": {
+    "name": "mask_type",
+    "type": "str",
+    "default": "nk_masks",
+    "description": null,
+    "method": "track",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.track.config": {
+    "name": "config",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "track",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.track.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "track",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_signal_association.tracking_block": {
+    "name": "tracking_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_signal_association",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_signal_association.methods": {
+    "name": "methods",
+    "type": "List[...]",
+    "default": [
+      "ccm"
+    ],
+    "description": null,
+    "method": "analyze_signal_association",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_signal_association.config": {
+    "name": "config",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "analyze_signal_association",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_signal_association.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_signal_association",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_keller_segel.tracking_block": {
+    "name": "tracking_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_keller_segel",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_keller_segel.segmentation_block": {
+    "name": "segmentation_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_keller_segel",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_keller_segel.config": {
+    "name": "config",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "analyze_keller_segel",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_keller_segel.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_keller_segel",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._prepare_keller_segel_data.tracking_block": {
+    "name": "tracking_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_prepare_keller_segel_data",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._prepare_keller_segel_data.segmentation_block": {
+    "name": "segmentation_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_prepare_keller_segel_data",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_graph_theory.signal_association_block": {
+    "name": "signal_association_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_graph_theory",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_graph_theory.tracking_block": {
+    "name": "tracking_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_graph_theory",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_graph_theory.network_types": {
+    "name": "network_types",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "analyze_graph_theory",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_graph_theory.analysis_modes": {
+    "name": "analysis_modes",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "analyze_graph_theory",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_graph_theory.config": {
+    "name": "config",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "analyze_graph_theory",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_graph_theory.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_graph_theory",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_particle_tracking.tracking_block": {
+    "name": "tracking_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_particle_tracking",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_particle_tracking.segmentation_block": {
+    "name": "segmentation_block",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_particle_tracking",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_particle_tracking.config": {
+    "name": "config",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "analyze_particle_tracking",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.analyze_particle_tracking.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "analyze_particle_tracking",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_tracking_plot.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_tracking_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_tracking_plot.block_dir": {
+    "name": "block_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_tracking_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_keller_segel_plot.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_keller_segel_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_keller_segel_plot.block_dir": {
+    "name": "block_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_keller_segel_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_particle_tracking_plot.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_particle_tracking_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_particle_tracking_plot.block_dir": {
+    "name": "block_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_particle_tracking_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._save_block_data.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_save_block_data",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._save_block_data.block_type": {
+    "name": "block_type",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_save_block_data",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_segmentation_plot.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_segmentation_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_segmentation_plot.block_dir": {
+    "name": "block_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_segmentation_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_segmentation_plot.frame": {
+    "name": "frame",
+    "type": "int",
+    "default": null,
+    "description": null,
+    "method": "_generate_segmentation_plot",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_trajectory_plots.block_name": {
+    "name": "block_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_trajectory_plots",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA._generate_trajectory_plots.output_dir": {
+    "name": "output_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_trajectory_plots",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.save_results.filename": {
+    "name": "filename",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "save_results",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA.IMMUNIA.load_results.filepath": {
+    "name": "filepath",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "load_results",
+    "class": "IMMUNIA",
+    "module": "IMMUNIA"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.__init__.config": {
+    "name": "config",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.load_movie.movie_path": {
+    "name": "movie_path",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "load_movie",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.load_movie.channel_names": {
+    "name": "channel_names",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "load_movie",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.preprocess_frame.image": {
+    "name": "image",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "preprocess_frame",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.preprocess_frame.channel_type": {
+    "name": "channel_type",
+    "type": "str",
+    "default": "general",
+    "description": null,
+    "method": "preprocess_frame",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_simple_threshold.image": {
+    "name": "image",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "segment_simple_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_simple_threshold.min_size": {
+    "name": "min_size",
+    "type": "int",
+    "default": 50,
+    "description": null,
+    "method": "segment_simple_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_simple_threshold.threshold_factor": {
+    "name": "threshold_factor",
+    "type": "float",
+    "default": 1.0,
+    "description": null,
+    "method": "segment_simple_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor._grid_otsu_threshold.image": {
+    "name": "image",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_grid_otsu_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor._grid_otsu_threshold.grid_size": {
+    "name": "grid_size",
+    "type": "int",
+    "default": 4,
+    "description": null,
+    "method": "_grid_otsu_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor._grid_otsu_threshold.threshold_factor": {
+    "name": "threshold_factor",
+    "type": "float",
+    "default": 1.0,
+    "description": null,
+    "method": "_grid_otsu_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.separate_touching_objects.mask": {
+    "name": "mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "separate_touching_objects",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.separate_touching_objects.min_size": {
+    "name": "min_size",
+    "type": "int",
+    "default": 50,
+    "description": null,
+    "method": "separate_touching_objects",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.separate_touching_objects.separation_method": {
+    "name": "separation_method",
+    "type": "str",
+    "default": "watershed",
+    "description": null,
+    "method": "separate_touching_objects",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.separate_touching_objects.min_distance": {
+    "name": "min_distance",
+    "type": "int",
+    "default": 5,
+    "description": null,
+    "method": "separate_touching_objects",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.image": {
+    "name": "image",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.min_size": {
+    "name": "min_size",
+    "type": "int",
+    "default": 50,
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.threshold_factor": {
+    "name": "threshold_factor",
+    "type": "float",
+    "default": 1.0,
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.method": {
+    "name": "method",
+    "type": "str",
+    "default": "global",
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.grid_size": {
+    "name": "grid_size",
+    "type": "int",
+    "default": 4,
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.block_size": {
+    "name": "block_size",
+    "type": "int",
+    "default": 51,
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.separate_objects": {
+    "name": "separate_objects",
+    "type": "bool",
+    "default": false,
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_adaptive_threshold.separation_method": {
+    "name": "separation_method",
+    "type": "str",
+    "default": "watershed",
+    "description": null,
+    "method": "segment_adaptive_threshold",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_channel.channel_data": {
+    "name": "channel_data",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "segment_channel",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_channel.channel_name": {
+    "name": "channel_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "segment_channel",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_channel_labeled.channel_data": {
+    "name": "channel_data",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "segment_channel_labeled",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.segment_channel_labeled.channel_name": {
+    "name": "channel_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "segment_channel_labeled",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor._get_channel_type.channel_name": {
+    "name": "channel_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_get_channel_type",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.create_averaged_mask.masks": {
+    "name": "masks",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "create_averaged_mask",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.create_averaged_mask.method": {
+    "name": "method",
+    "type": "str",
+    "default": "mean",
+    "description": null,
+    "method": "create_averaged_mask",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.process_movie.movie_path": {
+    "name": "movie_path",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "process_movie",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.process_movie.channel_names": {
+    "name": "channel_names",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "process_movie",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.process_movie.output_dir": {
+    "name": "output_dir",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "process_movie",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.process_batch.movie_list": {
+    "name": "movie_list",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "process_batch",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.process_batch.base_output_dir": {
+    "name": "base_output_dir",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "process_batch",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.visualize_frame.movie_data": {
+    "name": "movie_data",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "visualize_frame",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.visualize_frame.masks": {
+    "name": "masks",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "visualize_frame",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.visualize_frame.frame_idx": {
+    "name": "frame_idx",
+    "type": "int",
+    "default": 0,
+    "description": null,
+    "method": "visualize_frame",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.plot_averaged_masks.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "plot_averaged_masks",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.save_results.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "save_results",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.save_results.output_dir": {
+    "name": "output_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "save_results",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_preprocessor_segmentor.Preprocessor_Segmentor.get_integration_output.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "get_integration_output",
+    "class": "Preprocessor_Segmentor",
+    "module": "IMMUNIA_preprocessor_segmentor"
+  },
+  "IMMUNIA_tracker.Tracker.__init__.config": {
+    "name": "config",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.detect_features_from_masks.masks": {
+    "name": "masks",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "detect_features_from_masks",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.detect_features_from_images.images": {
+    "name": "images",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "detect_features_from_images",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.link_trajectories.features": {
+    "name": "features",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "link_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.filter_trajectories.trajectories": {
+    "name": "trajectories",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "filter_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker._filter_by_velocity.trajectories": {
+    "name": "trajectories",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "_filter_by_velocity",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.compute_track_statistics.trajectories": {
+    "name": "trajectories",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "compute_track_statistics",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.track_cells.nk_masks": {
+    "name": "nk_masks",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "track_cells",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.track_cells.nk_images": {
+    "name": "nk_images",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "track_cells",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.track_cells.use_masks": {
+    "name": "use_masks",
+    "type": "bool",
+    "default": true,
+    "description": null,
+    "method": "track_cells",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_trajectories.background": {
+    "name": "background",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "visualize_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_trajectories.show_all": {
+    "name": "show_all",
+    "type": "bool",
+    "default": true,
+    "description": null,
+    "method": "visualize_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_trajectories.color_by": {
+    "name": "color_by",
+    "type": "str",
+    "default": "particle",
+    "description": null,
+    "method": "visualize_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_trajectories.figsize": {
+    "name": "figsize",
+    "type": "Tuple[...]",
+    "default": null,
+    "description": null,
+    "method": "visualize_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_trajectories.save_path": {
+    "name": "save_path",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "visualize_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_trajectories.show": {
+    "name": "show",
+    "type": "bool",
+    "default": true,
+    "description": null,
+    "method": "visualize_trajectories",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_statistics.stat_type": {
+    "name": "stat_type",
+    "type": "str",
+    "default": "all",
+    "description": null,
+    "method": "visualize_statistics",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_statistics.figsize": {
+    "name": "figsize",
+    "type": "Tuple[...]",
+    "default": null,
+    "description": null,
+    "method": "visualize_statistics",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_statistics.save_path": {
+    "name": "save_path",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "visualize_statistics",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_statistics.show": {
+    "name": "show",
+    "type": "bool",
+    "default": true,
+    "description": null,
+    "method": "visualize_statistics",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_msd.max_lag": {
+    "name": "max_lag",
+    "type": "int",
+    "default": 100,
+    "description": null,
+    "method": "visualize_msd",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_msd.figsize": {
+    "name": "figsize",
+    "type": "Tuple[...]",
+    "default": null,
+    "description": null,
+    "method": "visualize_msd",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_msd.save_path": {
+    "name": "save_path",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "visualize_msd",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.visualize_msd.show": {
+    "name": "show",
+    "type": "bool",
+    "default": true,
+    "description": null,
+    "method": "visualize_msd",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.save_results.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "save_results",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_tracker.Tracker.save_results.output_dir": {
+    "name": "output_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "save_results",
+    "class": "Tracker",
+    "module": "IMMUNIA_tracker"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.__init__.config": {
+    "name": "config",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_signal_association_analysis.prepared_data": {
+    "name": "prepared_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_signal_association_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_signal_association_analysis.dataset_name": {
+    "name": "dataset_name",
+    "type": "str",
+    "default": "SA_Dataset",
+    "description": null,
+    "method": "run_signal_association_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_signal_association_analysis.methods": {
+    "name": "methods",
+    "type": "List[...]",
+    "default": [
+      "ccm"
+    ],
+    "description": null,
+    "method": "run_signal_association_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_keller_segel_analysis.prepared_data": {
+    "name": "prepared_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_keller_segel_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_keller_segel_analysis.dataset_name": {
+    "name": "dataset_name",
+    "type": "str",
+    "default": "KS_Dataset",
+    "description": null,
+    "method": "run_keller_segel_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_graph_theory_analysis.prepared_data": {
+    "name": "prepared_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_graph_theory_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_graph_theory_analysis.dataset_name": {
+    "name": "dataset_name",
+    "type": "str",
+    "default": "Graph_Dataset",
+    "description": null,
+    "method": "run_graph_theory_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_particle_tracking_analysis.prepared_data": {
+    "name": "prepared_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_particle_tracking_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "IMMUNIA_analyzer.IMMUNIA_Analyzer.run_particle_tracking_analysis.dataset_name": {
+    "name": "dataset_name",
+    "type": "str",
+    "default": "PT_Dataset",
+    "description": null,
+    "method": "run_particle_tracking_analysis",
+    "class": "IMMUNIA_Analyzer",
+    "module": "IMMUNIA_analyzer"
+  },
+  "keller_segel_analyzer.compute_laplacian_numba.C": {
+    "name": "C",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "function": "compute_laplacian_numba",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.compute_laplacian_numba.dx": {
+    "name": "dx",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "function": "compute_laplacian_numba",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer.__init__.parent_analyzer": {
+    "name": "parent_analyzer",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer.run_analysis.dataset_name": {
+    "name": "dataset_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer.run_analysis.tracking_data": {
+    "name": "tracking_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer.run_analysis.segmentation_data": {
+    "name": "segmentation_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer.run_analysis.config": {
+    "name": "config",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer.run_analysis.output_dir": {
+    "name": "output_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._extract_measurements.tracking_data": {
+    "name": "tracking_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_extract_measurements",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._extract_measurements.segmentation_data": {
+    "name": "segmentation_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_extract_measurements",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._presence_from_trajectories.trajectories": {
+    "name": "trajectories",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_presence_from_trajectories",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._presence_from_trajectories.shape": {
+    "name": "shape",
+    "type": "Tuple",
+    "default": null,
+    "description": null,
+    "method": "_presence_from_trajectories",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._get_tumor_regions.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_get_tumor_regions",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._expand_tumor_region.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_expand_tumor_region",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._expand_tumor_region.tumor_id": {
+    "name": "tumor_id",
+    "type": "int",
+    "default": null,
+    "description": null,
+    "method": "_expand_tumor_region",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._expand_tumor_region.expansion_percent": {
+    "name": "expansion_percent",
+    "type": "float",
+    "default": 10.0,
+    "description": null,
+    "method": "_expand_tumor_region",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._create_source_field.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_create_source_field",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._create_source_field.tissue_mask": {
+    "name": "tissue_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_create_source_field",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._create_source_field.source_type": {
+    "name": "source_type",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_create_source_field",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._analyze_steady_state.measurements": {
+    "name": "measurements",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_steady_state",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._analyze_steady_state.source": {
+    "name": "source",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_analyze_steady_state",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._analyze_steady_state.tissue_mask": {
+    "name": "tissue_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_analyze_steady_state",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._analyze_steady_state.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_steady_state",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._solve_chemoattractant_pde.source": {
+    "name": "source",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_solve_chemoattractant_pde",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._solve_chemoattractant_pde.tissue_mask": {
+    "name": "tissue_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_solve_chemoattractant_pde",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._solve_chemoattractant_pde.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_solve_chemoattractant_pde",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._create_initial_distribution.measurements": {
+    "name": "measurements",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_create_initial_distribution",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._create_initial_distribution.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_create_initial_distribution",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._validate_theory.theoretical": {
+    "name": "theoretical",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_validate_theory",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._validate_theory.measured": {
+    "name": "measured",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_validate_theory",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._generate_plots.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_generate_plots",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._generate_plots.output_dir": {
+    "name": "output_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_generate_plots",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._plot_steady_state_fields.steady": {
+    "name": "steady",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_plot_steady_state_fields",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._plot_steady_state_fields.output_dir": {
+    "name": "output_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_plot_steady_state_fields",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._plot_validation.validation": {
+    "name": "validation",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_plot_validation",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "keller_segel_analyzer.KellerSegelAnalyzer._plot_validation.output_dir": {
+    "name": "output_dir",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_plot_validation",
+    "class": "KellerSegelAnalyzer",
+    "module": "keller_segel_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer.__init__.parent_analyzer": {
+    "name": "parent_analyzer",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._safe_check_mask.mask": {
+    "name": "mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_safe_check_mask",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._safe_check_mask.x": {
+    "name": "x",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "method": "_safe_check_mask",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._safe_check_mask.y": {
+    "name": "y",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "method": "_safe_check_mask",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._add_reliability_warnings.metrics": {
+    "name": "metrics",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_add_reliability_warnings",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._add_reliability_warnings.track": {
+    "name": "track",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "_add_reliability_warnings",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._add_reliability_warnings.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_add_reliability_warnings",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer.run_analysis.dataset_name": {
+    "name": "dataset_name",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer.run_analysis.results": {
+    "name": "results",
+    "type": "Dict[...]",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer.run_analysis.analysis_mode": {
+    "name": "analysis_mode",
+    "type": "str",
+    "default": "auto",
+    "description": null,
+    "method": "run_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer.run_analysis.save_plots": {
+    "name": "save_plots",
+    "type": "bool",
+    "default": false,
+    "description": null,
+    "method": "run_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer.run_analysis.show_plots": {
+    "name": "show_plots",
+    "type": "bool",
+    "default": false,
+    "description": null,
+    "method": "run_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer.run_analysis.params": {
+    "name": "params",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._determine_analysis_mode.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_determine_analysis_mode",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._extract_tracks_data.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_extract_tracks_data",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._extract_segmentation_data.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_extract_segmentation_data",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_basic_analysis.tracks_data": {
+    "name": "tracks_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_basic_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_basic_analysis.seg_data": {
+    "name": "seg_data",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "_run_basic_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_basic_analysis.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_basic_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_enhanced_analysis.tracks_data": {
+    "name": "tracks_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_enhanced_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_enhanced_analysis.seg_data": {
+    "name": "seg_data",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "_run_enhanced_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_enhanced_analysis.full_results": {
+    "name": "full_results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_enhanced_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_enhanced_analysis.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_enhanced_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_spatial_analysis.tracks_data": {
+    "name": "tracks_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_spatial_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_spatial_analysis.seg_data": {
+    "name": "seg_data",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "_run_spatial_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_spatial_analysis.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_spatial_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_comparison_ready_analysis.tracks_data": {
+    "name": "tracks_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_comparison_ready_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_comparison_ready_analysis.seg_data": {
+    "name": "seg_data",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "_run_comparison_ready_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._run_comparison_ready_analysis.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_run_comparison_ready_analysis",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_track_metrics.track": {
+    "name": "track",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "_calculate_track_metrics",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_track_metrics.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_calculate_track_metrics",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_msd.x": {
+    "name": "x",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_calculate_msd",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_msd.y": {
+    "name": "y",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_calculate_msd",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_msd.params": {
+    "name": "params",
+    "type": "Optional[...]",
+    "default": null,
+    "description": null,
+    "method": "_calculate_msd",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._classify_motion.diffusivity": {
+    "name": "diffusivity",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "method": "_classify_motion",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._classify_motion.directedness": {
+    "name": "directedness",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "method": "_classify_motion",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._classify_motion.diff_thresholds": {
+    "name": "diff_thresholds",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "_classify_motion",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._classify_motion.directed_threshold": {
+    "name": "directed_threshold",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "method": "_classify_motion",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._classify_motion.use_adaptive": {
+    "name": "use_adaptive",
+    "type": "bool",
+    "default": false,
+    "description": null,
+    "method": "_classify_motion",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._classify_motion.all_diffusivities": {
+    "name": "all_diffusivities",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "_classify_motion",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._add_spatial_context.track": {
+    "name": "track",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "_add_spatial_context",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._add_spatial_context.seg_data": {
+    "name": "seg_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_add_spatial_context",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._find_tumor_positions.x_arr": {
+    "name": "x_arr",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_find_tumor_positions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._find_tumor_positions.y_arr": {
+    "name": "y_arr",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_find_tumor_positions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._find_tumor_positions.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_find_tumor_positions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._find_tumor_positions.height": {
+    "name": "height",
+    "type": "int",
+    "default": null,
+    "description": null,
+    "method": "_find_tumor_positions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._find_tumor_positions.width": {
+    "name": "width",
+    "type": "int",
+    "default": null,
+    "description": null,
+    "method": "_find_tumor_positions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._detect_tumor_revisits.tumor_positions": {
+    "name": "tumor_positions",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "_detect_tumor_revisits",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._detect_tumor_revisits.min_gap": {
+    "name": "min_gap",
+    "type": "int",
+    "default": 3,
+    "description": null,
+    "method": "_detect_tumor_revisits",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._analyze_before_after_tumor_contact.x_arr": {
+    "name": "x_arr",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_analyze_before_after_tumor_contact",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._analyze_before_after_tumor_contact.y_arr": {
+    "name": "y_arr",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_analyze_before_after_tumor_contact",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._analyze_before_after_tumor_contact.tumor_positions": {
+    "name": "tumor_positions",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "_analyze_before_after_tumor_contact",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._analyze_before_after_tumor_contact.speeds": {
+    "name": "speeds",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_analyze_before_after_tumor_contact",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._analyze_before_after_tumor_contact.params": {
+    "name": "params",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_before_after_tumor_contact",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._analyze_boundary_interaction.track": {
+    "name": "track",
+    "type": "pd.DataFrame",
+    "default": null,
+    "description": null,
+    "method": "_analyze_boundary_interaction",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._analyze_boundary_interaction.mask": {
+    "name": "mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_analyze_boundary_interaction",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_motion_distribution.motion_classes": {
+    "name": "motion_classes",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "_calculate_motion_distribution",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_network_metrics.influence_matrix": {
+    "name": "influence_matrix",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_calculate_network_metrics",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_speed_distributions.track_metrics": {
+    "name": "track_metrics",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "_calculate_speed_distributions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._calculate_speed_distributions.has_masks": {
+    "name": "has_masks",
+    "type": "bool",
+    "default": null,
+    "description": null,
+    "method": "_calculate_speed_distributions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._compute_contact_statistics.tracks_data": {
+    "name": "tracks_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_compute_contact_statistics",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._compute_contact_statistics.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_contact_statistics",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._compute_contact_statistics.tissue_mask": {
+    "name": "tissue_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_contact_statistics",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._summarize_spatial_interactions.interactions": {
+    "name": "interactions",
+    "type": "List[...]",
+    "default": null,
+    "description": null,
+    "method": "_summarize_spatial_interactions",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._generate_comparison_metrics.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_generate_comparison_metrics",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._generate_summary.results": {
+    "name": "results",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_generate_summary",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "particle_tracking_analyzer.ParticleTrackingAnalyzer._convert_old_tracks_format.prep_data": {
+    "name": "prep_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_convert_old_tracks_format",
+    "class": "ParticleTrackingAnalyzer",
+    "module": "particle_tracking_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer.__init__.parent_analyzer": {
+    "name": "parent_analyzer",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "__init__",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer.run_analysis.prepared_data": {
+    "name": "prepared_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "run_analysis",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer.run_analysis.dataset_name": {
+    "name": "dataset_name",
+    "type": "str",
+    "default": "GT_Dataset",
+    "description": null,
+    "method": "run_analysis",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._extract_immunia_data.prepared_data": {
+    "name": "prepared_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_extract_immunia_data",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_ccm_networks.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_build_ccm_networks",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_gc_networks.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_build_gc_networks",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_correlation_networks.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_build_correlation_networks",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_spatial_networks.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_build_spatial_networks",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_temporal_networks.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_build_temporal_networks",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_graphs_from_matrix.matrix": {
+    "name": "matrix",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_build_graphs_from_matrix",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_graphs_from_matrix.track_ids": {
+    "name": "track_ids",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_build_graphs_from_matrix",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_graphs_from_matrix.threshold": {
+    "name": "threshold",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "method": "_build_graphs_from_matrix",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_graphs_from_matrix.method": {
+    "name": "method",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_build_graphs_from_matrix",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_spatial_proximity_graphs.trajectories": {
+    "name": "trajectories",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_build_spatial_proximity_graphs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_spatial_proximity_graphs.track_ids": {
+    "name": "track_ids",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_build_spatial_proximity_graphs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_spatial_proximity_graphs.radius": {
+    "name": "radius",
+    "type": "float",
+    "default": null,
+    "description": null,
+    "method": "_build_spatial_proximity_graphs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_temporal_cooccurrence_graphs.trajectories": {
+    "name": "trajectories",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_build_temporal_cooccurrence_graphs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_temporal_cooccurrence_graphs.track_ids": {
+    "name": "track_ids",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_build_temporal_cooccurrence_graphs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._build_temporal_cooccurrence_graphs.window": {
+    "name": "window",
+    "type": "int",
+    "default": null,
+    "description": null,
+    "method": "_build_temporal_cooccurrence_graphs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._calculate_node_metrics.G": {
+    "name": "G",
+    "type": "nx.Graph",
+    "default": null,
+    "description": null,
+    "method": "_calculate_node_metrics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._calculate_graph_metrics.G": {
+    "name": "G",
+    "type": "nx.Graph",
+    "default": null,
+    "description": null,
+    "method": "_calculate_graph_metrics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_network_metrics.networks": {
+    "name": "networks",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_compute_network_metrics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_network_metrics.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_compute_network_metrics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_regions.networks": {
+    "name": "networks",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_regions",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_regions.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_regions",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._generate_metric_fields.node_metrics": {
+    "name": "node_metrics",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_generate_metric_fields",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._generate_metric_fields.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_generate_metric_fields",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._extract_regionwise_values.metric_fields": {
+    "name": "metric_fields",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_extract_regionwise_values",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._extract_regionwise_values.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_extract_regionwise_values",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_boundary_interactions.networks": {
+    "name": "networks",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_boundary_interactions",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_boundary_interactions.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_boundary_interactions",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._extract_tumor_contours.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_extract_tumor_contours",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._categorize_tracks_by_boundary.trajectories": {
+    "name": "trajectories",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_categorize_tracks_by_boundary",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._categorize_tracks_by_boundary.track_ids": {
+    "name": "track_ids",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_categorize_tracks_by_boundary",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._categorize_tracks_by_boundary.tumor_mask": {
+    "name": "tumor_mask",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_categorize_tracks_by_boundary",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_boundary_statistics.categorized": {
+    "name": "categorized",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_compute_boundary_statistics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_boundary_statistics.network_data": {
+    "name": "network_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_compute_boundary_statistics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_distance_pairs.networks": {
+    "name": "networks",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_distance_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_distance_pairs.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_distance_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_distance_pairs.network_data": {
+    "name": "network_data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_find_distance_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_distance_pairs.trajectories": {
+    "name": "trajectories",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_find_distance_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_distance_pairs.track_ids": {
+    "name": "track_ids",
+    "type": "List",
+    "default": null,
+    "description": null,
+    "method": "_find_distance_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_distance_pairs.distance_mode": {
+    "name": "distance_mode",
+    "type": "str",
+    "default": null,
+    "description": null,
+    "method": "_find_distance_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_intermediate_paths.G": {
+    "name": "G",
+    "type": "nx.Graph",
+    "default": null,
+    "description": null,
+    "method": "_find_intermediate_paths",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_intermediate_paths.src": {
+    "name": "src",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_find_intermediate_paths",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_intermediate_paths.tgt": {
+    "name": "tgt",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_find_intermediate_paths",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_intermediate_paths.trajectories": {
+    "name": "trajectories",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_find_intermediate_paths",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_intermediate_paths.track_ids": {
+    "name": "track_ids",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_find_intermediate_paths",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_intermediate_paths.src_idx": {
+    "name": "src_idx",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_find_intermediate_paths",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._find_intermediate_paths.tgt_idx": {
+    "name": "tgt_idx",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_find_intermediate_paths",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._point_between.point": {
+    "name": "point",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_point_between",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._point_between.start": {
+    "name": "start",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_point_between",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._point_between.end": {
+    "name": "end",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_point_between",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._point_between.tolerance": {
+    "name": "tolerance",
+    "type": null,
+    "default": 50,
+    "description": null,
+    "method": "_point_between",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._point_line_distance.point": {
+    "name": "point",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_point_line_distance",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._point_line_distance.line_start": {
+    "name": "line_start",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_point_line_distance",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._point_line_distance.line_end": {
+    "name": "line_end",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_point_line_distance",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._get_optimal_lag.src": {
+    "name": "src",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_get_optimal_lag",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._get_optimal_lag.tgt": {
+    "name": "tgt",
+    "type": null,
+    "default": null,
+    "description": null,
+    "method": "_get_optimal_lag",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._get_optimal_lag.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_get_optimal_lag",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_dynamics.networks": {
+    "name": "networks",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_dynamics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_dynamics.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_dynamics",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_pairs.networks": {
+    "name": "networks",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._analyze_pairs.data": {
+    "name": "data",
+    "type": "Dict",
+    "default": null,
+    "description": null,
+    "method": "_analyze_pairs",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_min_trajectory_distance.traj1": {
+    "name": "traj1",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_min_trajectory_distance",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_min_trajectory_distance.traj2": {
+    "name": "traj2",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_min_trajectory_distance",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_trajectory_distance.traj1": {
+    "name": "traj1",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_trajectory_distance",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_trajectory_distance.traj2": {
+    "name": "traj2",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_trajectory_distance",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_temporal_overlap.traj1": {
+    "name": "traj1",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_temporal_overlap",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  },
+  "graph_theory_analyzer.GraphTheoryAnalyzer._compute_temporal_overlap.traj2": {
+    "name": "traj2",
+    "type": "np.ndarray",
+    "default": null,
+    "description": null,
+    "method": "_compute_temporal_overlap",
+    "class": "GraphTheoryAnalyzer",
+    "module": "graph_theory_analyzer"
+  }
+}

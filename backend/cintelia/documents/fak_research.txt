@@ -1,0 +1,17 @@
+FAK Protein Research Summary
+=============================
+
+Focal Adhesion Kinase (FAK) is a 125 kDa non-receptor tyrosine kinase encoded by the PTK2 gene.
+
+Key Functions:
+- FAK localizes to focal adhesions where cells attach to the extracellular matrix
+- Phosphorylation at Tyr397 creates a binding site for Src family kinases
+- FAK regulates integrin-mediated signaling essential for cell migration
+- FAK knockout mice show embryonic lethality
+
+Clinical Significance:
+- FAK overexpression correlates with poor prognosis in breast, colon, and ovarian cancers
+- FAK inhibitors VS-4718 and defactinib are in clinical trials
+- FAK promotes cancer metastasis through EMT regulation
+
+Citations: Schaller MD (2010) Nature Reviews. Sulzmaier FJ (2014) Nature Reviews Cancer.

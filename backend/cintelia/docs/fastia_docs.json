@@ -1,0 +1,37 @@
+{
+  "pipeline_name": "FASTIA",
+  "modules": {
+    "FocalAdhesionDetector": {
+      "module_name": "backend.fastia.FocalAdhesionDetector",
+      "file_path": "G:\\My Drive\\Projects\\CEL_S_LAB\\backend\\fastia\\FocalAdhesionDetector.py",
+      "module_docstring": null,
+      "classes": {},
+      "functions": {},
+      "constants": {}
+    },
+    "FocalAdhesionTracker": {
+      "module_name": "backend.fastia.FocalAdhesionTracker",
+      "file_path": "G:\\My Drive\\Projects\\CEL_S_LAB\\backend\\fastia\\FocalAdhesionTracker.py",
+      "module_docstring": null,
+      "classes": {},
+      "functions": {},
+      "constants": {}
+    },
+    "FocalAdhesionAnalyzer": {
+      "module_name": "backend.fastia.FocalAdhesionAnalyzer",
+      "file_path": "G:\\My Drive\\Projects\\CEL_S_LAB\\backend\\fastia\\FocalAdhesionAnalyzer.py",
+      "module_docstring": null,
+      "classes": {},
+      "functions": {},
+      "constants": {}
+    },
+    "FocalAdhesionClassifier": {
+      "module_name": "backend.fastia.FocalAdhesionClassifier",
+      "file_path": "G:\\My Drive\\Projects\\CEL_S_LAB\\backend\\fastia\\FocalAdhesionClassifier.py",
+      "module_docstring": null,
+      "classes": {},
+      "functions": {},
+      "constants": {}
+    }
+  }
+}
