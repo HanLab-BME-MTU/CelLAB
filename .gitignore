@@ -58,3 +58,4 @@ Test/
 # Cintelia LLM models
 *.gguf
 cellab_env/
+cellab_env/
