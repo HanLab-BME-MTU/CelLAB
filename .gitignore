@@ -55,7 +55,3 @@ HowToRunGui.txt
 # Old v2 files (if any remain)
 static/
 Test/
-# Cintelia LLM models
-*.gguf
-cellab_env/
-cellab_env/

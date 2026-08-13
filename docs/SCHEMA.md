@@ -1,7 +1,7 @@
 # CelLAB Documentation Schema
 
 ## Purpose
-This schema defines the hierarchical documentation format used by cintelia and developers.
+This schema defines the hierarchical documentation format used by CellIntella and developers.
 The LLM reads Level 0 first, matches keywords, then drills into Level 1/2 as needed.
 
 ## Levels
