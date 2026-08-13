@@ -154,7 +154,7 @@ class cornealia :
         segmentor.global_fg = segmentor.foreground       # backward compat for plotters
         return segmentor.objects, segmentor
 
-    def _compute_cell_metrics(self, objects, segmentor, method='segmentation', dot_centroids=None):
+    def _compute_classic_metrics(self, objects, segmentor, method='segmentation', dot_centroids=None):
         
         """
         Compute morphological metrics from segmented cells.
@@ -333,62 +333,41 @@ class cornealia :
                 'n_interior_metrics': len(interior_objects),
                 'n_border_excluded': int((~interior_mask).sum()),
             }
-    def compute_morphometry(self, objects, segmentor, input_image=None, cell_area=None,
-                             machine_metrics=None, dot_centroids=None, image_path=None,
-                             centroids=None, image_dims=None):
+    def compute_collective_order(self, centroids, image_dims):
         """
-        Compute all morphometric measurements from segmentation results.
+        Compute collective order from cell centroids.
 
-        This method computes cell metrics (CD, Ave, SD, CV, HEX), the radial
-        distribution function g(r), interaction potential V(r), and the
-        collective order parameter K.
+        Computes the radial distribution function g(r), interaction potential
+        V(r), quality gate, and collective order parameter K using 5 methods.
 
         Parameters
         ----------
-        objects : list
-            List of regionprops objects from segmentation.
-        segmentor : CellADE
-            The segmentor object (has .H, .W, .labels, etc.).
-        input_image : np.ndarray, optional
-            Original input image (for result storage).
-        cell_area : np.ndarray, optional
-            Preprocessed cell area image.
-        machine_metrics : dict, optional
-            Metrics from machine preprocessing.
-        dot_centroids : np.ndarray, optional
-            (N, 2) green dot centroids for voronoi verification.
-        image_path : str, optional
-            Path to the source image (for result storage).
-        centroids : np.ndarray, optional
-            Pre-computed centroids (N, 2) in (row, col). If provided with
-            image_dims, objects/segmentor are ignored for g(r) computation.
-        image_dims : tuple, optional
-            (H, W) image dimensions for centroid-only mode.
+        centroids : np.ndarray
+            (N, 2) array of cell centroids in (row, col) pixel coordinates.
+        image_dims : tuple
+            (H, W) image dimensions in pixels.
 
         Returns
         -------
         dict
-            Full results including cell metrics, g(r), V(r), K values, etc.
+            Collective order results only:
+            - n_cells, n_interior
+            - K values (5 methods) + K_Vmin, K_gpeak
+            - RMSE values (5 methods)
+            - r0_fit, v_min, g_peak
+            - Quality gate: reliable, has_peak, has_crossing, has_trough,
+              R2_damped, R2_full, A_damped, xi_damped, lambda_damped,
+              r_excl_damped, phi_damped, SNR, ACF1
+            - Curves: r_values, g_r, g_r_smooth, v_r, r_valid, v_r_valid
+            - Fitting regions: r_fit_raw, v_fit_raw, r_fit_guided,
+              v_fit_guided, r_fit_ds, v_fit_ds
+            - Fit parameters: popt_qc, coeffs_qr, coeffs_qg, popt_mr,
+              popt_mg, popt_ds
         """
 
-        if centroids is not None and image_dims is not None:
-            # --- Centroid-only mode ---
-            cell_metrics_seg = {}
-            cell_metrics_vor = {}
-            cell_H, cell_W = image_dims
-            y_coords = centroids[:, 0]
-            x_coords = centroids[:, 1]
-        else:
-            # --- Normal mode: compute metrics from segmentation ---
-            cell_metrics_seg = self._compute_cell_metrics(objects, segmentor, method='segmentation')
-            cell_metrics_vor = self._compute_cell_metrics(objects, segmentor, method='voronoi',
-                                                        dot_centroids=dot_centroids)
-
-            centroids = np.array([o.centroid for o in objects])
-            y_coords = centroids[:, 0]
-            x_coords = centroids[:, 1]
-
-            cell_H, cell_W = segmentor.H, segmentor.W
+        cell_H, cell_W = image_dims
+        y_coords = centroids[:, 0]
+        x_coords = centroids[:, 1]
 
         MAX_R = int(min(cell_H, cell_W) * self.exclusion_ratio)
 
@@ -841,9 +820,6 @@ class cornealia :
             print(f"  K_gpeak = K × (g_peak-1) = {K_gpeak:.4f}" if not np.isnan(K_gpeak) else "  K_gpeak = NaN")
 
         return {
-            'image_path':      str(image_path),
-            'machine_metrics': machine_metrics,
-            'dot_centroids':   dot_centroids,
             'n_cells':         len(y_coords),
             'n_interior':      len(interior_indices),
             # 5 K values
@@ -878,52 +854,34 @@ class cornealia :
             'phi_damped':      round(_phi_fit, 4) if not np.isnan(_phi_fit) else np.nan,
             'SNR':             round(_SNR, 3),
             'ACF1':            round(_acf1, 3),
+            # curves
             'r_values':        r_values,
             'g_r':             g_r,
             'g_r_smooth':      g_r_smooth,
             'v_r':             v_r,
             'r_valid':         r_valid,
             'v_r_valid':       v_r_valid,
-            # fitting regions (for plotting)
+            # fitting regions
             'r_fit_raw':       r_fit_raw,
             'v_fit_raw':       v_fit_raw,
             'r_fit_guided':    r_fit_guided,
             'v_fit_guided':    v_fit_guided,
             'r_fit_ds':        r_fit_ds,
             'v_fit_ds':        v_fit_ds,
-            # fit parameters (for plotting)
+            # fit parameters
             'popt_qc':         _popt_qc if _fitted_qc is not None else None,
             'coeffs_qr':       _coeffs_qr,
             'coeffs_qg':       _coeffs_qg,
             'popt_mr':         _popt_mr,
             'popt_mg':         _popt_mg,
             'popt_ds':         _popt_ds,
-            # kept for plotting
-            'segmentor':       segmentor,
-            'objects':         objects,
-            'cell_area':       cell_area,
-            'input_image':     input_image,
-            # processor parameters
-            'fcm_method':         self.fcm_method,
-            'shell_thickness':    self.shell_thickness,
-            'exclusion_ratio':    self.exclusion_ratio,
-            'SAVGOL_WINDOW':      self.SAVGOL_WINDOW,
-            'SAVGOL_ORDER':       self.SAVGOL_ORDER,
-            'fitting_half_width': self.fitting_half_width,
-            'fitting_method':     self.fitting_method,
-            'pixel_size':         self.pixel_size,
-            # segmentation metrics (scientific)
-            **cell_metrics_seg,
-            # voronoi metrics (machine verification)
-            'voronoi_metrics': cell_metrics_vor,
         }
 
     def collective_order(self, image_path, centroids=None, image_dims=None):
         """
-        Full pipeline: load image → segment → compute all morphometry.
+        Full pipeline: load image → segment → classic metrics → collective order.
 
-        Backward-compatible convenience method. Calls segmentation() then
-        compute_morphometry() internally.
+        Assembles results from all components into one dict.
 
         Parameters
         ----------
@@ -937,19 +895,20 @@ class cornealia :
         Returns
         -------
         dict
-            Full results (same as compute_morphometry).
+            Combined results from all pipeline stages.
         """
         if centroids is not None and image_dims is not None:
-            # Centroid-only mode: no image loading or segmentation
-            return self.compute_morphometry(
-                objects=None, segmentor=None,
-                centroids=centroids, image_dims=image_dims,
-                image_path=image_path,
-            )
+            # Centroid-only mode: skip image loading and segmentation
+            co_results = self.compute_collective_order(centroids, image_dims)
+            co_results['image_path'] = str(image_path)
+            return co_results
 
-        # --- Normal mode: load + preprocess + segment ---
+        # --- Normal mode: full pipeline ---
+
+        # 1. Load image
         input_image = self._load_image(image_path)
 
+        # 2. Preprocess (if machine output)
         if self.is_input_image_machine_output:
             cell_area, machine_metrics, dot_centroids = self.cleaning_preprocessing(input_image)
         else:
@@ -960,14 +919,47 @@ class cornealia :
         if self.invert_image:
             cell_area = 255 - cell_area
 
+        # 3. Segmentation
         objects, segmentor = self.segmentation(cell_area)
+        centroids = np.array([o.centroid for o in objects])
 
-        return self.compute_morphometry(
-            objects=objects, segmentor=segmentor,
-            input_image=input_image, cell_area=cell_area,
-            machine_metrics=machine_metrics, dot_centroids=dot_centroids,
-            image_path=image_path,
-        )
+        # 4. Classic metrics
+        classic_metrics_seg = self._compute_classic_metrics(objects, segmentor, method='segmentation')
+        classic_metrics_vor = self._compute_classic_metrics(objects, segmentor, method='voronoi',
+                                                           dot_centroids=dot_centroids)
+
+        # 5. Collective order
+        co_results = self.compute_collective_order(centroids, (segmentor.H, segmentor.W))
+
+        # 6. Assemble full results
+        results = {
+            # image data
+            'image_path':      str(image_path),
+            'input_image':     input_image,
+            'cell_area':       cell_area,
+            'machine_metrics': machine_metrics,
+            'dot_centroids':   dot_centroids,
+            # segmentation data (plain arrays — picklable)
+            'segmentation': {
+                'H': segmentor.H,
+                'W': segmentor.W,
+                'labels': segmentor.labels,
+                'enhanced_image': segmentor.enhanced_image,
+                'blobs': segmentor.blobs,
+                'global_fg': segmentor.global_fg,
+                'centroids': centroids,
+                'areas': np.array([o.area for o in objects]),
+                'cell_labels': np.array([o.label for o in objects]),
+                'n_cells': len(objects),
+            },
+            # classic metrics
+            **classic_metrics_seg,
+            'voronoi_metrics': classic_metrics_vor,
+            # collective order
+            **co_results,
+        }
+
+        return results
 
     def _compute_residual_field(self, co_results):
         """

@@ -51,12 +51,7 @@ from project_manager import CellabProject, DATA_COPY, DATA_LINK, DATA_MOVE
 # ─── CellVisia backend (parametric feature-tree engine) ─────────────────────
 # Import the module-level singleton; Flask routes mutate pipelines through it.
 # Importing cellvisia also imports operations/*.py which register feature types.
-try:
-    from cellvisia.cellvisia import manager as cv_manager
-    print("✅ CellVisia engine loaded")
-except ImportError:
-    cv_manager = None
-    print("⚠️ CellVisia engine not available")
+from cellvisia.cellvisia import manager as cv_manager
 
 # Associa — Signal Coupling module
 try:
@@ -811,11 +806,10 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir):
                 if isinstance(v, dict):
                     all_params.update(v)
 
-            return _run_cornealia_analysis(project, results_dir, str(resolved), all_params, 'segmentation')
+            return _run_cornealia_segmentation(project, results_dir, str(resolved), all_params)
 
         # ── STEP: MORPHOMETRY ─────────────────────────
         if step_id == 'morphometry':
-            # Same as segmentation but different plots
             input_file = all_params.get('input_file', '')
             if not input_file:
                 import_params = project.load_params(ws_id, pipeline_id, 'import')
@@ -843,7 +837,13 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir):
                 if isinstance(v, dict):
                     all_params.update(v)
 
-            return _run_cornealia_analysis(project, results_dir, str(resolved), all_params, 'morphometry')
+            # Load segmentation results from previous step
+            seg_results_dir = project.get_results_dir(ws_id, pipeline_id, 'segmentation')
+            seg_pickle = seg_results_dir / "segmentation_results.pkl"
+            if not seg_pickle.exists():
+                return {"status": "error", "error_msg": "Run Cell Segmentation first."}
+
+            return _run_cornealia_morphometry(project, results_dir, str(resolved), all_params, seg_pickle)
 
         if step_id == 'batch':
             return {"status": "error", "error_msg": "Batch processing: TODO"}
@@ -857,19 +857,9 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir):
         return {"status": "error", "error_msg": str(e)}
 
 
-def _run_cornealia_analysis(project, results_dir, image_path, all_params, focus):
-    """
-    Run cornealia.collective_order() and generate plots based on focus.
-    focus: 'segmentation' or 'morphometry'
-    """
-    import matplotlib.pyplot as plt
-    import json
-    import numpy as np
-    import pickle
-
-    from cornealia.cornealia import cornealia as Cornealia
-
-    config = {
+def _cornealia_config(all_params):
+    """Build Cornealia engine config from GUI params."""
+    return {
         'pixel_size': float(all_params.get('pixel_size', 0.58)),
         'is_input_image_machine_output': all_params.get('is_machine_output', 'Yes') == 'Yes',
         'fcm_method': all_params.get('fcm_method', 'local'),
@@ -883,19 +873,17 @@ def _run_cornealia_analysis(project, results_dir, image_path, all_params, focus)
         'verbose': True,
     }
 
-    engine = Cornealia(**config)
-    print("  [DIAG] Engine created, running collective_order...")
-    results = engine.collective_order(image_path)
-    print(f"  [DIAG] collective_order done, {results.get('n_cells', '?')} cells")
 
-    # ── Extract plotter-safe data (no class instances, no regionprops) ──
+def _extract_safe_results(results):
+    """Extract plotter-safe data from Cornealia results (no class instances)."""
+    import numpy as np
+
     segmentor = results.get('segmentor')
     safe_results = {}
 
-    # Copy all scalars, strings, bools, numpy arrays
     for k, v in results.items():
         if k in ('segmentor', 'objects'):
-            continue  # handle separately
+            continue
         if isinstance(v, (int, float, str, bool)):
             safe_results[k] = v
         elif isinstance(v, (np.integer,)):
@@ -909,7 +897,6 @@ def _run_cornealia_analysis(project, results_dir, image_path, all_params, focus)
         elif isinstance(v, dict):
             safe_results[k] = v
 
-    # Extract segmentor data the plotter needs
     if segmentor is not None:
         safe_results['_segmentor_data'] = {
             'H': segmentor.H,
@@ -920,8 +907,6 @@ def _run_cornealia_analysis(project, results_dir, image_path, all_params, focus)
             'global_fg': segmentor.global_fg,
         }
 
-    # Extract objects data (regionprops → plain arrays)
-    # Plotter uses: o.centroid, o.area, o.label
     objects = results.get('objects', [])
     if objects:
         safe_results['_objects_data'] = {
@@ -931,28 +916,177 @@ def _run_cornealia_analysis(project, results_dir, image_path, all_params, focus)
             'count': len(objects),
         }
 
-    # Keep image arrays
     for img_key in ('input_image', 'cell_area', 'dot_centroids'):
         if img_key in results and results[img_key] is not None:
             safe_results[img_key] = results[img_key]
 
+    return safe_results
+
+
+def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
+    """
+    Run segmentation only: detect cell boundaries and centroids.
+    Saves segmentation data to pickle for morphometry step.
+    """
+    import matplotlib.pyplot as plt
+    import json
+    import numpy as np
+    import pickle
+    import cv2
+
+    from cornealia.cornealia import cornealia as Cornealia
+
+    config = _cornealia_config(all_params)
+    engine = Cornealia(**config)
+
+    # Load and preprocess
+    print("  [DIAG] Loading image...")
+    input_image = engine._load_image(image_path)
+
+    if config['is_input_image_machine_output']:
+        cell_area, machine_metrics, dot_centroids = engine.cleaning_preprocessing(input_image)
+    else:
+        cell_area = input_image
+        machine_metrics = None
+        dot_centroids = None
+
+    if engine.invert_image:
+        cell_area = 255 - cell_area
+
+    # Run segmentation
+    print("  [DIAG] Running segmentation...")
+    objects, segmentor = engine.segmentation(cell_area)
+    n_cells = len(objects)
+    print(f"  [DIAG] Segmentation done, {n_cells} cells detected")
+
+    # Save segmentation results for morphometry step
+    seg_data = {
+        'objects': objects,
+        'segmentor': segmentor,
+        'input_image': input_image,
+        'cell_area': cell_area,
+        'machine_metrics': machine_metrics,
+        'dot_centroids': dot_centroids,
+        'image_path': image_path,
+    }
+    with open(results_dir / "segmentation_results.pkl", 'wb') as f:
+        pickle.dump(seg_data, f)
+    print("  [DIAG] Segmentation pickle saved")
+
+    # Generate segmentation preview plot
+    plots_dir = results_dir / "plots"
+    plots_dir.mkdir(exist_ok=True)
+
+    centroids = np.array([o.centroid for o in objects])
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Original / cell area
+    axes[0].imshow(cell_area)
+    axes[0].set_title(f'Cell Area ({cell_area.shape[1]}×{cell_area.shape[0]})')
+    axes[0].axis('off')
+
+    # Segmentation overlay
+    axes[1].imshow(cell_area)
+    axes[1].imshow(segmentor.labels, alpha=0.3, cmap='nipy_spectral')
+    if len(centroids) > 0:
+        axes[1].plot(centroids[:, 1], centroids[:, 0], 'r.', markersize=2, alpha=0.5)
+    axes[1].set_title(f'Segmentation ({n_cells} cells)')
+    axes[1].axis('off')
+
+    plt.tight_layout()
+    plt.savefig(str(plots_dir / "segmentation_preview.png"), dpi=150, bbox_inches='tight')
+    plt.close('all')
+
+    # Save segmentor data for plotting
+    safe_seg = {
+        '_segmentor_data': {
+            'H': segmentor.H,
+            'W': segmentor.W,
+            'enhanced_image': segmentor.enhanced_image,
+            'labels': segmentor.labels,
+            'blobs': segmentor.blobs,
+            'global_fg': segmentor.global_fg,
+        },
+        '_objects_data': {
+            'centroids': centroids,
+            'areas': np.array([o.area for o in objects]),
+            'labels': np.array([o.label for o in objects]),
+            'count': n_cells,
+        },
+        'cell_area': cell_area,
+        'n_cells': n_cells,
+    }
+    with open(results_dir / "full_results.pkl", 'wb') as f:
+        pickle.dump(safe_seg, f)
+
+    # Clean up
+    engine._ocr_reader = None
+    del engine
+    import gc
+    gc.collect()
+
+    return {
+        "status": "done",
+        "outputs": {
+            "n_cells": n_cells,
+            "image_size": f"{cell_area.shape[1]} x {cell_area.shape[0]}",
+        },
+    }
+
+
+def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg_pickle):
+    """
+    Run morphometric analysis using saved segmentation results.
+    Computes cell metrics, g(r), V(r), and collective order K.
+    """
+    import json
+    import numpy as np
+    import pickle
+
+    from cornealia.cornealia import cornealia as Cornealia
+
+    # Load segmentation results
+    with open(seg_pickle, 'rb') as f:
+        seg_data = pickle.load(f)
+
+    objects = seg_data['objects']
+    segmentor = seg_data['segmentor']
+    input_image = seg_data['input_image']
+    cell_area = seg_data['cell_area']
+    machine_metrics = seg_data['machine_metrics']
+    dot_centroids = seg_data['dot_centroids']
+
+    config = _cornealia_config(all_params)
+    engine = Cornealia(**config)
+
+    # Run morphometry on existing segmentation
+    print("  [DIAG] Running morphometric analysis...")
+    results = engine.compute_morphometry(
+        objects=objects, segmentor=segmentor,
+        input_image=input_image, cell_area=cell_area,
+        machine_metrics=machine_metrics, dot_centroids=dot_centroids,
+        image_path=image_path,
+    )
+    print(f"  [DIAG] Morphometry done, K={results.get('K', 'N/A')}")
+
+    # Extract safe results
+    safe_results = _extract_safe_results(results)
     print("  [DIAG] Safe results extracted")
 
-    # Clean up engine BEFORE saving (OCR reader + PyTorch)
+    # Clean up
     engine._ocr_reader = None
     del engine, results
     import gc
     gc.collect()
-    print("  [DIAG] Engine cleaned up")
 
     # Save scalar results as JSON
     scalar_results = {k: v for k, v in safe_results.items()
                       if isinstance(v, (int, float, str, bool))}
     with open(results_dir / "analysis_results.json", 'w') as f:
         json.dump(scalar_results, f, indent=2, default=str)
-    print("  [DIAG] JSON saved")
 
-    # Save plotter-safe results as pickle (no class instances)
+    # Save full results as pickle
     try:
         with open(results_dir / "full_results.pkl", 'wb') as f:
             pickle.dump(safe_results, f)
@@ -960,12 +1094,10 @@ def _run_cornealia_analysis(project, results_dir, image_path, all_params, focus)
     except Exception as pkl_err:
         print(f"  [DIAG] Pickle error: {pkl_err}")
 
-    # Available plot types for this analysis
     available_plots = ['segmentation', 'radial_distribution', 'potential',
                        'fitting', 'comprehensive', 'publication_gr',
                        'publication_vr', 'pipeline_figure']
 
-    print("  [DIAG] About to return response")
     return {
         "status": "done",
         "outputs": {
@@ -975,6 +1107,10 @@ def _run_cornealia_analysis(project, results_dir, image_path, all_params, focus)
             "reliable": scalar_results.get('reliable', False),
             "g_peak": scalar_results.get('g_peak', 'N/A'),
             "available_plots": available_plots,
+            "CD_calc": scalar_results.get('CD_calc', 'N/A'),
+            "Ave_calc": scalar_results.get('Ave_calc', 'N/A'),
+            "CV_calc": scalar_results.get('CV_calc', 'N/A'),
+            "HEX_calc": scalar_results.get('HEX_calc', 'N/A'),
         },
     }
 
@@ -7628,12 +7764,12 @@ def browse_open():
 
 
 # ═════════════════════════════════════════════
-# CellIntella — AI ASSISTANT
+# cintelia — AI ASSISTANT
 # ═════════════════════════════════════════════
 
-_CellIntella = None
-_CellIntella_loading = False
-_CellIntella_config = {
+_cintelia = None
+_cintelia_loading = False
+_cintelia_config = {
     'n_ctx': 4096,
     'n_threads': 10,
     'timeout': 500,
@@ -7747,7 +7883,7 @@ def _retrieve_docs(query):
     return '\n\n---\n\n'.join(context_parts) if context_parts else ''
 
 
-CellIntella_SYSTEM_PROMPT = """You are CellIntella (Cell Intelligent Autonomous Interface), the AI assistant built into CelLAB (Cellular Analysis Workbench).
+cintelia_SYSTEM_PROMPT = """You are cintelia (Cell Intelligent Autonomous Interface), the AI assistant built into CelLAB (Cellular Analysis Workbench).
 You were created by the Han Mechanobiology Lab at Michigan Tech.
 
 CRITICAL RULES:
@@ -7766,7 +7902,7 @@ You run locally on Llama 3.2 3B — all conversations are private.
 def _collect_scope_context(scope):
     """
     Collect CelLAB project state based on scope level.
-    Returns a concise text summary for injection into CellIntella prompt.
+    Returns a concise text summary for injection into cintelia prompt.
     """
     if not scope or scope.get('level') == 'none':
         return ''
@@ -7783,22 +7919,22 @@ def _collect_scope_context(scope):
     if level == 'pipeline':
         ws_id = scope.get('wsId', '')
         pipeline_id = scope.get('pipelineId', '')
-        print(f"[CellIntella scope] Looking for ws={ws_id}, pipeline={pipeline_id}")
-        print(f"[CellIntella scope] Available dirs: {[d.name for d in project.workspaces_dir.iterdir() if d.is_dir()]}")
+        print(f"[cintelia scope] Looking for ws={ws_id}, pipeline={pipeline_id}")
+        print(f"[cintelia scope] Available dirs: {[d.name for d in project.workspaces_dir.iterdir() if d.is_dir()]}")
 
         # Try to find workspace — wsId from frontend might not match backend dirs
         if not ws_id or not (project.workspaces_dir / ws_id / pipeline_id / 'pipeline.json').exists():
             found = False
             for ws_dir in sorted(project.workspaces_dir.iterdir()):
                 if ws_dir.is_dir():
-                    print(f"[CellIntella scope] Checking {ws_dir.name}: {[p.name for p in ws_dir.iterdir() if p.is_dir()]}")
+                    print(f"[cintelia scope] Checking {ws_dir.name}: {[p.name for p in ws_dir.iterdir() if p.is_dir()]}")
                     if (ws_dir / pipeline_id / 'pipeline.json').exists():
                         ws_id = ws_dir.name
                         found = True
-                        print(f"[CellIntella scope] Found pipeline in {ws_id}")
+                        print(f"[cintelia scope] Found pipeline in {ws_id}")
                         break
             if not found:
-                print(f"[CellIntella scope] Pipeline {pipeline_id} NOT FOUND in any workspace")
+                print(f"[cintelia scope] Pipeline {pipeline_id} NOT FOUND in any workspace")
 
         if ws_id and pipeline_id:
             try:
@@ -7845,7 +7981,7 @@ def _collect_scope_context(scope):
                         except:
                             pass
 
-                print(f"[CellIntella scope] Pipeline {pipeline_id}: {len(step_dirs)} step dirs, context = {len(lines)} lines", flush=True)
+                print(f"[cintelia scope] Pipeline {pipeline_id}: {len(step_dirs)} step dirs, context = {len(lines)} lines", flush=True)
 
                 # If batch pipeline, try to include result summary
                 if p_type == 'cornealia_batch':
@@ -7863,9 +7999,9 @@ def _collect_scope_context(scope):
                                     if len(vals) > 0:
                                         lines.append(f'    {col}: mean={vals.mean():.4f}, std={vals.std():.4f}, range=[{vals.min():.4f}, {vals.max():.4f}]')
                         except Exception as ex:
-                            print(f"[CellIntella scope] CSV read error: {ex}", flush=True)
+                            print(f"[cintelia scope] CSV read error: {ex}", flush=True)
             except Exception as ex:
-                print(f"[CellIntella scope] Error loading pipeline {pipeline_id}: {ex}", flush=True)
+                print(f"[cintelia scope] Error loading pipeline {pipeline_id}: {ex}", flush=True)
                 lines.append(f'Pipeline: {pipeline_id} (error loading: {ex})')
 
     elif level == 'workspace':
@@ -7903,48 +8039,48 @@ def _collect_scope_context(scope):
     return '\n'.join(lines) + '\n'
 
 
-def _get_CellIntella():
-    """Lazy-load CellIntella manager."""
-    global _CellIntella, _CellIntella_loading
-    if _CellIntella is not None:
-        return _CellIntella
-    if _CellIntella_loading:
+def _get_cintelia():
+    """Lazy-load cintelia manager."""
+    global _cintelia, _cintelia_loading
+    if _cintelia is not None:
+        return _cintelia
+    if _cintelia_loading:
         return None
 
-    _CellIntella_loading = True
+    _cintelia_loading = True
     try:
         sys.path.insert(0, os.path.join(BACKEND_DIR))
-        from cellintella.cellintella_manager import CellIntella
-        _CellIntella = CellIntella(mode='local', verbose=True)
+        from cintelia.cintelia_manager import cintelia
+        _cintelia = cintelia(mode='local', verbose=True)
 
         # Override process wrapper settings with our config
-        if _CellIntella.local_ai is None and not _CellIntella.local_ai_attempted:
-            from cellintella.cellintella_process_wrapper import CellIntellaProcessWrapper
-            _CellIntella.local_ai_attempted = True
-            _CellIntella.local_ai = CellIntellaProcessWrapper(
-                n_threads=_CellIntella_config['n_threads'],
-                n_ctx=_CellIntella_config['n_ctx'],
+        if _cintelia.local_ai is None and not _cintelia.local_ai_attempted:
+            from cintelia.cintelia_process_wrapper import cinteliaProcessWrapper
+            _cintelia.local_ai_attempted = True
+            _cintelia.local_ai = cinteliaProcessWrapper(
+                n_threads=_cintelia_config['n_threads'],
+                n_ctx=_cintelia_config['n_ctx'],
                 verbose=True,
-                timeout=_CellIntella_config['timeout'],
+                timeout=_cintelia_config['timeout'],
             )
 
-        print(f"✅ CellIntella initialized (n_ctx={_CellIntella_config['n_ctx']}, n_threads={_CellIntella_config['n_threads']})")
-        return _CellIntella
+        print(f"✅ cintelia initialized (n_ctx={_cintelia_config['n_ctx']}, n_threads={_cintelia_config['n_threads']})")
+        return _cintelia
     except Exception as e:
-        print(f"❌ CellIntella init failed: {e}")
+        print(f"❌ cintelia init failed: {e}")
         traceback.print_exc()
-        _CellIntella_loading = False
+        _cintelia_loading = False
         return None
 
 
-@app.route('/api/CellIntella/status', methods=['GET'])
-def CellIntella_status():
-    """Check CellIntella availability."""
-    if _CellIntella is not None:
+@app.route('/api/cintelia/status', methods=['GET'])
+def cintelia_status():
+    """Check cintelia availability."""
+    if _cintelia is not None:
         return api_response({
             "available": True,
             "loaded": True,
-            "mode": _CellIntella.mode,
+            "mode": _cintelia.mode,
         })
     return api_response({
         "available": True,
@@ -7953,14 +8089,14 @@ def CellIntella_status():
     })
 
 
-@app.route('/api/CellIntella/query', methods=['POST'])
-def CellIntella_query():
+@app.route('/api/cintelia/query', methods=['POST'])
+def cintelia_query():
     """
-    Send a message to CellIntella with hierarchical doc context.
+    Send a message to cintelia with hierarchical doc context.
     Body: { "message": "How do I change pixel size?", "context_type": null }
     """
     body = request.get_json()
-    print(f"[CellIntella QUERY] body keys: {list(body.keys())}, scope: {body.get('scope')}", flush=True)
+    print(f"[cintelia QUERY] body keys: {list(body.keys())}, scope: {body.get('scope')}", flush=True)
     try:
         body = request.get_json()
         message = body.get('message', '').strip()
@@ -7997,10 +8133,10 @@ def CellIntella_query():
         if not message:
             return api_error("'message' is required")
 
-        ai = _get_CellIntella()
+        ai = _get_cintelia()
         if ai is None:
             return api_response({
-                "response": "CellIntella is loading the Llama model... please wait 2-3 minutes and try again.",
+                "response": "cintelia is loading the Llama model... please wait 2-3 minutes and try again.",
                 "mode": "loading",
             })
 
@@ -8009,12 +8145,12 @@ def CellIntella_query():
 
         # Collect scope context (project/workspace/pipeline state)
         scope_context = _collect_scope_context(scope)
-        print(f"[CellIntella] scope={scope}, context_len={len(scope_context)}")
+        print(f"[cintelia] scope={scope}, context_len={len(scope_context)}")
         if scope_context:
-            print(f"[CellIntella] State injected:\n{scope_context[:500]}")
+            print(f"[cintelia] State injected:\n{scope_context[:500]}")
 
         # Build enriched prompt — state first so LLM sees it prominently
-        enriched_message = f"[System]\n{CellIntella_SYSTEM_PROMPT}\n\n"
+        enriched_message = f"[System]\n{cintelia_SYSTEM_PROMPT}\n\n"
 
         if scope_context:
             enriched_message += f"{scope_context}\n"
@@ -8056,74 +8192,74 @@ def CellIntella_query():
         })
 
 
-@app.route('/api/CellIntella/history', methods=['GET'])
-def CellIntella_history():
+@app.route('/api/cintelia/history', methods=['GET'])
+def cintelia_history():
     """Get conversation history."""
-    if _CellIntella is None:
+    if _cintelia is None:
         return api_response([])
-    return api_response(_CellIntella.conversation_history)
+    return api_response(_cintelia.conversation_history)
 
 
-@app.route('/api/CellIntella/clear', methods=['POST'])
-def CellIntella_clear():
+@app.route('/api/cintelia/clear', methods=['POST'])
+def cintelia_clear():
     """Clear conversation history."""
-    if _CellIntella is not None:
-        _CellIntella.conversation_history = []
+    if _cintelia is not None:
+        _cintelia.conversation_history = []
     return api_response({"cleared": True})
 
 
-@app.route('/api/CellIntella/config', methods=['GET'])
-def CellIntella_config_get():
-    """Get current CellIntella config."""
-    kv_cache_mb = int(_CellIntella_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
+@app.route('/api/cintelia/config', methods=['GET'])
+def cintelia_config_get():
+    """Get current cintelia config."""
+    kv_cache_mb = int(_cintelia_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
     return api_response({
-        "n_ctx": _CellIntella_config['n_ctx'],
-        "n_threads": _CellIntella_config['n_threads'],
-        "timeout": _CellIntella_config['timeout'],
+        "n_ctx": _cintelia_config['n_ctx'],
+        "n_threads": _cintelia_config['n_threads'],
+        "timeout": _cintelia_config['timeout'],
         "kv_cache_mb": kv_cache_mb,
         "model_mb": 1918,
-        "loaded": _CellIntella is not None and _CellIntella.local_ai is not None,
+        "loaded": _cintelia is not None and _cintelia.local_ai is not None,
     })
 
 
-@app.route('/api/CellIntella/config', methods=['POST'])
-def CellIntella_config_set():
+@app.route('/api/cintelia/config', methods=['POST'])
+def cintelia_config_set():
     """
-    Update CellIntella config and reload model.
+    Update cintelia config and reload model.
     Body: { "n_ctx": 8192 } or { "n_threads": 12 }
     """
-    global _CellIntella, _CellIntella_loading
+    global _cintelia, _cintelia_loading
     body = request.get_json()
 
     changed = False
     for key in ('n_ctx', 'n_threads', 'timeout'):
         if key in body:
             new_val = int(body[key])
-            if new_val != _CellIntella_config[key]:
-                _CellIntella_config[key] = new_val
+            if new_val != _cintelia_config[key]:
+                _cintelia_config[key] = new_val
                 changed = True
 
     if not changed:
         return api_response({"reloaded": False, "reason": "no changes"})
 
     # Kill existing model
-    print(f"[CellIntella] Reloading with config: {_CellIntella_config}", flush=True)
+    print(f"[cintelia] Reloading with config: {_cintelia_config}", flush=True)
     try:
-        if _CellIntella and _CellIntella.local_ai:
-            _CellIntella.local_ai.shutdown()
+        if _cintelia and _cintelia.local_ai:
+            _cintelia.local_ai.shutdown()
     except:
         pass
-    _CellIntella = None
-    _CellIntella_loading = False
+    _cintelia = None
+    _cintelia_loading = False
 
     # Reload
-    ai = _get_CellIntella()
+    ai = _get_cintelia()
 
-    kv_cache_mb = int(_CellIntella_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
+    kv_cache_mb = int(_cintelia_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
     return api_response({
         "reloaded": True,
-        "n_ctx": _CellIntella_config['n_ctx'],
-        "n_threads": _CellIntella_config['n_threads'],
+        "n_ctx": _cintelia_config['n_ctx'],
+        "n_threads": _cintelia_config['n_threads'],
         "kv_cache_mb": kv_cache_mb,
     })
 
@@ -8261,8 +8397,8 @@ def _generate_cornealia_batch_report(project, ws_id, pipeline_id):
     # ── 4. Interpretation Placeholder ──
     lines.append(f'## 4. Interpretation')
     lines.append(f'')
-    lines.append(f'<!-- CellIntella placeholder: AI-generated narrative will go here in a future version -->')
-    lines.append(f'*No AI interpretation generated. Enable CellIntella narrative in a future version.*')
+    lines.append(f'<!-- cintelia placeholder: AI-generated narrative will go here in a future version -->')
+    lines.append(f'*No AI interpretation generated. Enable cintelia narrative in a future version.*')
     lines.append(f'')
 
     # ── Footer ──
