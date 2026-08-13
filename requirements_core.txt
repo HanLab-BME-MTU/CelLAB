@@ -8,3 +8,6 @@ seaborn
 flask
 tqdm
 requests
+easyocr
+scikit-fuzzy
+psutil
