@@ -668,9 +668,9 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir):
     
     Steps:
       - import: load image, preprocess if machine output, show preview
-      - segmentation: runs collective_order, saves segmentation plot
+      - segmentation: runs collective_order_pipeline, saves segmentation plot
       - morphometry: uses existing results, generates analysis plots
-      - batch: runs collective_order_batch on a folder
+      - batch: runs collective_order_pipeline_batch on a folder
     """
     import matplotlib.pyplot as plt
     import json
@@ -959,15 +959,17 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
     n_cells = len(objects)
     print(f"  [DIAG] Segmentation done, {n_cells} cells detected")
 
-    # Save segmentation results for morphometry step
+    # Save segmentation results for morphometry step (plain arrays only)
+    centroids = np.array([o.centroid for o in objects])
     seg_data = {
-        'objects': objects,
-        'segmentor': segmentor,
+        'centroids': centroids,
+        'image_dims': (segmentor.H, segmentor.W),
         'input_image': input_image,
         'cell_area': cell_area,
         'machine_metrics': machine_metrics,
         'dot_centroids': dot_centroids,
         'image_path': image_path,
+        'n_cells': n_cells,
     }
     with open(results_dir / "segmentation_results.pkl", 'wb') as f:
         pickle.dump(seg_data, f)
@@ -1037,7 +1039,7 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
 
 def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg_pickle):
     """
-    Run morphometric analysis using saved segmentation results.
+    Run morphometric analysis using saved segmentation centroids.
     Computes cell metrics, g(r), V(r), and collective order K.
     """
     import json
@@ -1046,26 +1048,25 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
 
     from cornealia.cornealia import cornealia as Cornealia
 
-    # Load segmentation results
+    # Load segmentation results (plain arrays)
+    print("  [DIAG] Loading segmentation data...")
     with open(seg_pickle, 'rb') as f:
         seg_data = pickle.load(f)
-
-    objects = seg_data['objects']
-    segmentor = seg_data['segmentor']
-    input_image = seg_data['input_image']
-    cell_area = seg_data['cell_area']
-    machine_metrics = seg_data['machine_metrics']
-    dot_centroids = seg_data['dot_centroids']
+    print("  [DIAG] Loaded OK")
 
     config = _cornealia_config(all_params)
     engine = Cornealia(**config)
 
-    # Run morphometry on existing segmentation
+    # Run morphometry using centroid-only mode
     print("  [DIAG] Running morphometric analysis...")
     results = engine.compute_morphometry(
-        objects=objects, segmentor=segmentor,
-        input_image=input_image, cell_area=cell_area,
-        machine_metrics=machine_metrics, dot_centroids=dot_centroids,
+        objects=None, segmentor=None,
+        centroids=seg_data['centroids'],
+        image_dims=seg_data['image_dims'],
+        input_image=seg_data['input_image'],
+        cell_area=seg_data['cell_area'],
+        machine_metrics=seg_data['machine_metrics'],
+        dot_centroids=seg_data['dot_centroids'],
         image_path=image_path,
     )
     print(f"  [DIAG] Morphometry done, K={results.get('K', 'N/A')}")
@@ -1121,7 +1122,7 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
     
     Steps:
       - batch_setup: validates folder, returns image count
-      - batch_run: runs collective_order_batch, saves CSV + JSON
+      - batch_run: runs collective_order_pipeline_batch, saves CSV + JSON
       - batch_results: no-op (results already saved)
     """
     import matplotlib

@@ -877,7 +877,7 @@ class cornealia :
             'popt_ds':         _popt_ds,
         }
 
-    def collective_order(self, image_path, centroids=None, image_dims=None):
+    def collective_order_pipeline(self, image_path, centroids=None, image_dims=None):
         """
         Full pipeline: load image → segment → classic metrics → collective order.
 
@@ -963,13 +963,13 @@ class cornealia :
 
     def _compute_residual_field(self, co_results):
         """
-        Build Delaunay truss from collective_order results and compute
+        Build Delaunay truss from collective_order_pipeline results and compute
         per-node residual force vectors from the fitted interaction potential.
 
         Parameters
         ----------
         co_results : dict
-            Output of collective_order().
+            Output of collective_order_pipeline().
 
         Returns
         -------
@@ -977,16 +977,15 @@ class cornealia :
         """
         from scipy.spatial import Delaunay
 
-        objects = co_results.get('objects', [])
-        if len(objects) < 10:
+        seg = co_results.get('segmentation', {})
+        if not seg or seg.get('n_cells', 0) < 10:
             return None
 
-        segmentor = co_results.get('segmentor')
-        H, W = segmentor.H, segmentor.W
+        H, W = seg['H'], seg['W']
         px = self.pixel_size
 
-        # Extract centroids and interior mask (same logic as collective_order)
-        centroids = np.array([o.centroid for o in objects])  # (N, 2) row, col
+        # Extract centroids and interior mask
+        centroids = seg['centroids']  # (N, 2) row, col
         MAX_R = int(min(H, W) * self.exclusion_ratio)
         y, x = centroids[:, 0], centroids[:, 1]
         interior = ((y >= MAX_R) & (y <= H - MAX_R) &
@@ -1101,12 +1100,12 @@ class cornealia :
         Returns
         -------
         dict containing:
-            - All collective_order outputs (K_ds, quality gate, g(r), fitted params, ...)
+            - All collective_order_pipeline outputs (K_ds, quality gate, g(r), fitted params, ...)
             - Residual force field (nodes, edges, forces, vectors, hot spots)
             - Scalar summaries (mean_F, frac_compression, spatial_cv)
         """
         # Run collective order (segmentation + fitting + quality gate)
-        co = self.collective_order(image_path)
+        co = self.collective_order_pipeline(image_path)
 
         # Compute residual field from collective order results
         rf = self._compute_residual_field(co)
@@ -1164,7 +1163,7 @@ class cornealia :
     def _collective_order_safe(self, image_path):
         """Wrapper for parallel use — catches exceptions so one failure doesn't kill the pool."""
         try:
-            return self.collective_order(image_path)
+            return self.collective_order_pipeline(image_path)
         except Exception as e:
             print(f"  FAILED: {Path(image_path).name} — {e}")
             return {'image_path': str(image_path), 'error': str(e)}
@@ -1269,10 +1268,10 @@ def _worker_init(config):
 def _worker_process_image(image_path):
     """Process one image using the worker's persistent cornealia instance."""
     try:
-        result = _worker_instance.collective_order(image_path)
+        result = _worker_instance.collective_order_pipeline(image_path)
 
-        # Remove heavy objects that can't fit through the pipe
-        for key in ('segmentor', 'objects', 'cell_area', 'input_image',
+        # Remove heavy data that can't fit through the pipe
+        for key in ('segmentation', 'cell_area', 'input_image',
                      'dot_centroids',
                      'r_values', 'g_r', 'g_r_smooth', 'v_r',
                      'r_valid', 'v_r_valid'):
@@ -1306,7 +1305,7 @@ def _cli_process_one(args):
     )
 
     try:
-        r = proc.collective_order(str(img_path))
+        r = proc.collective_order_pipeline(str(img_path))
 
         def safe(key, scale=1):
             v = r.get(key, np.nan)
@@ -1357,13 +1356,77 @@ def _cli_process_one(args):
             'g_r': r.get('g_r', np.array([])),
         }
 
-        objects = r.get('objects', [])
-        centroids = np.array([o.centroid for o in objects]) if objects else np.empty((0, 2))
+        seg = r.get('segmentation', {})
+        centroids = seg.get('centroids', np.empty((0, 2)))
 
         return {'status': 'ok', 'row': row, 'gr': gr_curve, 'centroids': centroids}
 
     except Exception as e:
         return {'status': 'error', 'image': img_path.name, 'error': str(e)}
+
+
+def _cli_single(args):
+    """Process a single image from CLI."""
+    import json
+    from pathlib import Path
+
+    image_path = Path(args.image)
+    if not image_path.exists():
+        print(f"Error: Image not found: {image_path}")
+        return
+
+    pixel_size = args.pixel_size
+    px2 = pixel_size ** 2
+    cellade_params = json.loads(args.cellade_params) if args.cellade_params else None
+
+    output_dir = Path(args.output) if args.output else image_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Image:   {image_path.name}")
+    print(f"Pixel:   {pixel_size} µm/px")
+    print(f"Machine: {args.machine}")
+    print(f"Output:  {output_dir}")
+
+    engine = cornealia(
+        pixel_size=pixel_size,
+        is_input_image_machine_output=args.machine,
+        invert_image=args.invert,
+        cellade_params=cellade_params or {},
+        verbose=True,
+    )
+
+    results = engine.collective_order_pipeline(str(image_path))
+
+    # Print key results
+    print(f"\n{'='*50}")
+    print(f"Cells:    {results['n_cells']} ({results['n_interior']} interior)")
+    print(f"Reliable: {results['reliable']}")
+    print(f"K (px⁻²):  {results['K']}")
+    print(f"K (µm⁻²):  {round(results['K'] / px2, 6) if results['K'] is not None else 'N/A'}")
+    print(f"K_ds:      {results['K_ds']}")
+    print(f"r0 (px):   {results['r0_fit']}")
+    print(f"g_peak:    {results['g_peak']:.3f}")
+    print(f"CD:        {results.get('CD_calc', 'N/A')} cells/mm²")
+    print(f"Ave:       {results.get('Ave_calc', 'N/A')} µm²")
+    print(f"CV:        {results.get('CV_calc', 'N/A')}%")
+    print(f"HEX:       {results.get('HEX_calc', 'N/A')}%")
+
+    # Save JSON
+    scalar_results = {k: v for k, v in results.items()
+                      if isinstance(v, (int, float, str, bool))}
+    json_path = output_dir / f"{image_path.stem}_results.json"
+    with open(json_path, 'w') as f:
+        json.dump(scalar_results, f, indent=2, default=str)
+    print(f"\nJSON:    {json_path}")
+
+    # Generate plots if requested
+    if args.plot:
+        plots_dir = output_dir / f"{image_path.stem}_plots"
+        plots_dir.mkdir(exist_ok=True)
+        engine.plot(results, save=True, save_dir=str(plots_dir), formats=('png',))
+        print(f"Plots:   {plots_dir}")
+
+    print("Done.")
 
 
 def _cli_batch(args):
@@ -1498,6 +1561,16 @@ if __name__ == '__main__':
     )
     sub = parser.add_subparsers(dest='command')
 
+    # --- single command ---
+    sp = sub.add_parser('single', help='Process a single image')
+    sp.add_argument('--image', required=True, help='Path to image file')
+    sp.add_argument('--output', default=None, help='Output directory (default: same as image)')
+    sp.add_argument('--pixel-size', type=float, default=0.58, help='Pixel size in µm/px (default: 0.58)')
+    sp.add_argument('--machine', action='store_true', help='Input is machine output (has OCR metrics area)')
+    sp.add_argument('--invert', action='store_true', help='Invert image contrast (for bright-field)')
+    sp.add_argument('--plot', action='store_true', help='Generate plots')
+    sp.add_argument('--cellade-params', default=None, help='JSON string of CellADE params')
+
     # --- batch command ---
     bp = sub.add_parser('batch', help='Process a folder of images in parallel')
     bp.add_argument('--folder', required=True, help='Path to image folder')
@@ -1510,7 +1583,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.command == 'batch':
+    if args.command == 'single':
+        _cli_single(args)
+    elif args.command == 'batch':
         _cli_batch(args)
     else:
         parser.print_help()

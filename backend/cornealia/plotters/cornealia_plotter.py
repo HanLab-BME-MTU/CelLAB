@@ -69,18 +69,44 @@ class cornealia_plotter:
         from types import SimpleNamespace
         self.c = SimpleNamespace(**results)
         
-        # also expose segmentor sub-attributes directly on self.c
-        # so self.c.H, self.c.W etc. work as before
-        if results.get('segmentor') is not None:
-            self.c.H = results['segmentor'].H
-            self.c.W = results['segmentor'].W
-            self.c.enhanced_image = results['segmentor'].enhanced_image
-            self.c.metrics_area = results['cell_area']
+        # also expose segmentation sub-attributes directly on self.c
+        seg = results.get('segmentation')
+        if seg is not None:
+            self.c.H = seg['H']
+            self.c.W = seg['W']
+            self.c.enhanced_image = seg['enhanced_image']
+            self.c.seg_labels = seg['labels']
+            self.c.seg_blobs = seg['blobs']
+            self.c.seg_global_fg = seg['global_fg']
+            self.c.metrics_area = results.get('cell_area')
         else:
             self.c.H = None
             self.c.W = None
             self.c.enhanced_image = None
+            self.c.seg_labels = None
+            self.c.seg_blobs = None
+            self.c.seg_global_fg = None
             self.c.metrics_area = None
+
+        # config defaults (no longer echoed in results, but plotter labels need them)
+        if not hasattr(self.c, 'fcm_method'):
+            self.c.fcm_method = 'auto'
+        if not hasattr(self.c, 'SAVGOL_WINDOW'):
+            self.c.SAVGOL_WINDOW = 11
+        if not hasattr(self.c, 'shell_thickness'):
+            self.c.shell_thickness = 1
+        if not hasattr(self.c, 'exclusion_ratio'):
+            self.c.exclusion_ratio = 0.15
+        if not hasattr(self.c, 'fitting_half_width'):
+            self.c.fitting_half_width = 10
+
+        # convenience: expose centroids and n_cells at top level
+        if seg is not None:
+            self.c.seg_centroids = seg['centroids']
+            self.c.seg_n_cells = seg['n_cells']
+        else:
+            self.c.seg_centroids = None
+            self.c.seg_n_cells = 0
         
         self.save = save
         self.save_dir = save_dir
@@ -256,11 +282,11 @@ class cornealia_plotter:
         blobs       | fg mask   | watershed labels
         """
         self._check_attr('input_image', 'cell_area', 'metrics_area',
-                         'enhanced_image', 'segmentor')
+                         'enhanced_image', 'seg_labels')
 
         save = save if save is not None else self.save
 
-        n = self.c.segmentor.labels.max()
+        n = self.c.seg_labels.max()
         colors = ['black'] + [f'#{random.randint(0, 0xFFFFFF):06x}' for _ in range(n)]
         cmap = ListedColormap(colors)
 
@@ -280,17 +306,17 @@ class cornealia_plotter:
         axs[2].axis('off')
 
         axs[3].imshow(self.c.enhanced_image, cmap='gray')
-        axs[3].scatter(self.c.segmentor.blobs[:, 1], self.c.segmentor.blobs[:, 0],
-                       c='red', s=10, label=f'{len(self.c.segmentor.blobs)} blobs')
+        axs[3].scatter(self.c.seg_blobs[:, 1], self.c.seg_blobs[:, 0],
+                       c='red', s=10, label=f'{len(self.c.seg_blobs)} blobs')
         axs[3].set_title('Blob Detection', fontweight='bold')
         axs[3].legend(fontsize=9, loc='upper right')
         axs[3].axis('off')
 
-        axs[4].imshow(self.c.segmentor.global_fg, cmap='gray')
+        axs[4].imshow(self.c.seg_global_fg, cmap='gray')
         axs[4].set_title(f'Foreground Mask ({self.c.fcm_method} FCM)', fontweight='bold')
         axs[4].axis('off')
 
-        axs[5].imshow(self.c.segmentor.labels, cmap=cmap)
+        axs[5].imshow(self.c.seg_labels, cmap=cmap)
         axs[5].set_title(f'Watershed Labels ({n} cells)', fontweight='bold')
         axs[5].axis('off')
 
@@ -515,7 +541,7 @@ class cornealia_plotter:
         Row 4: damped sine fit | residuals | quality gate
         """
         self._check_attr('r_values', 'g_r', 'g_r_smooth',
-                         'r_valid', 'v_r_valid', 'r0_fit', 'K', 'segmentor')
+                         'r_valid', 'v_r_valid', 'r0_fit', 'K', 'seg_labels')
         save = save if save is not None else self.save
 
         c = self.c
@@ -524,10 +550,10 @@ class cornealia_plotter:
         v = c.v_r_valid
 
         # centroids
-        centroids = np.array([o.centroid for o in c.objects])
+        centroids = c.seg_centroids
         y_coords = centroids[:, 0]
         x_coords = centroids[:, 1]
-        cell_H, cell_W = c.segmentor.H, c.segmentor.W
+        cell_H, cell_W = c.H, c.W
         MAX_R = int(min(cell_H, cell_W) * c.exclusion_ratio)
         interior_mask = ((y_coords >= MAX_R) & (y_coords <= cell_H - MAX_R) &
                          (x_coords >= MAX_R) & (x_coords <= cell_W - MAX_R))
@@ -561,7 +587,7 @@ class cornealia_plotter:
         ax.set_ylim(cell_H, 0)
         ax.set_xlabel('X (pixels)', fontsize=12, fontweight='bold')
         ax.set_ylabel('Y (pixels)', fontsize=12, fontweight='bold')
-        ax.set_title(f'Step 1: Cell Centroids\n(N = {len(c.objects)} total)', fontsize=13, fontweight='bold', pad=8)
+        ax.set_title(f'Step 1: Cell Centroids\n(N = {c.seg_n_cells} total)', fontsize=13, fontweight='bold', pad=8)
         ax.tick_params(axis='both', labelsize=10)
         ax.legend(fontsize=9, loc='upper right', framealpha=0.95)
         ax.set_aspect('equal')
@@ -672,17 +698,17 @@ class cornealia_plotter:
         # --- Row 3 ---
 
         # 3.1 Segmentation labels
-        n_labels = self.c.segmentor.labels.max()
+        n_labels = self.c.seg_labels.max()
         colors_seg = ['black'] + [f'#{random.randint(0, 0xFFFFFF):06x}' for _ in range(n_labels)]
         cmap_seg = ListedColormap(colors_seg)
         ax = axes[2, 0]
-        ax.imshow(self.c.segmentor.labels, cmap=cmap_seg)
+        ax.imshow(self.c.seg_labels, cmap=cmap_seg)
         ax.set_title(f'Step 7: Watershed Labels\n({n_labels} cells)', fontsize=13, fontweight='bold', pad=8)
         ax.axis('off')
 
         # 3.2 CLAHE-enhanced image (input to segmentation)
         ax = axes[2, 1]
-        ax.imshow(c.segmentor.enhanced_image, cmap='gray')
+        ax.imshow(c.enhanced_image, cmap='gray')
         ax.set_title('CLAHE Enhanced Image', fontsize=13, fontweight='bold', pad=8)
         ax.axis('off')
 
@@ -707,7 +733,7 @@ class cornealia_plotter:
             f"    COLLECTIVE ORDER RESULTS\n"
             f"{'━'*42}\n\n"
             f"Cells:\n"
-            f"  Total:    {len(c.objects)}\n"
+            f"  Total:    {c.seg_n_cells}\n"
             f"  Interior: {interior_mask.sum()}\n\n"
             f"Parameters:\n"
             f"  DR (shell) = {c.shell_thickness} px\n"
@@ -973,7 +999,7 @@ class cornealia_plotter:
         """
         self._check_attr('r_values', 'g_r', 'g_r_smooth',
                          'r_valid', 'v_r_valid', 'r0_fit', 'K',
-                         'segmentor', 'objects', 'cell_area')
+                         'seg_labels', 'cell_area')
         save = save if save is not None else self.save
 
         c = self.c
@@ -1017,9 +1043,9 @@ class cornealia_plotter:
             axes[2, j] = fig.add_subplot(gs_bot[1, j])
 
         # --- Precompute ---
-        centroids = np.array([o.centroid for o in c.objects])
+        centroids = c.seg_centroids
         y_coords, x_coords = centroids[:, 0], centroids[:, 1]
-        cell_H, cell_W = c.segmentor.H, c.segmentor.W
+        cell_H, cell_W = c.H, c.W
         MAX_R = int(min(cell_H, cell_W) * px)
         interior = ((y_coords >= MAX_R) & (y_coords <= cell_H - MAX_R) &
                      (x_coords >= MAX_R) & (x_coords <= cell_W - MAX_R))
@@ -1063,7 +1089,7 @@ class cornealia_plotter:
 
         # (b) Segmentation (overlay on raw image)
         ax = axes[0, 1]
-        seg_labels = c.segmentor.labels
+        seg_labels = c.seg_labels
         n_labels = seg_labels.max()
         # Darken the base image so colored cells pop
         ax.imshow(c.cell_area, cmap='gray', vmax=np.percentile(c.cell_area, 99) * 0.6)
