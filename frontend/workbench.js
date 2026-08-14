@@ -9605,8 +9605,6 @@ function getAvailablePlots(moduleType, stepId) {
         ];
         if (stepId === 'segmentation') return [
             { id: 'segmentation',    icon: '🖼', label: 'Segmentation Overview' },
-            { id: 'comprehensive',   icon: '📊', label: 'Comprehensive Summary' },
-            { id: 'pipeline_figure', icon: '🎯', label: 'Pipeline Figure' },
         ];
         if (stepId === 'morphometry') return [
             { id: 'radial_distribution', icon: '📈', label: 'g(r) — Radial Distribution' },
@@ -11997,8 +11995,8 @@ const MENUS = {
         { label: 'Python Console (Isolated)', action: 'openIsolatedConsole()' },
         { label: 'Git Terminal', shortcut: 'Ctrl+Shift+G', action: 'openGitConsole()' },
         { sep: true },
-        { label: 'CellIntella (Shared)', action: 'toggleCellIntellaPanel()' },
-        { label: 'CellIntella (Fresh)', action: 'openCellIntellaFresh()' },
+        { label: 'cintelia (Shared)', action: 'togglecinteliaPanel()' },
+        { label: 'cintelia (Fresh)', action: 'opencinteliaFresh()' },
         { sep: true },
         { label: 'Task Manager', action: 'openTaskManager()' },
         { label: 'Package Manager', action: 'openPackageManager()' },
@@ -12110,7 +12108,7 @@ async function cleanUnusedData() {
 function openSharedConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('shared'); }
 function openIsolatedConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('isolated'); }
 function openGitConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('git'); }
-function openCellIntellaFresh() { if (!_consoleOpen) toggleConsole(); addConsoleTab('CellIntella_fresh'); }
+function opencinteliaFresh() { if (!_consoleOpen) toggleConsole(); addConsoleTab('cintelia_fresh'); }
 
 function showPipelineContextMenu(e, pipeline) {
     e.preventDefault();
@@ -12223,7 +12221,7 @@ async function aiMiniSend() {
     // Handle /config command
     if (msg === '/config') {
         try {
-            const res = await api('CellIntella/config', 'GET');
+            const res = await api('cintelia/config', 'GET');
             if (res.success) {
                 const c = res.data;
                 body.innerHTML += `<div class="ai-mini-msg ai-mini-ai">⚙ n_ctx=${c.n_ctx}, threads=${c.n_threads}, KV=${c.kv_cache_mb}MB, model=${c.model_mb}MB<br>Use: /config n_ctx 8192</div>`;
@@ -12239,7 +12237,7 @@ async function aiMiniSend() {
             body.innerHTML += `<div class="ai-mini-msg ai-mini-ai">⏳ Reloading with ${parts[0]}=${parts[1]}...</div>`;
             body.scrollTop = body.scrollHeight;
             try {
-                const res = await api('CellIntella/config', 'POST', bdy);
+                const res = await api('cintelia/config', 'POST', bdy);
                 if (res.success && res.data.reloaded) {
                     body.innerHTML += `<div class="ai-mini-msg ai-mini-ai">✅ Reloaded. n_ctx=${res.data.n_ctx}, KV=${res.data.kv_cache_mb}MB</div>`;
                 }
@@ -12262,7 +12260,7 @@ async function aiMiniSend() {
 
     try {
         const scope = JSON.parse(chat.dataset.scope || '{}');
-        const res = await api('CellIntella/query', 'POST', {
+        const res = await api('cintelia/query', 'POST', {
             message: msg,
             scope,
             accumulated_context: buildAIContextText('mini-chat'),
@@ -12486,7 +12484,7 @@ function showHelpLink(type) {
             bullets: [
                 'Define pipeline steps (Import → Process → Analyze → Export)',
                 'Create plotters for your results (batch + single)',
-                'Add hierarchical documentation for CellIntella',
+                'Add hierarchical documentation for cintelia',
                 'Publish as a CelLAB extension package',
             ],
             action: 'https://github.com/MAjidROSTAM/CelLAB/issues/new?title=Package+Integration+Request&labels=package',
@@ -12876,10 +12874,10 @@ let _consoleOpen = false;
 let _consoleTabs = [];  // [{id, sessionId, type, name, lines: [], history: [], histIdx: -1}]
 let _consoleActiveTab = null;
 let _consoleTabCounter = 0;
-let _CellIntellaModelLoaded = false;
+let _cinteliaModelLoaded = false;
 
 // AI Context Accumulation
-// Each CellIntella chat (mini-chat or console tab) can accumulate context items
+// Each cintelia chat (mini-chat or console tab) can accumulate context items
 // Items are sent with every query from that chat
 let _aiContextStore = new Map();  // chatId → [{type, label, data}]
 
@@ -12898,11 +12896,11 @@ function addAIContext(chatId, item) {
 }
 
 function getOpenAIChats() {
-    // Collect all open CellIntella chats (console tabs + mini-chat)
+    // Collect all open cintelia chats (console tabs + mini-chat)
     const chats = [];
     // Console tabs
     for (const tab of _consoleTabs) {
-        if (tab.type === 'CellIntella' || tab.type === 'CellIntella_fresh') {
+        if (tab.type === 'cintelia' || tab.type === 'cintelia_fresh') {
             chats.push({ id: tab.id, label: tab.name, type: 'console' });
         }
     }
@@ -12943,7 +12941,7 @@ function buildAISubmenu(contextItem) {
         ).join('');
     }
     addToItems += `<div class="ctx-item" onclick="aiAddContextNewFromMenu(${idx})">
-        <span style="opacity:.6">＋</span> New CellIntella tab
+        <span style="opacity:.6">＋</span> New cintelia tab
     </div>`;
 
     return `
@@ -12997,10 +12995,10 @@ function aiAddContextToChat(chatId, item) {
 
 function aiAddContextNewTab(item) {
     if (!_consoleOpen) toggleConsole();
-    addConsoleTab('CellIntella').then(() => {
+    addConsoleTab('cintelia').then(() => {
         // Find the just-created tab
         const tab = _consoleTabs[_consoleTabs.length - 1];
-        if (tab && (tab.type === 'CellIntella' || tab.type === 'CellIntella_fresh')) {
+        if (tab && (tab.type === 'cintelia' || tab.type === 'cintelia_fresh')) {
             addAIContext(tab.id, item);
             tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">📌 Context added: ${escapeHtml(item.label)}</span>` });
             renderConsoleBody();
@@ -13012,8 +13010,8 @@ const CONSOLE_TYPES = {
     shared:       { label: '🐍 Python',     color: '#89b4fa', prompt: '>>> ', welcome: 'Python (shared namespace) — has access to project, results, all imports' },
     isolated:     { label: '🐍 Python',     color: '#a6e3a1', prompt: '>>> ', welcome: 'Python (isolated) — fresh namespace, import what you need' },
     git:          { label: '📦 CelLAB Git', color: '#fab387', prompt: '$ ',  welcome: 'CelLAB Git — type "help" for available commands' },
-    CellIntella:      { label: '🤖 CellIntella',    color: '#cba6f7', prompt: '🤖 ', welcome: 'CellIntella (shared memory) — Cell Intelligent Autonomous Interface — conversation history preserved across messages' },
-    CellIntella_fresh:{ label: '🤖 CellIntella',    color: '#b4befe', prompt: '🤖 ', welcome: 'CellIntella (fresh) — Cell Intelligent Autonomous Interface — no history, fast one-off questions' },
+    cintelia:      { label: '🤖 cintelia',    color: '#cba6f7', prompt: '🤖 ', welcome: 'cintelia (shared memory) — Cell Intelligent Autonomous Interface — conversation history preserved across messages' },
+    cintelia_fresh:{ label: '🤖 cintelia',    color: '#b4befe', prompt: '🤖 ', welcome: 'cintelia (fresh) — Cell Intelligent Autonomous Interface — no history, fast one-off questions' },
 };
 
 function toggleConsole() {
@@ -13057,9 +13055,9 @@ function toggleConsole() {
 async function addConsoleTab(type, scope = null) {
     let sessionId = null;
 
-    // CellIntella tabs don't need a console session
-    if (type === 'CellIntella' || type === 'CellIntella_fresh') {
-        sessionId = `CellIntella_${Date.now()}`;
+    // cintelia tabs don't need a console session
+    if (type === 'cintelia' || type === 'cintelia_fresh') {
+        sessionId = `cintelia_${Date.now()}`;
     } else {
         const res = await api('console/create', 'POST', { type });
         if (!res.success) return;
@@ -13094,7 +13092,7 @@ async function addConsoleTab(type, scope = null) {
         lines: [
             { html: `<span class="console-welcome">CelLAB Console — ${info.welcome}</span>` },
             ...(scopeWelcome ? [{ html: `<span class="console-welcome" style="color:#cba6f7">${scopeWelcome}</span>` }] : []),
-            ...(type === 'CellIntella' || type === 'CellIntella_fresh' ? [
+            ...(type === 'cintelia' || type === 'cintelia_fresh' ? [
                 { html: `<span class="console-welcome">⏳ First message takes ~2-3 min to load the model. After that, responses are fast.</span>` },
                 { html: `<span class="console-welcome">Powered by Llama 3.2 3B (local, private — no data leaves your machine)</span>` },
             ] : []),
@@ -13154,8 +13152,8 @@ function showAddTerminalMenu(e) {
         <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('isolated')"><span style="color:#a6e3a1">●</span> Python (Isolated)</div>
         <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('git')"><span style="color:#fab387">●</span> CelLAB Git</div>
         <div class="ctx-separator"></div>
-        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('CellIntella')"><span style="color:#cba6f7">●</span> CellIntella (Shared)</div>
-        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('CellIntella_fresh')"><span style="color:#b4befe">●</span> CellIntella (Fresh)</div>
+        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia')"><span style="color:#cba6f7">●</span> cintelia (Shared)</div>
+        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia_fresh')"><span style="color:#b4befe">●</span> cintelia (Fresh)</div>
     `;
     document.body.appendChild(menu);
     const rect = e.target.getBoundingClientRect();
@@ -13229,9 +13227,9 @@ async function consoleExec(code) {
     const tab = getActiveConsoleTab();
     if (!tab) return;
 
-    // Route CellIntella tabs to AI endpoint
-    if (tab.type === 'CellIntella' || tab.type === 'CellIntella_fresh') {
-        await CellIntellaConsoleExec(tab, code);
+    // Route cintelia tabs to AI endpoint
+    if (tab.type === 'cintelia' || tab.type === 'cintelia_fresh') {
+        await cinteliaConsoleExec(tab, code);
         return;
     }
 
@@ -13256,7 +13254,7 @@ async function consoleExec(code) {
     }
 }
 
-async function CellIntellaConsoleExec(tab, message) {
+async function cinteliaConsoleExec(tab, message) {
     // Magic commands
     if (message === 'clear' || message === 'cls' || message === 'clc') {
         consoleClear(); return;
@@ -13268,10 +13266,10 @@ async function CellIntellaConsoleExec(tab, message) {
         if (!arg) {
             // Show current config
             try {
-                const res = await api('CellIntella/config', 'GET');
+                const res = await api('cintelia/config', 'GET');
                 if (res.success) {
                     const c = res.data;
-                    tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">⚙ CellIntella Config:\n  n_ctx = ${c.n_ctx} tokens (context window)\n  n_threads = ${c.n_threads}\n  KV cache = ${c.kv_cache_mb} MB\n  Model = ${c.model_mb} MB\n  Total RAM ≈ ${c.model_mb + c.kv_cache_mb} MB\n  Loaded: ${c.loaded ? 'yes' : 'no'}\n\nUsage: /config n_ctx 8192</span>` });
+                    tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">⚙ cintelia Config:\n  n_ctx = ${c.n_ctx} tokens (context window)\n  n_threads = ${c.n_threads}\n  KV cache = ${c.kv_cache_mb} MB\n  Model = ${c.model_mb} MB\n  Total RAM ≈ ${c.model_mb + c.kv_cache_mb} MB\n  Loaded: ${c.loaded ? 'yes' : 'no'}\n\nUsage: /config n_ctx 8192</span>` });
                 }
             } catch(e) { tab.lines.push({ html: `<span class="console-err">Error: ${e.message}</span>` }); }
         } else {
@@ -13287,7 +13285,7 @@ async function CellIntellaConsoleExec(tab, message) {
                     renderConsoleBody();
                     try {
                         const body = {}; body[key] = val;
-                        const res = await api('CellIntella/config', 'POST', body);
+                        const res = await api('cintelia/config', 'POST', body);
                         if (res.success && res.data.reloaded) {
                             tab.lines.push({ html: `<span class="console-result" style="color:#a6e3a1">✅ Model reloaded. n_ctx=${res.data.n_ctx}, KV cache=${res.data.kv_cache_mb}MB</span>` });
                         } else {
@@ -13305,7 +13303,7 @@ async function CellIntellaConsoleExec(tab, message) {
 
     // /help command
     if (message === '/help') {
-        tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">CellIntella Commands:\n  /config          — show model settings\n  /config n_ctx N  — change context window (reloads model)\n  /scope           — show current scope\n  /scope project   — attach entire project context\n  /scope workspace — attach current workspace\n  /scope none      — clear scope\n  /context         — show accumulated context items\n  /context clear   — remove all context items\n  clear            — clear console</span>` });
+        tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">cintelia Commands:\n  /config          — show model settings\n  /config n_ctx N  — change context window (reloads model)\n  /scope           — show current scope\n  /scope project   — attach entire project context\n  /scope workspace — attach current workspace\n  /scope none      — clear scope\n  /context         — show accumulated context items\n  /context clear   — remove all context items\n  clear            — clear console</span>` });
         renderConsoleBody();
         return;
     }
@@ -13362,14 +13360,14 @@ async function CellIntellaConsoleExec(tab, message) {
 
     // Show thinking indicator
     const info = CONSOLE_TYPES[tab.type];
-    tab.lines.push({ html: `<span class="console-out" style="color:rgba(203,166,247,.4);font-style:italic">${_CellIntellaModelLoaded ? '⏳ Thinking...' : '⏳ Loading model & thinking... (~2-3 min first time)'}</span>` });
+    tab.lines.push({ html: `<span class="console-out" style="color:rgba(203,166,247,.4);font-style:italic">${_cinteliaModelLoaded ? '⏳ Thinking...' : '⏳ Loading model & thinking... (~2-3 min first time)'}</span>` });
     renderConsoleBody();
 
     try {
-        const res = await api('CellIntella/query', 'POST', {
+        const res = await api('cintelia/query', 'POST', {
             message: message,
             session_id: tab.sessionId,
-            fresh: tab.type === 'CellIntella_fresh',
+            fresh: tab.type === 'cintelia_fresh',
             scope: tab.scope || { level: 'none' },
             accumulated_context: buildAIContextText(tab.id),
         });
@@ -13380,7 +13378,7 @@ async function CellIntellaConsoleExec(tab, message) {
         if (res.success && res.data.response) {
             const text = res.data.response;
             tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">${escapeHtml(text)}</span>` });
-            _CellIntellaModelLoaded = true;
+            _cinteliaModelLoaded = true;
         } else {
             tab.lines.push({ html: `<span class="console-err">${escapeHtml(res.error || 'No response')}</span>` });
         }
@@ -13693,16 +13691,16 @@ function openAristolia() {
     updateStatus('Aristolia — coming soon. "We learn by doing" — Aristotle');
 }
 
-function toggleCellIntellaPanel() {
+function togglecinteliaPanel() {
     // Open console if not open
     if (!_consoleOpen) toggleConsole();
 
-    // Check if a CellIntella tab already exists
-    const existing = _consoleTabs.find(t => t.type === 'CellIntella');
+    // Check if a cintelia tab already exists
+    const existing = _consoleTabs.find(t => t.type === 'cintelia');
     if (existing) {
         switchConsoleTab(existing.id);
     } else {
-        addConsoleTab('CellIntella');
+        addConsoleTab('cintelia');
     }
 }
 

@@ -961,8 +961,10 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
 
     # Save segmentation results for morphometry step (plain arrays only)
     centroids = np.array([o.centroid for o in objects])
+    areas = np.array([o.area for o in objects])
     seg_data = {
         'centroids': centroids,
+        'areas': areas,
         'image_dims': (segmentor.H, segmentor.W),
         'input_image': input_image,
         'cell_area': cell_area,
@@ -1000,25 +1002,29 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
     plt.savefig(str(plots_dir / "segmentation_preview.png"), dpi=150, bbox_inches='tight')
     plt.close('all')
 
-    # Save segmentor data for plotting
+    # Save segmentation data for plotting (matches new result structure)
     safe_seg = {
-        '_segmentor_data': {
+        'segmentation': {
             'H': segmentor.H,
             'W': segmentor.W,
             'enhanced_image': segmentor.enhanced_image,
             'labels': segmentor.labels,
             'blobs': segmentor.blobs,
             'global_fg': segmentor.global_fg,
-        },
-        '_objects_data': {
             'centroids': centroids,
             'areas': np.array([o.area for o in objects]),
-            'labels': np.array([o.label for o in objects]),
-            'count': n_cells,
+            'cell_labels': np.array([o.label for o in objects]),
+            'n_cells': n_cells,
         },
+        'input_image': input_image,
         'cell_area': cell_area,
+        'metrics_area': cell_area,  # same as cell_area for non-machine; overwritten below for machine
         'n_cells': n_cells,
     }
+    # For machine output, metrics_area is a different crop
+    if config['is_input_image_machine_output'] and input_image is not None:
+        safe_seg['metrics_area'] = input_image[812:968, 114:307]
+
     with open(results_dir / "full_results.pkl", 'wb') as f:
         pickle.dump(safe_seg, f)
 
@@ -1059,16 +1065,46 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
 
     # Run morphometry using centroid-only mode
     print("  [DIAG] Running morphometric analysis...")
-    results = engine.compute_morphometry(
-        objects=None, segmentor=None,
+    results = engine.compute_collective_order(
         centroids=seg_data['centroids'],
         image_dims=seg_data['image_dims'],
-        input_image=seg_data['input_image'],
-        cell_area=seg_data['cell_area'],
-        machine_metrics=seg_data['machine_metrics'],
-        dot_centroids=seg_data['dot_centroids'],
-        image_path=image_path,
     )
+    # Add image data and segmentation for plotter
+    results['input_image'] = seg_data['input_image']
+    results['cell_area'] = seg_data['cell_area']
+    results['machine_metrics'] = seg_data['machine_metrics']
+    results['dot_centroids'] = seg_data['dot_centroids']
+    results['image_path'] = image_path
+    # Compute classic metrics from saved arrays
+    classic_metrics = engine._compute_classic_metrics(
+        seg_data['centroids'], seg_data['areas'],
+        seg_data['image_dims'][0], seg_data['image_dims'][1],
+        method='segmentation'
+    )
+    results.update(classic_metrics)
+    # Carry forward segmentation data (needed by comprehensive/pipeline_figure plots)
+    results['segmentation'] = {
+        'H': seg_data['image_dims'][0],
+        'W': seg_data['image_dims'][1],
+        'centroids': seg_data['centroids'],
+        'n_cells': len(seg_data['centroids']),
+        'enhanced_image': None,
+        'labels': None,
+        'blobs': None,
+        'global_fg': None,
+    }
+    # Load full segmentation data if available
+    seg_full_pkl = seg_pickle.parent / "full_results.pkl"
+    if seg_full_pkl.exists():
+        try:
+            with open(seg_full_pkl, 'rb') as f:
+                seg_full = pickle.load(f)
+            seg_from_full = seg_full.get('segmentation', {})
+            for key in ('enhanced_image', 'labels', 'blobs', 'global_fg', 'areas', 'cell_labels'):
+                if key in seg_from_full:
+                    results['segmentation'][key] = seg_from_full[key]
+        except Exception:
+            pass
     print(f"  [DIAG] Morphometry done, K={results.get('K', 'N/A')}")
 
     # Extract safe results

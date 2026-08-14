@@ -154,18 +154,24 @@ class cornealia :
         segmentor.global_fg = segmentor.foreground       # backward compat for plotters
         return segmentor.objects, segmentor
 
-    def _compute_classic_metrics(self, objects, segmentor, method='segmentation', dot_centroids=None):
+    def _compute_classic_metrics(self, centroids, areas, H, W, method='segmentation', dot_centroids=None):
         
         """
-        Compute morphological metrics from segmented cells.
+        Compute morphological metrics from cell data.
 
         Parameters
         ----------
+        centroids : np.ndarray
+            (N, 2) array of cell centroids in (row, col) pixel coordinates.
+        areas : np.ndarray
+            (N,) array of cell areas in pixels.
+        H : int
+            Image height in pixels.
+        W : int
+            Image width in pixels.
         method : str
             'voronoi'       – Voronoi from machine's green dot centroids.
-                            Reproduces the machine's Center Method for verification.
-            'segmentation'  – Actual watershed cell regions (scientifically accurate).
-
+            'segmentation'  – From watershed cell regions (scientifically accurate).
         dot_centroids : np.ndarray or None
             (N, 2) array of (x, y) green dot positions. Required for 'voronoi' method.
 
@@ -176,7 +182,6 @@ class cornealia :
         from scipy.spatial import Voronoi, Delaunay, ConvexHull
 
         px2 = self.pixel_size ** 2
-        H, W = segmentor.H, segmentor.W
 
         # ==================================================================
         # METHOD 1: Voronoi from machine green dots (verification)
@@ -277,21 +282,20 @@ class cornealia :
 
             # Exclusion zone
             MAX_R = int(min(H, W) * self.exclusion_ratio)
-            centroids = np.array([o.centroid for o in objects])  # (N, 2) row, col
             y_coords = centroids[:, 0]
             x_coords = centroids[:, 1]
 
             interior_mask = ((y_coords >= MAX_R) & (y_coords <= H - MAX_R) &
                             (x_coords >= MAX_R) & (x_coords <= W - MAX_R))
 
-            interior_objects = [o for o, m in zip(objects, interior_mask) if m]
+            interior_areas = areas[interior_mask]
 
-            if not interior_objects:
-                interior_objects = list(objects)
+            if len(interior_areas) == 0:
+                interior_areas = areas
                 interior_mask[:] = True
 
             # Areas from actual pixel counts
-            areas_um2 = np.array([o.area for o in interior_objects]) * px2
+            areas_um2 = interior_areas * px2
 
             Ave_calc = float(np.mean(areas_um2))
             SD_calc  = float(np.std(areas_um2))
@@ -301,14 +305,14 @@ class cornealia :
             interior_H = H - 2 * MAX_R
             interior_W = W - 2 * MAX_R
             interior_area_mm2 = (interior_H * interior_W) * px2_to_mm2
-            CD_calc = len(interior_objects) / interior_area_mm2
+            CD_calc = len(interior_areas) / interior_area_mm2
 
             # HEX: Delaunay neighbors from centroids (robust, gap-independent)
-            interior_centroids = np.array([o.centroid for o in interior_objects])
+            interior_centroids = centroids[interior_mask]
             interior_points = np.column_stack([interior_centroids[:, 1],
                                             interior_centroids[:, 0]])  # (x, y)
 
-            n_int = len(interior_objects)
+            n_int = len(interior_areas)
             if n_int >= 4:
                 tri = Delaunay(interior_points)
                 neighbors = {i: set() for i in range(n_int)}
@@ -330,7 +334,7 @@ class cornealia :
                 'CV_calc':  round(CV_calc, 8),
                 'HEX_calc': round(HEX_calc, 8),
                 'metrics_method': 'segmentation',
-                'n_interior_metrics': len(interior_objects),
+                'n_interior_metrics': int(interior_mask.sum()),
                 'n_border_excluded': int((~interior_mask).sum()),
             }
     def compute_collective_order(self, centroids, image_dims):
@@ -922,10 +926,11 @@ class cornealia :
         # 3. Segmentation
         objects, segmentor = self.segmentation(cell_area)
         centroids = np.array([o.centroid for o in objects])
+        areas = np.array([o.area for o in objects])
 
         # 4. Classic metrics
-        classic_metrics_seg = self._compute_classic_metrics(objects, segmentor, method='segmentation')
-        classic_metrics_vor = self._compute_classic_metrics(objects, segmentor, method='voronoi',
+        classic_metrics_seg = self._compute_classic_metrics(centroids, areas, segmentor.H, segmentor.W, method='segmentation')
+        classic_metrics_vor = self._compute_classic_metrics(centroids, areas, segmentor.H, segmentor.W, method='voronoi',
                                                            dot_centroids=dot_centroids)
 
         # 5. Collective order
@@ -948,7 +953,7 @@ class cornealia :
                 'blobs': segmentor.blobs,
                 'global_fg': segmentor.global_fg,
                 'centroids': centroids,
-                'areas': np.array([o.area for o in objects]),
+                'areas': areas,
                 'cell_labels': np.array([o.label for o in objects]),
                 'n_cells': len(objects),
             },
