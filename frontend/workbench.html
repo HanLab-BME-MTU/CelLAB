@@ -123,7 +123,16 @@
 </div>
 <div class="workspace-tab-bar" id="workspaceTabBar">
     <div class="workspace-tabs-scroll" id="workspaceTabsScroll"></div>
-    <button class="ws-new-tab-btn" onclick="createWorkspace()" title="New Workspace"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+    <div class="ws-new-btns">
+        <button class="ws-new-tab-btn" onclick="createWorkspace()" title="New Workspace">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5"/></svg>
+            <span>Workspace</span>
+        </button>
+        <button class="ws-new-tab-btn ws-new-codechat-btn" onclick="createCodeChat()" title="New Code & Chat">
+            <svg width="11" height="11" viewBox="0 0 12 12"><path d="M1 3h10M1 6h7M1 9h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span>Code & Chat</span>
+        </button>
+    </div>
 </div>
 <div class="main-container" id="mainContainer">
     <div class="left-panel" id="leftPanel"></div>

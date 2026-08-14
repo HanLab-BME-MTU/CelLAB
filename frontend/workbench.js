@@ -71,12 +71,62 @@ function createWorkspace(name) {
     }
 }
 
+let _codeChatCounter = 0;
+function createCodeChat(name) {
+    _codeChatCounter++;
+    const wsId = `cc-${_codeChatCounter}`;
+    name = name || `Code & Chat ${_codeChatCounter}`;
+
+    const ws = {
+        id: wsId, name,
+        type: 'codechat',
+        _isDefault: _codeChatCounter === 1,
+        consoleTabs: [],
+        activeConsoleTab: null,
+    };
+
+    // Add a default Python tab
+    const tabId = `cctab_${Date.now()}`;
+    const info = CONSOLE_TYPES['shared'];
+    ws.consoleTabs.push({
+        id: tabId,
+        sessionId: null,
+        type: 'shared',
+        name: `${info.label} 1`,
+        scope: { level: 'none' },
+        lines: [{ html: `<span class="console-welcome">CelLAB Console — ${info.welcome}</span>` }],
+        history: [],
+        histIdx: -1,
+    });
+    ws.activeConsoleTab = tabId;
+
+    state.workspaces.set(wsId, ws);
+
+    // Create backend session
+    api('console/create', 'POST', { type: 'shared' }).then(res => {
+        if (res.success) {
+            ws.consoleTabs[0].sessionId = res.data.session_id;
+        }
+    });
+
+    renderWorkspaceTabs();
+    switchWorkspace(wsId);
+    updateStatus(`Created ${name}`);
+}
+
 function switchWorkspace(wsId) {
     const ws = state.workspaces.get(wsId);
     if (!ws) return;
 
-    // If clicking the already-active workspace, go back to canvas
+    // Exiting a codechat workspace — restore layout
+    const prevWs = state.workspaces.get(state.activeWorkspace);
+    if (prevWs && prevWs.type === 'codechat' && wsId !== state.activeWorkspace) {
+        _exitCodeChat();
+    }
+
+    // If clicking the already-active workspace
     if (state.activeWorkspace === wsId) {
+        if (ws.type === 'codechat') return;
         const canvasTab = [...ws.subtabs.values()].find(s => s.type === 'canvas');
         if (canvasTab && ws.activeSubtab !== canvasTab.id) {
             ws.activeSubtab = canvasTab.id;
@@ -89,8 +139,285 @@ function switchWorkspace(wsId) {
     }
 
     state.activeWorkspace = wsId;
-    renderAll();
+
+    if (ws.type === 'codechat') {
+        _enterCodeChat(ws);
+    } else {
+        renderAll();
+    }
+
+    renderWorkspaceTabs();
     document.getElementById('statusWorkspace').textContent = ws.name;
+}
+
+function _findOrCreateCodeChat() {
+    let ccWs = [...state.workspaces.values()].find(w => w.type === 'codechat');
+    if (!ccWs) {
+        createCodeChat();
+        ccWs = [...state.workspaces.values()].find(w => w.type === 'codechat');
+    } else {
+        switchWorkspace(ccWs.id);
+    }
+    return ccWs;
+}
+
+function _enterCodeChat(ws) {
+    document.getElementById('leftPanel').style.display = 'none';
+    document.getElementById('leftResizer').style.display = 'none';
+    document.getElementById('rightPanel').style.display = 'none';
+    document.getElementById('rightResizer').style.display = 'none';
+    document.getElementById('subtabBar').style.display = 'none';
+
+    const viewport = document.getElementById('viewport');
+    viewport.className = 'viewport codechat-viewport';
+    _renderCodeChatView(viewport, ws);
+}
+
+function _exitCodeChat() {
+    document.getElementById('leftPanel').style.display = '';
+    document.getElementById('leftResizer').style.display = '';
+    document.getElementById('rightPanel').style.display = '';
+    document.getElementById('rightResizer').style.display = '';
+    document.getElementById('subtabBar').style.display = '';
+
+    const viewport = document.getElementById('viewport');
+    viewport.className = 'viewport';
+}
+
+function _renderCodeChatView(viewport, ws) {
+    viewport.innerHTML = `
+        <div class="codechat-container">
+            <div class="codechat-tabs-bar">
+                <div class="codechat-tabs" id="codeChatTabs"></div>
+                <div class="codechat-actions">
+                    <button class="codechat-btn" onclick="_addCodeChatTab('shared')" title="New Python">+ Python</button>
+                    <button class="codechat-btn" onclick="_addCodeChatTab('cellintella')" title="New CellIntella">+ CellIntella</button>
+                    <button class="codechat-btn" onclick="_addCodeChatTab('git')" title="New Git">+ Git</button>
+                </div>
+            </div>
+            <div class="codechat-body" id="codeChatBody" onclick="document.getElementById('consoleInput')?.focus()"></div>
+        </div>
+    `;
+    _renderCodeChatTabs();
+    _renderCodeChatBody();
+}
+
+function _getActiveCodeChatWs() {
+    const ws = state.workspaces.get(state.activeWorkspace);
+    return (ws && ws.type === 'codechat') ? ws : null;
+}
+
+function _getActiveCodeChatTab() {
+    const ws = _getActiveCodeChatWs();
+    if (!ws) return null;
+    return ws.consoleTabs.find(t => t.id === ws.activeConsoleTab);
+}
+
+async function _addCodeChatTab(type) {
+    const ws = _getActiveCodeChatWs();
+    if (!ws) return;
+
+    let sessionId = null;
+    if (type === 'cellintella' || type === 'cellintella_fresh') {
+        sessionId = `cellintella_${Date.now()}`;
+    } else {
+        const res = await api('console/create', 'POST', { type });
+        if (!res.success) return;
+        sessionId = res.data.session_id;
+    }
+
+    const info = CONSOLE_TYPES[type];
+    if (!info) return;
+    const tabId = `cctab_${Date.now()}`;
+    const count = ws.consoleTabs.filter(t => t.type === type).length + 1;
+
+    const tab = {
+        id: tabId,
+        sessionId,
+        type,
+        name: `${info.label} ${count}`,
+        scope: { level: 'none' },
+        lines: [
+            { html: `<span class="console-welcome">CelLAB Console — ${info.welcome}</span>` },
+            ...(type === 'cellintella' || type === 'cellintella_fresh' ? [
+                { html: `<span class="console-welcome">⏳ First message takes ~2-3 min to load the model. After that, responses are fast.</span>` },
+                { html: `<span class="console-welcome">Powered by Llama 3.2 3B (local, private — no data leaves your machine)</span>` },
+            ] : []),
+        ],
+        history: [],
+        histIdx: -1,
+    };
+
+    ws.consoleTabs.push(tab);
+    ws.activeConsoleTab = tabId;
+    _renderCodeChatTabs();
+    _renderCodeChatBody();
+}
+
+function _closeCodeChatTab(tabId, ev) {
+    if (ev) ev.stopPropagation();
+    const ws = _getActiveCodeChatWs();
+    if (!ws) return;
+    ws.consoleTabs = ws.consoleTabs.filter(t => t.id !== tabId);
+    if (ws.activeConsoleTab === tabId) {
+        ws.activeConsoleTab = ws.consoleTabs.length > 0 ? ws.consoleTabs[0].id : null;
+    }
+    _renderCodeChatTabs();
+    _renderCodeChatBody();
+}
+
+function _renderCodeChatTabs() {
+    const bar = document.getElementById('codeChatTabs');
+    if (!bar) return;
+    const ws = _getActiveCodeChatWs();
+    if (!ws) return;
+    bar.innerHTML = '';
+
+    ws.consoleTabs.forEach(tab => {
+        const el = document.createElement('div');
+        const info = CONSOLE_TYPES[tab.type] || { label: tab.type, color: '#888' };
+        const isActive = tab.id === ws.activeConsoleTab;
+        el.className = `codechat-tab ${isActive ? 'active' : ''}`;
+        el.style.borderTopColor = info.color;
+        el.onclick = () => { ws.activeConsoleTab = tab.id; _renderCodeChatTabs(); _renderCodeChatBody(); };
+        el.innerHTML = `
+            <span class="codechat-tab-dot" style="color:${info.color}">●</span>
+            <span class="codechat-tab-name">${tab.name}</span>
+            ${ws.consoleTabs.length > 1 ? `<span class="codechat-tab-close" onclick="_closeCodeChatTab('${tab.id}',event)">×</span>` : ''}
+        `;
+        bar.appendChild(el);
+    });
+}
+
+function _renderCodeChatBody() {
+    const body = document.getElementById('codeChatBody');
+    if (!body) return;
+
+    const tab = _getActiveCodeChatTab();
+    if (!tab) { body.innerHTML = '<p style="padding:20px;color:var(--text-secondary)">No tabs open. Add one above.</p>'; return; }
+
+    const info = CONSOLE_TYPES[tab.type] || { prompt: '> ', color: '#888' };
+    const linesHtml = tab.lines.map(l => `<div class="console-line">${l.html}</div>`).join('');
+
+    body.innerHTML = `
+        ${linesHtml}
+        <div class="console-input-row">
+            <span class="console-prompt" style="color:${info.color}">${info.prompt}</span>
+            <input class="console-input" id="consoleInput" type="text"
+                   onkeydown="_codeChatKeyDown(event)"
+                   placeholder="Type a command or message..."
+                   autocomplete="off" spellcheck="false" />
+        </div>
+    `;
+
+    body.scrollTop = body.scrollHeight;
+    document.getElementById('consoleInput')?.focus();
+}
+
+function _codeChatKeyDown(e) {
+    const tab = _getActiveCodeChatTab();
+    if (!tab) return;
+
+    if (e.key === 'Enter') {
+        const input = document.getElementById('consoleInput');
+        const code = input.value.trim();
+        if (!code) return;
+
+        tab.history.push(code);
+        tab.histIdx = tab.history.length;
+
+        const info = CONSOLE_TYPES[tab.type] || { prompt: '> ', color: '#888' };
+        tab.lines.push({ html: `<span class="console-prompt-echo" style="color:${info.color}">${info.prompt}</span><span class="console-code">${escapeHtml(code)}</span>` });
+
+        input.value = '';
+        _renderCodeChatBody();
+        _codeChatExec(tab, code);
+    }
+
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (tab.histIdx > 0) {
+            tab.histIdx--;
+            document.getElementById('consoleInput').value = tab.history[tab.histIdx] || '';
+        }
+    }
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (tab.histIdx < tab.history.length - 1) {
+            tab.histIdx++;
+            document.getElementById('consoleInput').value = tab.history[tab.histIdx] || '';
+        } else {
+            tab.histIdx = tab.history.length;
+            document.getElementById('consoleInput').value = '';
+        }
+    }
+}
+
+async function _codeChatExec(tab, code) {
+    if (tab.type === 'cellintella' || tab.type === 'cellintella_fresh') {
+        // Show thinking indicator
+        tab.lines.push({ html: `<span class="console-out" style="color:rgba(203,166,247,.4);font-style:italic">${_cellIntellaModelLoaded ? '⏳ Thinking...' : '⏳ Loading model & thinking... (~2-3 min first time)'}</span>` });
+        _renderCodeChatBody();
+
+        try {
+            const res = await api('cellintella/query', 'POST', {
+                message: code,
+                session_id: tab.sessionId,
+                fresh: tab.type === 'cellintella_fresh',
+                scope: tab.scope || { level: 'none' },
+                accumulated_context: [],
+            });
+
+            // Remove thinking indicator
+            tab.lines.pop();
+
+            if (res.success && res.data.response) {
+                tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">🤖 ${escapeHtml(res.data.response)}</span>` });
+                _cellIntellaModelLoaded = true;
+            } else {
+                tab.lines.push({ html: `<span class="console-err">${escapeHtml(res.error || 'No response')}</span>` });
+            }
+        } catch (err) {
+            tab.lines.pop();
+            tab.lines.push({ html: `<span class="console-err">Connection error: ${escapeHtml(err.message)}</span>` });
+        }
+        _renderCodeChatBody();
+        return;
+    }
+
+    try {
+        // Ensure session exists
+        if (!tab.sessionId) {
+            const createRes = await api('console/create', 'POST', { type: tab.type });
+            if (createRes.success) {
+                tab.sessionId = createRes.data.session_id;
+            } else {
+                tab.lines.push({ html: `<span class="console-error">Failed to create console session</span>` });
+                _renderCodeChatBody();
+                return;
+            }
+        }
+        const res = await api('console/exec', 'POST', {
+            session_id: tab.sessionId,
+            code: code,
+        });
+
+        if (!res.success) {
+            tab.lines.push({ html: `<span class="console-err">${escapeHtml(res.error || 'Failed')}</span>` });
+            _renderCodeChatBody();
+            return;
+        }
+
+        const { stdout, stderr, result, magic } = res.data;
+        if (magic === 'clear') { tab.lines = []; _renderCodeChatBody(); return; }
+
+        if (stdout) tab.lines.push({ html: `<span class="console-out">${escapeHtml(stdout)}</span>` });
+        if (result) tab.lines.push({ html: `<span class="console-result">${escapeHtml(result)}</span>` });
+        if (stderr) tab.lines.push({ html: `<span class="console-err">${escapeHtml(stderr)}</span>` });
+    } catch (err) {
+        tab.lines.push({ html: `<span class="console-err">Network error: ${escapeHtml(err.message)}</span>` });
+    }
+    _renderCodeChatBody();
 }
 
 function closeWorkspace(wsId, ev) {
@@ -98,14 +425,23 @@ function closeWorkspace(wsId, ev) {
     if (state.workspaces.size <= 1) { updateStatus('Cannot close last workspace'); return; }
     const ws = state.workspaces.get(wsId);
     if (!ws) return;
-    const mc = ws.subtabs.size - 1;
-    if (mc > 0 && !confirm(`Close "${ws.name}" and ${mc} module(s)?`)) return;
+
+    if (ws.type === 'codechat') {
+        if (ws._isDefault) { updateStatus('Cannot close default Code & Chat'); return; }
+        if (!confirm(`Close "${ws.name}"?`)) return;
+        // Exit codechat layout if it's active
+        if (state.activeWorkspace === wsId) _exitCodeChat();
+    } else {
+        const mc = ws.subtabs.size - 1;
+        if (mc > 0 && !confirm(`Close "${ws.name}" and ${mc} module(s)?`)) return;
+    }
+
     state.workspaces.delete(wsId);
     if (state.activeWorkspace === wsId) switchWorkspace(state.workspaces.keys().next().value);
     else renderWorkspaceTabs();
     updateStatus(`Closed ${ws.name}`);
 
-    if (state._projectOpen) {
+    if (state._projectOpen && ws.type !== 'codechat') {
         api(`workspace/${wsId}/delete`, 'DELETE');
     }
 }
@@ -708,10 +1044,14 @@ function renderWorkspaceTabs() {
     c.innerHTML = '';
     for (const [wsId, ws] of state.workspaces) {
         const t = document.createElement('div');
-        t.className = `ws-tab ${wsId === state.activeWorkspace ? 'active' : ''}`;
+        const isCodeChat = ws.type === 'codechat';
+        t.className = `ws-tab ${isCodeChat ? 'ws-tab-codechat' : ''} ${wsId === state.activeWorkspace ? 'active' : ''}`;
         t.onclick = () => switchWorkspace(wsId);
-        t.ondblclick = () => renameWorkspace(wsId);
-        t.innerHTML = `<span class="ws-tab-icon">◈</span><span class="ws-tab-label">${ws.name}</span><span class="ws-tab-close" onclick="closeWorkspace('${wsId}',event)">×</span>`;
+        if (!isCodeChat) t.ondblclick = () => renameWorkspace(wsId);
+        const icon = isCodeChat ? '⌘' : '◈';
+        const showClose = !(isCodeChat && ws._isDefault);
+        const closeBtn = showClose ? `<span class="ws-tab-close" onclick="closeWorkspace('${wsId}',event)">×</span>` : '';
+        t.innerHTML = `<span class="ws-tab-icon">${icon}</span><span class="ws-tab-label">${ws.name}</span>${closeBtn}`;
         c.appendChild(t);
     }
 }
@@ -4724,7 +5064,7 @@ document.addEventListener('keydown', (e) => {
     const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 
     // Ctrl+` — toggle console
-    if (e.key === '`' && e.ctrlKey) { e.preventDefault(); toggleConsole(); return; }
+    if (e.key === '`' && e.ctrlKey) { e.preventDefault(); _findOrCreateCodeChat(); return; }
     // Ctrl+S — save project
     if (e.key === 's' && e.ctrlKey && !e.shiftKey) { e.preventDefault(); saveProject(); return; }
     // Ctrl+Shift+N — new project
@@ -4734,15 +5074,15 @@ document.addEventListener('keydown', (e) => {
     // F5 — run current step
     if (e.key === 'F5' && !e.ctrlKey) { e.preventDefault(); shortcutRunCurrentStep(); return; }
     // Ctrl+Shift+G — new Git terminal
-    if (e.key === 'G' && e.ctrlKey && e.shiftKey) { e.preventDefault(); if (!_consoleOpen) toggleConsole(); else addConsoleTab('git'); return; }
+    if (e.key === 'G' && e.ctrlKey && e.shiftKey) { e.preventDefault(); _findOrCreateCodeChat(); addConsoleTab('git').then(() => { _renderCodeChatTabs(); _renderCodeChatBody(); }); return; }
     // Ctrl+Shift+T — new Python terminal
-    if (e.key === 'T' && e.ctrlKey && e.shiftKey) { e.preventDefault(); if (!_consoleOpen) toggleConsole(); else addConsoleTab('shared'); return; }
+    if (e.key === 'T' && e.ctrlKey && e.shiftKey) { e.preventDefault(); _findOrCreateCodeChat(); addConsoleTab('shared').then(() => { _renderCodeChatTabs(); _renderCodeChatBody(); }); return; }
     // Ctrl+Shift+E — toggle left panel (toolbox)
     if (e.key === 'E' && e.ctrlKey && e.shiftKey) { e.preventDefault(); shortcutToggleLeftPanel(); return; }
     // Ctrl+Shift+H — toggle version control panel
     if (e.key === 'H' && e.ctrlKey && e.shiftKey) { e.preventDefault(); toggleVersionPanel(); return; }
     // Ctrl+Shift+B — toggle console (alternate)
-    if (e.key === 'B' && e.ctrlKey && e.shiftKey) { e.preventDefault(); toggleConsole(); return; }
+    if (e.key === 'B' && e.ctrlKey && e.shiftKey) { e.preventDefault(); _findOrCreateCodeChat(); return; }
     // Escape — close dialogs/menus
     if (e.key === 'Escape') { hideContextMenu(); closeModals(); return; }
     // Ctrl+Shift+/ — show shortcuts help
@@ -5138,6 +5478,7 @@ function restoreFromState(fullState) {
         const ws = {
             id: wsId,
             name: wsData.name,
+            type: 'workspace',
             subtabs: new Map(),
             pipelines: new Map(),
             activeSubtab: canvasSubId,
@@ -12388,10 +12729,23 @@ async function cleanUnusedData() {
         }
     }
 }
-function openSharedConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('shared'); }
-function openIsolatedConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('isolated'); }
-function openGitConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('git'); }
-function opencinteliaFresh() { if (!_consoleOpen) toggleConsole(); addConsoleTab('cintelia_fresh'); }
+function _findOrCreateCodeChat() {
+    let ccWs = [...state.workspaces.values()].find(w => w.type === 'codechat');
+    if (!ccWs) { createCodeChat(); ccWs = [...state.workspaces.values()].find(w => w.type === 'codechat'); }
+    else { switchWorkspace(ccWs.id); }
+    return ccWs;
+}
+
+function _findOrCreateCodeChat() {
+    let ccWs = [...state.workspaces.values()].find(w => w.type === 'codechat');
+    if (!ccWs) { createCodeChat(); ccWs = [...state.workspaces.values()].find(w => w.type === 'codechat'); }
+    else { switchWorkspace(ccWs.id); }
+    return ccWs;
+}
+function openSharedConsole() { _findOrCreateCodeChat(); _addCodeChatTab('shared'); }
+function openIsolatedConsole() { _findOrCreateCodeChat(); _addCodeChatTab('isolated'); }
+function openGitConsole() { _findOrCreateCodeChat(); _addCodeChatTab('git'); }
+function opencinteliaFresh() { _findOrCreateCodeChat(); _addCodeChatTab('cellintella_fresh'); }
 const openCellIntellaFresh = opencinteliaFresh;
 
 function showPipelineContextMenu(e, pipeline) {
@@ -13158,7 +13512,7 @@ let _consoleOpen = false;
 let _consoleTabs = [];  // [{id, sessionId, type, name, lines: [], history: [], histIdx: -1}]
 let _consoleActiveTab = null;
 let _consoleTabCounter = 0;
-let _cinteliaModelLoaded = false;
+let _cellIntellaModelLoaded = false;
 
 // AI Context Accumulation
 // Each CellIntella chat (mini-chat or console tab) can accumulate context items
@@ -13184,7 +13538,7 @@ function getOpenAIChats() {
     const chats = [];
     // Console tabs
     for (const tab of _consoleTabs) {
-        if (tab.type === 'cintelia' || tab.type === 'cintelia_fresh') {
+        if (tab.type === 'cellintella' || tab.type === 'cellintella_fresh') {
             chats.push({ id: tab.id, label: tab.name, type: 'console' });
         }
     }
@@ -13279,10 +13633,10 @@ function aiAddContextToChat(chatId, item) {
 
 function aiAddContextNewTab(item) {
     if (!_consoleOpen) toggleConsole();
-    addConsoleTab('cintelia').then(() => {
+    addConsoleTab('cellintella').then(() => {
         // Find the just-created tab
         const tab = _consoleTabs[_consoleTabs.length - 1];
-        if (tab && (tab.type === 'cintelia' || tab.type === 'cintelia_fresh')) {
+        if (tab && (tab.type === 'cellintella' || tab.type === 'cellintella_fresh')) {
             addAIContext(tab.id, item);
             tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">📌 Context added: ${escapeHtml(item.label)}</span>` });
             renderConsoleBody();
@@ -13294,8 +13648,8 @@ const CONSOLE_TYPES = {
     shared:       { label: '🐍 Python',     color: '#89b4fa', prompt: '>>> ', welcome: 'Python (shared namespace) — has access to project, results, all imports' },
     isolated:     { label: '🐍 Python',     color: '#a6e3a1', prompt: '>>> ', welcome: 'Python (isolated) — fresh namespace, import what you need' },
     git:          { label: '📦 CelLAB Git', color: '#fab387', prompt: '$ ',  welcome: 'CelLAB Git — type "help" for available commands' },
-    cintelia:      { label: '🤖 CellIntella',    color: '#cba6f7', prompt: '🤖 ', welcome: 'CellIntella (shared memory) — Cell Intelligent Autonomous Interface — conversation history preserved across messages' },
-    cintelia_fresh:{ label: '🤖 CellIntella',    color: '#b4befe', prompt: '🤖 ', welcome: 'CellIntella (fresh) — Cell Intelligent Autonomous Interface — no history, fast one-off questions' },
+    cellintella:      { label: '🤖 CellIntella',    color: '#cba6f7', prompt: '🤖 ', welcome: 'CellIntella (shared memory) — Cell Intelligent Autonomous Interface — conversation history preserved across messages' },
+    cellintella_fresh:{ label: '🤖 CellIntella',    color: '#b4befe', prompt: '🤖 ', welcome: 'CellIntella (fresh) — Cell Intelligent Autonomous Interface — no history, fast one-off questions' },
 };
 
 function toggleConsole() {
@@ -13340,8 +13694,8 @@ async function addConsoleTab(type, scope = null) {
     let sessionId = null;
 
     // CellIntella tabs don't need a console session
-    if (type === 'cintelia' || type === 'cintelia_fresh') {
-        sessionId = `cintelia_${Date.now()}`;
+    if (type === 'cellintella' || type === 'cellintella_fresh') {
+        sessionId = `cellintella_${Date.now()}`;
     } else {
         const res = await api('console/create', 'POST', { type });
         if (!res.success) return;
@@ -13376,7 +13730,7 @@ async function addConsoleTab(type, scope = null) {
         lines: [
             { html: `<span class="console-welcome">CelLAB Console — ${info.welcome}</span>` },
             ...(scopeWelcome ? [{ html: `<span class="console-welcome" style="color:#cba6f7">${scopeWelcome}</span>` }] : []),
-            ...(type === 'cintelia' || type === 'cintelia_fresh' ? [
+            ...(type === 'cellintella' || type === 'cellintella_fresh' ? [
                 { html: `<span class="console-welcome">⏳ First message takes ~2-3 min to load the model. After that, responses are fast.</span>` },
                 { html: `<span class="console-welcome">Powered by Llama 3.2 3B (local, private — no data leaves your machine)</span>` },
             ] : []),
@@ -13410,6 +13764,11 @@ function closeConsoleTab(tabId, ev) {
 }
 
 function renderConsoleTabs() {
+    // If in Code & Chat mode, render there instead
+    if ((_getActiveCodeChatWs() !== null)) {
+        _renderCodeChatTabs();
+        return;
+    }
     const row = document.getElementById('consoleTabsRow');
     if (!row) return;
 
@@ -13436,8 +13795,8 @@ function showAddTerminalMenu(e) {
         <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('isolated')"><span style="color:#a6e3a1">●</span> Python (Isolated)</div>
         <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('git')"><span style="color:#fab387">●</span> CelLAB Git</div>
         <div class="ctx-separator"></div>
-        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia')"><span style="color:#cba6f7">●</span> CellIntella (Shared)</div>
-        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia_fresh')"><span style="color:#b4befe">●</span> CellIntella (Fresh)</div>
+        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cellintella')"><span style="color:#cba6f7">●</span> CellIntella (Shared)</div>
+        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cellintella_fresh')"><span style="color:#b4befe">●</span> CellIntella (Fresh)</div>
     `;
     document.body.appendChild(menu);
     const rect = e.target.getBoundingClientRect();
@@ -13451,6 +13810,11 @@ function getActiveConsoleTab() {
 }
 
 function renderConsoleBody() {
+    // If in Code & Chat mode, render there instead
+    if ((_getActiveCodeChatWs() !== null)) {
+        _renderCodeChatBody();
+        return;
+    }
     const body = document.getElementById('consoleBody');
     if (!body) return;
     const tab = getActiveConsoleTab();
@@ -13512,8 +13876,8 @@ async function consoleExec(code) {
     if (!tab) return;
 
     // Route CellIntella tabs to AI endpoint
-    if (tab.type === 'cintelia' || tab.type === 'cintelia_fresh') {
-        await cinteliaConsoleExec(tab, code);
+    if (tab.type === 'cellintella' || tab.type === 'cellintella_fresh') {
+        await cellIntellaConsoleExec(tab, code);
         return;
     }
 
@@ -13538,7 +13902,7 @@ async function consoleExec(code) {
     }
 }
 
-async function cinteliaConsoleExec(tab, message) {
+async function cellIntellaConsoleExec(tab, message) {
     // Magic commands
     if (message === 'clear' || message === 'cls' || message === 'clc') {
         consoleClear(); return;
@@ -13587,7 +13951,7 @@ async function cinteliaConsoleExec(tab, message) {
 
     // /help command
     if (message === '/help') {
-        tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">cintelia Commands:\n  /config          — show model settings\n  /config n_ctx N  — change context window (reloads model)\n  /scope           — show current scope\n  /scope project   — attach entire project context\n  /scope workspace — attach current workspace\n  /scope none      — clear scope\n  /context         — show accumulated context items\n  /context clear   — remove all context items\n  clear            — clear console</span>` });
+        tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">CellIntella Commands:\n  /config          — show model settings\n  /config n_ctx N  — change context window (reloads model)\n  /scope           — show current scope\n  /scope project   — attach entire project context\n  /scope workspace — attach current workspace\n  /scope none      — clear scope\n  /context         — show accumulated context items\n  /context clear   — remove all context items\n  clear            — clear console</span>` });
         renderConsoleBody();
         return;
     }
@@ -13644,14 +14008,14 @@ async function cinteliaConsoleExec(tab, message) {
 
     // Show thinking indicator
     const info = CONSOLE_TYPES[tab.type];
-    tab.lines.push({ html: `<span class="console-out" style="color:rgba(203,166,247,.4);font-style:italic">${_cinteliaModelLoaded ? '⏳ Thinking...' : '⏳ Loading model & thinking... (~2-3 min first time)'}</span>` });
+    tab.lines.push({ html: `<span class="console-out" style="color:rgba(203,166,247,.4);font-style:italic">${_cellIntellaModelLoaded ? '⏳ Thinking...' : '⏳ Loading model & thinking... (~2-3 min first time)'}</span>` });
     renderConsoleBody();
 
     try {
         const res = await api('cellintella/query', 'POST', {
             message: message,
             session_id: tab.sessionId,
-            fresh: tab.type === 'cintelia_fresh',
+            fresh: tab.type === 'cellintella_fresh',
             scope: tab.scope || { level: 'none' },
             accumulated_context: buildAIContextText(tab.id),
         });
@@ -13662,7 +14026,7 @@ async function cinteliaConsoleExec(tab, message) {
         if (res.success && res.data.response) {
             const text = res.data.response;
             tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">${escapeHtml(text)}</span>` });
-            _cinteliaModelLoaded = true;
+            _cellIntellaModelLoaded = true;
         } else {
             tab.lines.push({ html: `<span class="console-err">${escapeHtml(res.error || 'No response')}</span>` });
         }
@@ -13976,17 +14340,28 @@ function openAristolia() {
 }
 
 function togglecinteliaPanel() {
-    // Open console if not open
-    if (!_consoleOpen) toggleConsole();
-
-    // Check if a cintelia tab already exists
-    const existing = _consoleTabs.find(t => t.type === 'cintelia');
-    if (existing) {
-        switchConsoleTab(existing.id);
+    let ccWs = null;
+    for (const [wsId, ws] of state.workspaces) {
+        if (ws.type === 'codechat') { ccWs = ws; break; }
+    }
+    if (!ccWs) {
+        createCodeChat();
+        ccWs = [...state.workspaces.values()].find(w => w.type === 'codechat');
     } else {
-        addConsoleTab('cintelia');
+        switchWorkspace(ccWs.id);
+    }
+    if (ccWs) {
+        const existing = ccWs.consoleTabs.find(t => t.type === 'cellintella');
+        if (existing) {
+            ccWs.activeConsoleTab = existing.id;
+            _renderCodeChatTabs();
+            _renderCodeChatBody();
+        } else {
+            _addCodeChatTab('cellintella');
+        }
     }
 }
+
 // Alias for renamed HTML references
 const toggleCellIntellaPanel = togglecinteliaPanel;
 
@@ -14013,4 +14388,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     updateStatus('Ready — CELLAB v3.1');
+
+    // Create default Code & Chat if none exists
+    const hasCodeChat = [...state.workspaces.values()].some(w => w.type === 'codechat');
+    if (!hasCodeChat) {
+        createCodeChat('Code & Chat');
+        // Switch back to first workspace
+        const firstWs = [...state.workspaces.values()].find(w => w.type === 'workspace');
+        if (firstWs) switchWorkspace(firstWs.id);
+    }
 });
