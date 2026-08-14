@@ -1107,6 +1107,23 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
             pass
     print(f"  [DIAG] Morphometry done, K={results.get('K', 'N/A')}")
 
+    # Compute residual force field
+    print("  [DIAG] Computing residual force field...")
+    rf = engine._compute_residual_field(results)
+    results['residual_field'] = rf
+    if rf is not None:
+        results['mean_F'] = rf['mean_F']
+        results['frac_compression'] = rf['frac_compression']
+        results['spatial_cv'] = rf['spatial_cv']
+        results['n_hot_spots'] = rf['n_hot_spots']
+        print(f"  [DIAG] Force field: mean_F={rf['mean_F']:.4f}, hot_spots={rf['n_hot_spots']}")
+    else:
+        results['mean_F'] = None
+        results['frac_compression'] = None
+        results['spatial_cv'] = None
+        results['n_hot_spots'] = 0
+        print("  [DIAG] Force field: insufficient data")
+
     # Extract safe results
     safe_results = _extract_safe_results(results)
     print("  [DIAG] Safe results extracted")
@@ -1148,6 +1165,10 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
             "Ave_calc": scalar_results.get('Ave_calc', 'N/A'),
             "CV_calc": scalar_results.get('CV_calc', 'N/A'),
             "HEX_calc": scalar_results.get('HEX_calc', 'N/A'),
+            "mean_F": scalar_results.get('mean_F', 'N/A'),
+            "frac_compression": scalar_results.get('frac_compression', 'N/A'),
+            "spatial_cv": scalar_results.get('spatial_cv', 'N/A'),
+            "n_hot_spots": scalar_results.get('n_hot_spots', 0),
         },
     }
 
