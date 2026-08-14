@@ -1665,12 +1665,17 @@ class cornealia_plotter:
     # -----------------------------------------------------------------------
 
     def mechanical_field(self, save=None):
-        """Delaunay truss network, residual force magnitude, and force vectors."""
+        """Combined truss network + force field visualization.
+        Left: raw image with Delaunay edges (red=compressed, blue=tension) + r₀ zoom inset
+        Right: |F| heatmap on nodes + force vectors on high-stress nodes + histogram inset
+        """
         from matplotlib.collections import LineCollection
+        from matplotlib.lines import Line2D
+        from matplotlib.patches import Rectangle
 
         rf = getattr(self.c, 'residual_field', None)
         if rf is None:
-            print("No residual_field data — call mechanical_state() instead of collective_order().")
+            print("No residual_field data — call mechanical_state() instead of collective_order_pipeline().")
             return
 
         save = save if save is not None else self.save
@@ -1682,56 +1687,164 @@ class cornealia_plotter:
         r0 = rf['r0']
         F_res = rf['F_residual']
         F_mag = rf['F_mag']
+        mean_F = F_mag.mean()
+        frac_c = rf.get('frac_compression', (d_um < r0).sum() / len(edges))
 
-        fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
+        # Shared spatial limits
+        pad = 5
+        xl = (pts[:, 0].min() - pad, pts[:, 0].max() + pad)
+        yl = (pts[:, 1].min() - pad, pts[:, 1].max() + pad)
+        vmax = np.percentile(F_mag, 95)
 
-        # Panel 1: Delaunay network
-        ax = axes[0]
-        segments, colors = [], []
-        for k, (i, j) in enumerate(edges):
-            segments.append([pts[i], pts[j]])
-            colors.append('#CC3311' if d_um[k] < r0 else '#0077BB')
-        lc = LineCollection(segments, colors=colors, linewidths=0.4, alpha=0.5)
-        ax.add_collection(lc)
-        ax.set_xlim(pts[:, 0].min(), pts[:, 0].max())
-        ax.set_ylim(pts[:, 1].min(), pts[:, 1].max())
-        ax.set_aspect('equal')
-        ax.set_xlabel('x (µm)'); ax.set_ylabel('y (µm)')
-        ax.set_title('Delaunay Network\n(red=compressed, blue=tension)', fontsize=9, fontweight='bold')
+        fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(16, 7))
+
+        # ── LEFT: Truss network with image background ──
+        # Try to show cell_area as background
+        cell_area = getattr(self.c, 'cell_area', None)
+        if cell_area is not None:
+            pixel_size = getattr(self.c, 'pixel_size', 0.58) if hasattr(self.c, 'pixel_size') else 0.58
+            H_px, W_px = cell_area.shape[:2]
+            extent_um = [0, W_px * pixel_size, H_px * pixel_size, 0]
+            ax_left.imshow(cell_area, extent=extent_um, aspect='auto',
+                          cmap='gray' if cell_area.ndim == 2 else None,
+                          alpha=0.5, zorder=0)
+
+        # Delaunay edges
+        segments = [[pts[i], pts[j]] for i, j in edges]
+        edge_colors = ['#CC3311' if d_um[k] < r0 else '#0077BB' for k in range(len(edges))]
+        ax_left.add_collection(LineCollection(segments, colors=edge_colors,
+                                              linewidths=0.4, alpha=0.4, zorder=1))
+
+        # Centroids
+        ax_left.scatter(pts[:, 0], pts[:, 1], s=3, c='white', edgecolors='#333',
+                        linewidths=0.2, zorder=2, alpha=0.8)
+
+        ax_left.set_xlim(xl); ax_left.set_ylim(yl)
+        ax_left.set_aspect('equal')
+        ax_left.set_xlabel('x (µm)'); ax_left.set_ylabel('y (µm)')
         n_comp = (d_um < r0).sum()
-        ax.text(0.02, 0.02, f'Compressed: {n_comp}/{len(edges)} ({100*n_comp/len(edges):.0f}%)',
-                transform=ax.transAxes, fontsize=7, va='bottom')
-        sns.despine(ax=ax)
+        ax_left.set_title(f'Truss Network  ({n_comp}/{len(edges)} compressed)',
+                          fontsize=10, fontweight='bold')
 
-        # Panel 2: |F| heatmap
-        ax = axes[1]
-        sc = ax.scatter(pts[:, 0], pts[:, 1], c=F_mag, s=3, cmap='hot_r',
-                        vmin=0, vmax=np.percentile(F_mag, 95), edgecolors='none')
-        plt.colorbar(sc, ax=ax, shrink=0.7, label='|F_residual|')
-        ax.set_aspect('equal'); ax.set_xlabel('x (µm)')
-        ax.set_title('Residual Force Magnitude\n(hot = far from equilibrium)', fontsize=9, fontweight='bold')
-        sns.despine(ax=ax)
+        # Zoom inset around center node
+        cx, cy = np.median(pts[:, 0]), np.median(pts[:, 1])
+        center_node = np.argmin(np.sqrt((pts[:, 0] - cx)**2 + (pts[:, 1] - cy)**2))
+        zoom_cx, zoom_cy = pts[center_node]
+        zoom_r = r0 * 2.2
 
-        # Panel 3: force arrows
-        ax = axes[2]
-        ax.scatter(pts[:, 0], pts[:, 1], c='#ddd', s=1, edgecolors='none')
+        rect = Rectangle((zoom_cx - zoom_r, zoom_cy - zoom_r),
+                           2 * zoom_r, 2 * zoom_r,
+                           linewidth=1.2, edgecolor='#009E73', facecolor='none', zorder=5)
+        ax_left.add_patch(rect)
+
+        ax_in = ax_left.inset_axes([0.58, 0.02, 0.40, 0.50])
+        ax_in.set_facecolor('#F8F8F5')
+        x_lo, x_hi = zoom_cx - zoom_r, zoom_cx + zoom_r
+        y_lo, y_hi = zoom_cy - zoom_r, zoom_cy + zoom_r
+
+        # 1st-ring neighbors
+        neighbor_mask = (edges[:, 0] == center_node) | (edges[:, 1] == center_node)
+        ring1 = set()
+        for i, j in edges[neighbor_mask]:
+            ring1.add(i); ring1.add(j)
+        ring2 = set()
+        for nn in ring1:
+            nn_mask = (edges[:, 0] == nn) | (edges[:, 1] == nn)
+            for i, j in edges[nn_mask]:
+                ring2.add(i); ring2.add(j)
+
+        for k, (i, j) in enumerate(edges):
+            if i in ring2 and j in ring2:
+                xi, yi = pts[i]; xj, yj = pts[j]
+                if x_lo < xi < x_hi and x_lo < xj < x_hi and \
+                   y_lo < yi < y_hi and y_lo < yj < y_hi:
+                    color = '#CC3311' if d_um[k] < r0 else '#0077BB'
+                    lw = 1.5 if (i in ring1 and j in ring1) else 0.5
+                    alpha = 0.9 if (i in ring1 and j in ring1) else 0.25
+                    ax_in.plot([xi, xj], [yi, yj], '-', color=color, linewidth=lw, alpha=alpha)
+
+        circle = plt.Circle((zoom_cx, zoom_cy), r0, fill=False,
+                              color='#009E73', linewidth=1.5, linestyle='--', alpha=0.9)
+        ax_in.add_patch(circle)
+
+        for idx in ring2:
+            xi, yi = pts[idx]
+            if not (x_lo < xi < x_hi and y_lo < yi < y_hi):
+                continue
+            if idx == center_node:
+                ax_in.plot(xi, yi, 'o', color='#333', markersize=6,
+                           markeredgecolor='white', markeredgewidth=0.8, zorder=5)
+            elif idx in ring1:
+                ax_in.plot(xi, yi, 'o', color='#666', markersize=4,
+                           markeredgecolor='white', markeredgewidth=0.5, zorder=4)
+            else:
+                ax_in.plot(xi, yi, 'o', color='#bbb', markersize=2.5, zorder=3)
+
+        ax_in.set_xlim(x_lo, x_hi); ax_in.set_ylim(y_hi, y_lo)
+        ax_in.set_aspect('equal'); ax_in.set_xticks([]); ax_in.set_yticks([])
+        for spine in ax_in.spines.values():
+            spine.set_edgecolor('#009E73'); spine.set_linewidth(1.2)
+
+        legend_el = [
+            Line2D([0], [0], color='#CC3311', lw=1.5, label=r'd < r$_0$'),
+            Line2D([0], [0], color='#0077BB', lw=1.5, label=r'd > r$_0$'),
+            Line2D([0], [0], color='#009E73', lw=1.5, linestyle='--',
+                   label=f'r₀ = {r0:.1f} µm'),
+        ]
+        ax_left.legend(handles=legend_el, fontsize=7, loc='upper center', ncol=3,
+                       framealpha=0.9)
+
+        # ── RIGHT: Force field heatmap + vectors ──
+        # Subtle edges
+        ax_right.add_collection(LineCollection(segments,
+                                colors=['#E8CCCC' if d_um[k]<r0 else '#CCE0F0'
+                                        for k in range(len(edges))],
+                                linewidths=0.25, alpha=0.3))
+
+        sc = ax_right.scatter(pts[:, 0], pts[:, 1], c=F_mag, s=8, cmap='YlOrRd',
+                              vmin=0, vmax=vmax, edgecolors='none', zorder=2)
+
+        # Force vectors (top 30%)
         threshold = np.percentile(F_mag, 70)
         high = F_mag >= threshold
-        scale = np.percentile(F_mag[high], 95) if high.any() else 1.0
-        ax.quiver(pts[high, 0], pts[high, 1], F_res[high, 0], F_res[high, 1],
-                  F_mag[high], cmap='hot_r', scale=scale * 15,
-                  width=0.003, headwidth=3, headlength=4, alpha=0.7)
-        ax.set_aspect('equal'); ax.set_xlabel('x (µm)')
-        ax.set_title('Residual Force Vectors\n(top 30% by magnitude)', fontsize=9, fontweight='bold')
-        sns.despine(ax=ax)
+        if high.any():
+            scale = np.percentile(F_mag[high], 95)
+            ax_right.quiver(pts[high, 0], pts[high, 1], F_res[high, 0], F_res[high, 1],
+                            F_mag[high], cmap='YlOrRd', clim=(0, vmax),
+                            scale=scale * 18, width=0.004, headwidth=3, headlength=3.5,
+                            alpha=0.75, zorder=3)
 
-        mean_F = getattr(self.c, 'mean_F', np.nan)
-        frac_c = getattr(self.c, 'frac_compression', np.nan)
-        fig.suptitle(f'Mechanical Field  (mean|F|={mean_F:.3f}, compressed={frac_c:.0%})',
-                     fontweight='bold', fontsize=10, y=1.02)
+        cb = plt.colorbar(sc, ax=ax_right, shrink=0.75, pad=0.02)
+        cb.set_label(r'$|F_i|$ (µm$^{-1}$)', fontsize=9, fontweight='bold')
+
+        ax_right.set_xlim(xl); ax_right.set_ylim(yl)
+        ax_right.set_aspect('equal')
+        ax_right.set_xlabel('x (µm)')
+        ax_right.set_title('Force Field', fontsize=10, fontweight='bold')
+
+        # Stats annotation
+        ax_right.text(0.97, 0.03,
+                      f'mean|F| = {mean_F:.3f}\ncompression = {frac_c:.0%}\n'
+                      f'hot spots = {rf.get("n_hot_spots", "?")}',
+                      transform=ax_right.transAxes, fontsize=7, fontweight='bold',
+                      color='white', ha='right', va='bottom',
+                      bbox=dict(boxstyle='round,pad=0.3', facecolor='black',
+                                alpha=0.6, edgecolor='none'))
+
+        # Histogram inset
+        ax_hist = ax_right.inset_axes([0.02, 0.65, 0.30, 0.30])
+        ax_hist.hist(F_mag, bins=25, color='#E8833A', alpha=0.7, edgecolor='white', linewidth=0.3)
+        ax_hist.axvline(mean_F, color='#CC3311', linewidth=1.5, linestyle='--', alpha=0.8)
+        ax_hist.set_xlabel(r'$|F_i|$', fontsize=6); ax_hist.set_ylabel('n', fontsize=6)
+        ax_hist.tick_params(labelsize=5)
+        ax_hist.set_facecolor('#F8F8F5')
+
+        fig.suptitle(f'Mechanical State  (K = {getattr(self.c, "K", "?")},  '
+                     f'mean|F| = {mean_F:.3f},  {frac_c:.0%} compressed)',
+                     fontweight='bold', fontsize=11, y=1.01)
         plt.tight_layout()
         if save:
-            self._save_fig(fig, 'mechanical_field')
+            self._save_fig(fig, '08_mechanical_state')
         plt.show()
 
     # 8. HOT SPOTS (2-panel: network + histogram)

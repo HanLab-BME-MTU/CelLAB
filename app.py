@@ -1149,7 +1149,7 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
         print(f"  [DIAG] Pickle error: {pkl_err}")
 
     available_plots = ['segmentation', 'radial_distribution', 'potential',
-                       'fitting', 'comprehensive', 'publication_gr',
+                       'fitting', 'mechanical_field', 'comprehensive', 'publication_gr',
                        'publication_vr', 'pipeline_figure']
 
     return {
@@ -4046,6 +4046,7 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                     'publication_gr':       ('publication_gr',       '06_publication_gr.png'),
                     'publication_vr':       ('publication_vr',       '07_publication_vr.png'),
                     'pipeline_figure':      ('pipeline_figure',      'pipeline_figure.png'),
+                    'mechanical_field':     ('mechanical_field',     '08_mechanical_state.png'),
                 }
 
                 if plot_type not in plot_map:

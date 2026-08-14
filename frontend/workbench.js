@@ -9610,6 +9610,7 @@ function getAvailablePlots(moduleType, stepId) {
             { id: 'radial_distribution', icon: '📈', label: 'g(r) — Radial Distribution' },
             { id: 'potential',           icon: '📉', label: 'V(r) — Interaction Potential' },
             { id: 'fitting',            icon: '🔬', label: 'Fitting & Stiffness (K)' },
+            { id: 'mechanical_field',   icon: '⚡', label: 'Mechanical State' },
             { id: 'comprehensive',      icon: '📊', label: 'Comprehensive Summary' },
             { id: 'publication_gr',     icon: '📄', label: 'Publication — g(r)' },
             { id: 'publication_vr',     icon: '📄', label: 'Publication — V(r)' },
