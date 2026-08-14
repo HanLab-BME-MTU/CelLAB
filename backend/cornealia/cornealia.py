@@ -18,6 +18,148 @@ from shared_modules.cellade.cellade import CellADE
 from .plotters.cornealia_plotter import cornealia_plotter
 
 
+# ═══════════════════════════════════════════════════════════
+# Pipeline step contract — defines the ordered stages,
+# their display names, and which key outputs to surface.
+# ═══════════════════════════════════════════════════════════
+
+PIPELINE_STEPS = [
+    {'id': 'load',       'name': 'Load Image',       'key_outputs': []},
+    {'id': 'preprocess', 'name': 'Preprocess',        'key_outputs': ['machine_CD', 'machine_Ave'], 'optional': True},
+    {'id': 'segment',    'name': 'Segmentation',      'key_outputs': ['n_cells']},
+    {'id': 'metrics',    'name': 'Classic Metrics',    'key_outputs': ['CD_calc', 'Ave_calc', 'CV_calc', 'HEX_calc']},
+    {'id': 'gr',         'name': 'g(r) Computation',   'key_outputs': ['n_interior', 'g_peak']},
+    {'id': 'quality',    'name': 'Quality Gate',       'key_outputs': ['reliable', 'R2_damped', 'SNR']},
+    {'id': 'fitting',    'name': 'K Fitting',          'key_outputs': ['K', 'K_ds', 'r0_fit']},
+    {'id': 'force',      'name': 'Force Field',        'key_outputs': ['mean_F', 'frac_compression', 'n_hot_spots']},
+]
+
+
+class PipelineReporter:
+    """
+    Tracks pipeline step progress with structured status updates.
+
+    Each step transitions:  idle → running → done | failed
+
+    Usage:
+        reporter = PipelineReporter(PIPELINE_STEPS, callback=my_gui_callback)
+        reporter.start('segment')
+        ...compute...
+        reporter.done('segment', {'n_cells': 342})
+
+    The callback receives the full board state on every transition,
+    enabling real-time GUI updates. Without a callback, status is printed.
+    """
+
+    # Status constants
+    IDLE    = 'idle'
+    RUNNING = 'running'
+    DONE    = 'done'
+    FAILED  = 'failed'
+    SKIPPED = 'skipped'
+
+    # Status indicators for CLI display
+    _ICONS = {
+        'idle':    '⚪',
+        'running': '🟡',
+        'done':    '🟢',
+        'failed':  '🔴',
+        'skipped': '⚫',
+    }
+
+    def __init__(self, steps=None, callback=None, verbose=True):
+        """
+        Parameters
+        ----------
+        steps : list of dict
+            Step definitions from PIPELINE_STEPS.
+        callback : callable or None
+            Called with (step_id, status, board) on every transition.
+            If None, prints to stdout.
+        verbose : bool
+            If True and no callback, print status updates.
+        """
+        self.steps = steps or PIPELINE_STEPS
+        self.callback = callback
+        self.verbose = verbose
+
+        # Board state: ordered dict of step_id → {status, name, outputs, error, time}
+        self.board = {}
+        for s in self.steps:
+            self.board[s['id']] = {
+                'name':        s['name'],
+                'status':      self.IDLE,
+                'key_outputs': s.get('key_outputs', []),
+                'optional':    s.get('optional', False),
+                'outputs':     {},
+                'error':       None,
+                'time':        None,
+            }
+        self._timers = {}
+
+    def start(self, step_id):
+        """Mark step as running."""
+        if step_id not in self.board:
+            return
+        self.board[step_id]['status'] = self.RUNNING
+        self.board[step_id]['error'] = None
+        self._timers[step_id] = time.time()
+        self._emit(step_id)
+
+    def done(self, step_id, outputs=None):
+        """Mark step as done with optional key outputs."""
+        if step_id not in self.board:
+            return
+        elapsed = time.time() - self._timers.get(step_id, time.time())
+        self.board[step_id]['status'] = self.DONE
+        self.board[step_id]['time'] = round(elapsed, 2)
+        if outputs:
+            self.board[step_id]['outputs'] = outputs
+        self._emit(step_id)
+
+    def fail(self, step_id, error):
+        """Mark step as failed with error message."""
+        if step_id not in self.board:
+            return
+        elapsed = time.time() - self._timers.get(step_id, time.time())
+        self.board[step_id]['status'] = self.FAILED
+        self.board[step_id]['time'] = round(elapsed, 2)
+        self.board[step_id]['error'] = str(error)
+        self._emit(step_id)
+
+    def skip(self, step_id):
+        """Mark optional step as skipped."""
+        if step_id not in self.board:
+            return
+        self.board[step_id]['status'] = self.SKIPPED
+        self._emit(step_id)
+
+    def get_board(self):
+        """Return full board state for GUI rendering."""
+        completed = sum(1 for s in self.board.values() if s['status'] == self.DONE)
+        total = sum(1 for s in self.board.values() if not s['optional'])
+        return {
+            'steps': self.board,
+            'completed': completed,
+            'total': total,
+            'has_failure': any(s['status'] == self.FAILED for s in self.board.values()),
+        }
+
+    def _emit(self, step_id):
+        """Send update via callback or print."""
+        step = self.board[step_id]
+        icon = self._ICONS.get(step['status'], '?')
+
+        if self.callback:
+            self.callback(step_id, step['status'], self.get_board())
+        elif self.verbose:
+            out_str = ''
+            if step['outputs']:
+                out_str = '  ' + '  '.join(f"{k}={v}" for k, v in step['outputs'].items())
+            time_str = f"  ({step['time']}s)" if step['time'] is not None else ''
+            print(f"  {icon} {step['name']}{time_str}{out_str}")
+
+
 class cornealia :
     
     def __init__(self, is_input_image_machine_output=True, fcm_method='local', min_expansion_shells=5,min_interior_cells_ratio=0.4,exclusion_ratio=0.15,
@@ -881,7 +1023,7 @@ class cornealia :
             'popt_ds':         _popt_ds,
         }
 
-    def collective_order_pipeline(self, image_path, centroids=None, image_dims=None):
+    def collective_order_pipeline(self, image_path, centroids=None, image_dims=None, reporter=None):
         """
         Full pipeline: load image → segment → classic metrics → collective order.
 
@@ -895,27 +1037,62 @@ class cornealia :
             Pre-computed centroids (N, 2) for centroid-only mode.
         image_dims : tuple, optional
             (H, W) for centroid-only mode.
+        reporter : PipelineReporter, optional
+            If provided, emits structured status updates per step.
 
         Returns
         -------
         dict
             Combined results from all pipeline stages.
         """
+        if reporter is None:
+            reporter = PipelineReporter(PIPELINE_STEPS, verbose=self.verbose)
+
         if centroids is not None and image_dims is not None:
             # Centroid-only mode: skip image loading and segmentation
-            co_results = self.compute_collective_order(centroids, image_dims)
+            reporter.skip('load')
+            reporter.skip('preprocess')
+            reporter.skip('segment')
+            reporter.skip('metrics')
+
+            reporter.start('gr')
+            try:
+                co_results = self.compute_collective_order(centroids, image_dims)
+                reporter.done('gr', {'n_interior': co_results.get('n_interior'), 'g_peak': co_results.get('g_peak')})
+                reporter.done('quality', {'reliable': co_results.get('reliable'), 'R2_damped': co_results.get('R2_damped'), 'SNR': co_results.get('SNR')})
+                reporter.done('fitting', {'K': co_results.get('K'), 'K_ds': co_results.get('K_ds'), 'r0_fit': co_results.get('r0_fit')})
+            except Exception as e:
+                reporter.fail('gr', e)
+                raise
+
             co_results['image_path'] = str(image_path)
+            co_results['_reporter'] = reporter.get_board()
             return co_results
 
         # --- Normal mode: full pipeline ---
 
         # 1. Load image
-        input_image = self._load_image(image_path)
+        reporter.start('load')
+        try:
+            input_image = self._load_image(image_path)
+            reporter.done('load')
+        except Exception as e:
+            reporter.fail('load', e)
+            raise
 
         # 2. Preprocess (if machine output)
         if self.is_input_image_machine_output:
-            cell_area, machine_metrics, dot_centroids = self.cleaning_preprocessing(input_image)
+            reporter.start('preprocess')
+            try:
+                cell_area, machine_metrics, dot_centroids = self.cleaning_preprocessing(input_image)
+                reporter.done('preprocess', {
+                    'machine_CD': machine_metrics.get('CD', '?') if machine_metrics else '?',
+                })
+            except Exception as e:
+                reporter.fail('preprocess', e)
+                raise
         else:
+            reporter.skip('preprocess')
             cell_area = input_image
             machine_metrics = None
             dot_centroids = None
@@ -924,17 +1101,54 @@ class cornealia :
             cell_area = 255 - cell_area
 
         # 3. Segmentation
-        objects, segmentor = self.segmentation(cell_area)
-        centroids = np.array([o.centroid for o in objects])
-        areas = np.array([o.area for o in objects])
+        reporter.start('segment')
+        try:
+            objects, segmentor = self.segmentation(cell_area)
+            centroids = np.array([o.centroid for o in objects])
+            areas = np.array([o.area for o in objects])
+            reporter.done('segment', {'n_cells': len(objects)})
+        except Exception as e:
+            reporter.fail('segment', e)
+            raise
 
         # 4. Classic metrics
-        classic_metrics_seg = self._compute_classic_metrics(centroids, areas, segmentor.H, segmentor.W, method='segmentation')
-        classic_metrics_vor = self._compute_classic_metrics(centroids, areas, segmentor.H, segmentor.W, method='voronoi',
-                                                           dot_centroids=dot_centroids)
+        reporter.start('metrics')
+        try:
+            classic_metrics_seg = self._compute_classic_metrics(centroids, areas, segmentor.H, segmentor.W, method='segmentation')
+            classic_metrics_vor = self._compute_classic_metrics(centroids, areas, segmentor.H, segmentor.W, method='voronoi',
+                                                               dot_centroids=dot_centroids)
+            reporter.done('metrics', {
+                'CD_calc': round(classic_metrics_seg.get('CD_calc', 0), 1),
+                'Ave_calc': round(classic_metrics_seg.get('Ave_calc', 0), 1),
+                'HEX_calc': round(classic_metrics_seg.get('HEX_calc', 0), 1),
+            })
+        except Exception as e:
+            reporter.fail('metrics', e)
+            raise
 
-        # 5. Collective order
-        co_results = self.compute_collective_order(centroids, (segmentor.H, segmentor.W))
+        # 5. Collective order (g(r) + quality gate + fitting)
+        reporter.start('gr')
+        try:
+            co_results = self.compute_collective_order(centroids, (segmentor.H, segmentor.W))
+            reporter.done('gr', {
+                'n_interior': co_results.get('n_interior'),
+                'g_peak': round(co_results.get('g_peak', 0), 3),
+            })
+        except Exception as e:
+            reporter.fail('gr', e)
+            raise
+
+        reporter.done('quality', {
+            'reliable': co_results.get('reliable'),
+            'R2_damped': co_results.get('R2_damped'),
+            'SNR': co_results.get('SNR'),
+        })
+
+        reporter.done('fitting', {
+            'K': co_results.get('K'),
+            'K_ds': co_results.get('K_ds'),
+            'r0_fit': co_results.get('r0_fit'),
+        })
 
         # 6. Assemble full results
         results = {
@@ -962,6 +1176,8 @@ class cornealia :
             'voronoi_metrics': classic_metrics_vor,
             # collective order
             **co_results,
+            # reporter board
+            '_reporter': reporter.get_board(),
         }
 
         return results
@@ -1090,7 +1306,7 @@ class cornealia :
             'n_hot_spots':      int(hot_spots.sum()),
         }
 
-    def mechanical_state(self, image_path):
+    def mechanical_state(self, image_path, reporter=None):
         """
         Complete mechanical diagnostic of a corneal endothelial image.
 
@@ -1101,6 +1317,8 @@ class cornealia :
         ----------
         image_path : str or Path
             Path to the specular microscopy image.
+        reporter : PipelineReporter, optional
+            If provided, emits structured status updates per step.
 
         Returns
         -------
@@ -1109,25 +1327,38 @@ class cornealia :
             - Residual force field (nodes, edges, forces, vectors, hot spots)
             - Scalar summaries (mean_F, frac_compression, spatial_cv)
         """
+        if reporter is None:
+            reporter = PipelineReporter(PIPELINE_STEPS, verbose=self.verbose)
+
         # Run collective order (segmentation + fitting + quality gate)
-        co = self.collective_order_pipeline(image_path)
+        co = self.collective_order_pipeline(image_path, reporter=reporter)
 
         # Compute residual field from collective order results
-        rf = self._compute_residual_field(co)
+        reporter.start('force')
+        try:
+            rf = self._compute_residual_field(co)
+            co['residual_field'] = rf
+            if rf is not None:
+                co['mean_F'] = rf['mean_F']
+                co['frac_compression'] = rf['frac_compression']
+                co['spatial_cv'] = rf['spatial_cv']
+                co['n_hot_spots'] = rf['n_hot_spots']
+                reporter.done('force', {
+                    'mean_F': round(rf['mean_F'], 4),
+                    'frac_compression': round(rf['frac_compression'], 2),
+                    'n_hot_spots': rf['n_hot_spots'],
+                })
+            else:
+                co['mean_F'] = np.nan
+                co['frac_compression'] = np.nan
+                co['spatial_cv'] = np.nan
+                co['n_hot_spots'] = 0
+                reporter.skip('force')
+        except Exception as e:
+            reporter.fail('force', e)
+            raise
 
-        # Merge into single result
-        co['residual_field'] = rf
-        if rf is not None:
-            co['mean_F'] = rf['mean_F']
-            co['frac_compression'] = rf['frac_compression']
-            co['spatial_cv'] = rf['spatial_cv']
-            co['n_hot_spots'] = rf['n_hot_spots']
-        else:
-            co['mean_F'] = np.nan
-            co['frac_compression'] = np.nan
-            co['spatial_cv'] = np.nan
-            co['n_hot_spots'] = 0
-
+        co['_reporter'] = reporter.get_board()
         return co
 
     def _build_potential_functions(self, co_results):

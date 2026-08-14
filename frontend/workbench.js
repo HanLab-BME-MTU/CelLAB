@@ -195,7 +195,7 @@ function _renderCodeChatView(viewport, ws) {
                     <button class="codechat-btn" onclick="_addCodeChatTab('git')" title="New Git">+ Git</button>
                 </div>
             </div>
-            <div class="codechat-body" id="codeChatBody" onclick="document.getElementById('consoleInput')?.focus()"></div>
+            <div class="codechat-body" id="codeChatBody" onclick="document.getElementById('consoleInput')?.focus()" oncontextmenu="if(!event.target.closest('.console-input')){event.preventDefault();openWorkspaceRadialNav(event, true);}"></div>
         </div>
     `;
     _renderCodeChatTabs();
@@ -707,6 +707,173 @@ function toggleTabGroup(pipelineId) {
 function closeTabGroup(pipelineId, ev) {
     if (ev) ev.stopPropagation();
     closeSubtabsForPipeline(pipelineId);
+}
+
+function openWorkspaceRadialNav(ev, fromCodeChat = false) {
+    const existing = document.querySelector('.radial-nav-overlay');
+    if (existing) existing.remove();
+
+    const ws = getActiveWorkspace();
+
+    let items;
+    if (fromCodeChat) {
+        // Find first regular workspace to switch back to
+        const mainWs = [...state.workspaces.values()].find(w => w.type === 'workspace' || w.type === undefined);
+        items = [
+            { icon: '◈', label: 'Workspace', action: () => { if (mainWs) switchWorkspace(mainWs.id); } },
+            { icon: '💾', label: 'Save', action: () => { if (state._projectOpen) saveProject(); } },
+            { icon: '🐍', label: '+ Python', action: () => { _addCodeChatTab('shared'); } },
+            { icon: '🤖', label: '+ CellIntella', action: () => { _addCodeChatTab('cellintella'); } },
+            { icon: '📦', label: '+ Git', action: () => { _addCodeChatTab('git'); } },
+        ];
+    } else {
+        items = [
+            { icon: '💾', label: 'Save', action: () => { if (state._projectOpen) saveProject(); } },
+            { icon: '📂', label: 'Open', action: () => { showStartupDialog(); } },
+            { icon: '💾', label: 'Save As', action: () => { saveProjectAs(); } },
+            { icon: '🐍', label: 'Python', action: () => { openSharedConsole(); } },
+            { icon: '🤖', label: 'CellIntella', action: () => { togglecinteliaPanel(); } },
+            { icon: '📦', label: 'Git', action: () => { openGitConsole(); } },
+        ];
+    }
+
+    const n = items.length;
+    const outerR = 120;
+    const innerR = 65;
+    const navSize = outerR * 2 + 20;
+    const gapAngle = 4;
+    const segAngle = 360 / n;
+
+    // Clamp to viewport
+    let cx = ev.clientX;
+    let cy = ev.clientY;
+    const margin = outerR + 15;
+    cx = Math.max(margin, Math.min(window.innerWidth - margin, cx));
+    cy = Math.max(margin, Math.min(window.innerHeight - margin, cy));
+
+    const overlay = document.createElement('div');
+    overlay.className = 'radial-nav-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    const nav = document.createElement('div');
+    nav.className = 'radial-nav';
+    nav.style.left = cx + 'px';
+    nav.style.top = cy + 'px';
+    nav.style.width = navSize + 'px';
+    nav.style.height = navSize + 'px';
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'radial-nav-ring');
+    svg.setAttribute('viewBox', `0 0 ${navSize} ${navSize}`);
+    svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%';
+
+    const ctr = navSize / 2;
+    const accent = 'rgba(137,180,250,0.8)';
+
+    items.forEach((item, i) => {
+        const startDeg = -90 + i * segAngle + gapAngle / 2;
+        const endDeg = -90 + (i + 1) * segAngle - gapAngle / 2;
+        const startRad = startDeg * Math.PI / 180;
+        const endRad = endDeg * Math.PI / 180;
+
+        const x1o = ctr + outerR * Math.cos(startRad);
+        const y1o = ctr + outerR * Math.sin(startRad);
+        const x2o = ctr + outerR * Math.cos(endRad);
+        const y2o = ctr + outerR * Math.sin(endRad);
+        const x1i = ctr + innerR * Math.cos(endRad);
+        const y1i = ctr + innerR * Math.sin(endRad);
+        const x2i = ctr + innerR * Math.cos(startRad);
+        const y2i = ctr + innerR * Math.sin(startRad);
+        const largeArc = (endDeg - startDeg > 180) ? 1 : 0;
+
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', [
+            `M ${x1o} ${y1o}`,
+            `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2o} ${y2o}`,
+            `L ${x1i} ${y1i}`,
+            `A ${innerR} ${innerR} 0 ${largeArc} 0 ${x2i} ${y2i}`,
+            'Z'
+        ].join(' '));
+        path.setAttribute('fill', 'rgba(30,30,50,0.85)');
+        path.setAttribute('stroke', accent);
+        path.setAttribute('stroke-width', '1');
+        path.setAttribute('cursor', 'pointer');
+        path.style.transition = 'all .15s';
+
+        path.onmouseenter = () => {
+            path.setAttribute('fill', `rgba(137,180,250,0.25)`);
+            path.setAttribute('stroke-width', '2.5');
+        };
+        path.onmouseleave = () => {
+            path.setAttribute('fill', 'rgba(30,30,50,0.85)');
+            path.setAttribute('stroke-width', '1');
+        };
+        path.onclick = () => { overlay.remove(); item.action(); };
+        svg.appendChild(path);
+
+        // Icon
+        const midDeg = (startDeg + endDeg) / 2;
+        const midRad = midDeg * Math.PI / 180;
+        const iconR = innerR + (outerR - innerR) * 0.35;
+        const ix = ctr + iconR * Math.cos(midRad);
+        const iy = ctr + iconR * Math.sin(midRad) - 4;
+
+        const iconEl = document.createElementNS(svgNS, 'text');
+        iconEl.setAttribute('x', ix);
+        iconEl.setAttribute('y', iy);
+        iconEl.setAttribute('text-anchor', 'middle');
+        iconEl.setAttribute('dominant-baseline', 'central');
+        iconEl.setAttribute('font-size', '16');
+        iconEl.setAttribute('pointer-events', 'none');
+        iconEl.textContent = item.icon;
+        svg.appendChild(iconEl);
+
+        // Angular text
+        const textR = innerR + (outerR - innerR) * 0.75;
+        const tx = ctr + textR * Math.cos(midRad);
+        const ty = ctr + textR * Math.sin(midRad);
+
+        let textRotation = midDeg + 90;
+        let normRot = ((textRotation % 360) + 360) % 360;
+        if (normRot > 110 && normRot < 250) textRotation += 180;
+
+        const textEl = document.createElementNS(svgNS, 'text');
+        textEl.setAttribute('x', tx);
+        textEl.setAttribute('y', ty);
+        textEl.setAttribute('text-anchor', 'middle');
+        textEl.setAttribute('dominant-baseline', 'central');
+        textEl.setAttribute('font-size', '9');
+        textEl.setAttribute('font-weight', '600');
+        textEl.setAttribute('fill', 'rgba(255,255,255,0.9)');
+        textEl.setAttribute('pointer-events', 'none');
+        textEl.setAttribute('transform', `rotate(${textRotation}, ${tx}, ${ty})`);
+        textEl.textContent = item.label;
+        svg.appendChild(textEl);
+    });
+
+    // Hollow center
+    const hollowCircle = document.createElementNS(svgNS, 'circle');
+    hollowCircle.setAttribute('cx', ctr);
+    hollowCircle.setAttribute('cy', ctr);
+    hollowCircle.setAttribute('r', innerR - 2);
+    hollowCircle.setAttribute('fill', 'rgba(15,15,25,0.95)');
+    hollowCircle.setAttribute('stroke', accent);
+    hollowCircle.setAttribute('stroke-width', '1');
+    svg.appendChild(hollowCircle);
+
+    nav.appendChild(svg);
+
+    // Center label
+    const center = document.createElement('div');
+    center.className = 'radial-nav-center';
+    center.style.borderColor = accent;
+    center.innerHTML = ws ? ws.name : 'CelLAB';
+    center.onclick = () => overlay.remove();
+    nav.appendChild(center);
+
+    overlay.appendChild(nav);
+    document.body.appendChild(overlay);
 }
 
 function openRadialNavigator(pipelineId, ev) {
@@ -1280,6 +1447,12 @@ function renderCanvasView(vp, ws) {
     cv.ondragover = e => { e.preventDefault(); if (!cv.classList.contains('show-grid')) showCanvasGrid(true); };
     cv.ondragleave = (e) => { if (e.target === cv) showCanvasGrid(false); };
     cv.ondrop = e => { showCanvasGrid(false); handleCanvasDrop(e); };
+    cv.oncontextmenu = (e) => {
+        // Only trigger on empty canvas, not on pipeline nodes
+        if (e.target.closest('.pipeline-node')) return;
+        e.preventDefault();
+        openWorkspaceRadialNav(e);
+    };
 
     if (ws.pipelines.size === 0) {
         cv.innerHTML = `<div class="canvas-placeholder"><h3>◈ ${ws.name}</h3><p>Drag a pipeline from the Toolbox, or double-click to create</p><p style="margin-top:6px;font-size:10px;opacity:.6">Steps open as full-viewport tabs grouped by pipeline</p></div>`;
