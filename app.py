@@ -7823,12 +7823,12 @@ def browse_open():
 
 
 # ═════════════════════════════════════════════
-# cintelia — AI ASSISTANT
+# CellIntella — AI ASSISTANT
 # ═════════════════════════════════════════════
 
-_cintelia = None
-_cintelia_loading = False
-_cintelia_config = {
+_cellintella = None
+_cellintella_loading = False
+_cellintella_config = {
     'n_ctx': 4096,
     'n_threads': 10,
     'timeout': 500,
@@ -7942,7 +7942,7 @@ def _retrieve_docs(query):
     return '\n\n---\n\n'.join(context_parts) if context_parts else ''
 
 
-cintelia_SYSTEM_PROMPT = """You are cintelia (Cell Intelligent Autonomous Interface), the AI assistant built into CelLAB (Cellular Analysis Workbench).
+cellintella_SYSTEM_PROMPT = """You are CellIntella (Cell Intelligent Autonomous Interface), the AI assistant built into CelLAB (Cellular Analysis Workbench).
 You were created by the Han Mechanobiology Lab at Michigan Tech.
 
 CRITICAL RULES:
@@ -7961,7 +7961,7 @@ You run locally on Llama 3.2 3B — all conversations are private.
 def _collect_scope_context(scope):
     """
     Collect CelLAB project state based on scope level.
-    Returns a concise text summary for injection into cintelia prompt.
+    Returns a concise text summary for injection into CellIntella prompt.
     """
     if not scope or scope.get('level') == 'none':
         return ''
@@ -7978,22 +7978,22 @@ def _collect_scope_context(scope):
     if level == 'pipeline':
         ws_id = scope.get('wsId', '')
         pipeline_id = scope.get('pipelineId', '')
-        print(f"[cintelia scope] Looking for ws={ws_id}, pipeline={pipeline_id}")
-        print(f"[cintelia scope] Available dirs: {[d.name for d in project.workspaces_dir.iterdir() if d.is_dir()]}")
+        print(f"[CellIntella scope] Looking for ws={ws_id}, pipeline={pipeline_id}")
+        print(f"[CellIntella scope] Available dirs: {[d.name for d in project.workspaces_dir.iterdir() if d.is_dir()]}")
 
         # Try to find workspace — wsId from frontend might not match backend dirs
         if not ws_id or not (project.workspaces_dir / ws_id / pipeline_id / 'pipeline.json').exists():
             found = False
             for ws_dir in sorted(project.workspaces_dir.iterdir()):
                 if ws_dir.is_dir():
-                    print(f"[cintelia scope] Checking {ws_dir.name}: {[p.name for p in ws_dir.iterdir() if p.is_dir()]}")
+                    print(f"[CellIntella scope] Checking {ws_dir.name}: {[p.name for p in ws_dir.iterdir() if p.is_dir()]}")
                     if (ws_dir / pipeline_id / 'pipeline.json').exists():
                         ws_id = ws_dir.name
                         found = True
-                        print(f"[cintelia scope] Found pipeline in {ws_id}")
+                        print(f"[CellIntella scope] Found pipeline in {ws_id}")
                         break
             if not found:
-                print(f"[cintelia scope] Pipeline {pipeline_id} NOT FOUND in any workspace")
+                print(f"[CellIntella scope] Pipeline {pipeline_id} NOT FOUND in any workspace")
 
         if ws_id and pipeline_id:
             try:
@@ -8040,7 +8040,7 @@ def _collect_scope_context(scope):
                         except:
                             pass
 
-                print(f"[cintelia scope] Pipeline {pipeline_id}: {len(step_dirs)} step dirs, context = {len(lines)} lines", flush=True)
+                print(f"[CellIntella scope] Pipeline {pipeline_id}: {len(step_dirs)} step dirs, context = {len(lines)} lines", flush=True)
 
                 # If batch pipeline, try to include result summary
                 if p_type == 'cornealia_batch':
@@ -8058,9 +8058,9 @@ def _collect_scope_context(scope):
                                     if len(vals) > 0:
                                         lines.append(f'    {col}: mean={vals.mean():.4f}, std={vals.std():.4f}, range=[{vals.min():.4f}, {vals.max():.4f}]')
                         except Exception as ex:
-                            print(f"[cintelia scope] CSV read error: {ex}", flush=True)
+                            print(f"[CellIntella scope] CSV read error: {ex}", flush=True)
             except Exception as ex:
-                print(f"[cintelia scope] Error loading pipeline {pipeline_id}: {ex}", flush=True)
+                print(f"[CellIntella scope] Error loading pipeline {pipeline_id}: {ex}", flush=True)
                 lines.append(f'Pipeline: {pipeline_id} (error loading: {ex})')
 
     elif level == 'workspace':
@@ -8098,48 +8098,48 @@ def _collect_scope_context(scope):
     return '\n'.join(lines) + '\n'
 
 
-def _get_cintelia():
-    """Lazy-load cintelia manager."""
-    global _cintelia, _cintelia_loading
-    if _cintelia is not None:
-        return _cintelia
-    if _cintelia_loading:
+def _get_cellintella():
+    """Lazy-load CellIntella manager."""
+    global _cellintella, _cellintella_loading
+    if _cellintella is not None:
+        return _cellintella
+    if _cellintella_loading:
         return None
 
-    _cintelia_loading = True
+    _cellintella_loading = True
     try:
         sys.path.insert(0, os.path.join(BACKEND_DIR))
-        from cintelia.cintelia_manager import cintelia
-        _cintelia = cintelia(mode='local', verbose=True)
+        from cellintella.cellintella_manager import CellIntella as cellintella
+        _cellintella = cellintella(mode='local', verbose=True)
 
         # Override process wrapper settings with our config
-        if _cintelia.local_ai is None and not _cintelia.local_ai_attempted:
-            from cintelia.cintelia_process_wrapper import cinteliaProcessWrapper
-            _cintelia.local_ai_attempted = True
-            _cintelia.local_ai = cinteliaProcessWrapper(
-                n_threads=_cintelia_config['n_threads'],
-                n_ctx=_cintelia_config['n_ctx'],
+        if _cellintella.local_ai is None and not _cellintella.local_ai_attempted:
+            from cellintella.cellintella_process_wrapper import CellIntellaProcessWrapper as cellintellaProcessWrapper
+            _cellintella.local_ai_attempted = True
+            _cellintella.local_ai = cellintellaProcessWrapper(
+                n_threads=_cellintella_config['n_threads'],
+                n_ctx=_cellintella_config['n_ctx'],
                 verbose=True,
-                timeout=_cintelia_config['timeout'],
+                timeout=_cellintella_config['timeout'],
             )
 
-        print(f"✅ cintelia initialized (n_ctx={_cintelia_config['n_ctx']}, n_threads={_cintelia_config['n_threads']})")
-        return _cintelia
+        print(f"✅ CellIntella initialized (n_ctx={_cellintella_config['n_ctx']}, n_threads={_cellintella_config['n_threads']})")
+        return _cellintella
     except Exception as e:
-        print(f"❌ cintelia init failed: {e}")
+        print(f"❌ CellIntella init failed: {e}")
         traceback.print_exc()
-        _cintelia_loading = False
+        _cellintella_loading = False
         return None
 
 
-@app.route('/api/cintelia/status', methods=['GET'])
-def cintelia_status():
-    """Check cintelia availability."""
-    if _cintelia is not None:
+@app.route('/api/cellintella/status', methods=['GET'])
+def cellintella_status():
+    """Check CellIntella availability."""
+    if _cellintella is not None:
         return api_response({
             "available": True,
             "loaded": True,
-            "mode": _cintelia.mode,
+            "mode": _cellintella.mode,
         })
     return api_response({
         "available": True,
@@ -8148,14 +8148,14 @@ def cintelia_status():
     })
 
 
-@app.route('/api/cintelia/query', methods=['POST'])
-def cintelia_query():
+@app.route('/api/cellintella/query', methods=['POST'])
+def cellintella_query():
     """
-    Send a message to cintelia with hierarchical doc context.
+    Send a message to CellIntella with hierarchical doc context.
     Body: { "message": "How do I change pixel size?", "context_type": null }
     """
     body = request.get_json()
-    print(f"[cintelia QUERY] body keys: {list(body.keys())}, scope: {body.get('scope')}", flush=True)
+    print(f"[CellIntella QUERY] body keys: {list(body.keys())}, scope: {body.get('scope')}", flush=True)
     try:
         body = request.get_json()
         message = body.get('message', '').strip()
@@ -8192,10 +8192,10 @@ def cintelia_query():
         if not message:
             return api_error("'message' is required")
 
-        ai = _get_cintelia()
+        ai = _get_cellintella()
         if ai is None:
             return api_response({
-                "response": "cintelia is loading the Llama model... please wait 2-3 minutes and try again.",
+                "response": "CellIntella is loading the Llama model... please wait 2-3 minutes and try again.",
                 "mode": "loading",
             })
 
@@ -8204,12 +8204,12 @@ def cintelia_query():
 
         # Collect scope context (project/workspace/pipeline state)
         scope_context = _collect_scope_context(scope)
-        print(f"[cintelia] scope={scope}, context_len={len(scope_context)}")
+        print(f"[CellIntella] scope={scope}, context_len={len(scope_context)}")
         if scope_context:
-            print(f"[cintelia] State injected:\n{scope_context[:500]}")
+            print(f"[CellIntella] State injected:\n{scope_context[:500]}")
 
         # Build enriched prompt — state first so LLM sees it prominently
-        enriched_message = f"[System]\n{cintelia_SYSTEM_PROMPT}\n\n"
+        enriched_message = f"[System]\n{cellintella_SYSTEM_PROMPT}\n\n"
 
         if scope_context:
             enriched_message += f"{scope_context}\n"
@@ -8251,74 +8251,74 @@ def cintelia_query():
         })
 
 
-@app.route('/api/cintelia/history', methods=['GET'])
-def cintelia_history():
+@app.route('/api/cellintella/history', methods=['GET'])
+def cellintella_history():
     """Get conversation history."""
-    if _cintelia is None:
+    if _cellintella is None:
         return api_response([])
-    return api_response(_cintelia.conversation_history)
+    return api_response(_cellintella.conversation_history)
 
 
-@app.route('/api/cintelia/clear', methods=['POST'])
-def cintelia_clear():
+@app.route('/api/cellintella/clear', methods=['POST'])
+def cellintella_clear():
     """Clear conversation history."""
-    if _cintelia is not None:
-        _cintelia.conversation_history = []
+    if _cellintella is not None:
+        _cellintella.conversation_history = []
     return api_response({"cleared": True})
 
 
-@app.route('/api/cintelia/config', methods=['GET'])
-def cintelia_config_get():
-    """Get current cintelia config."""
-    kv_cache_mb = int(_cintelia_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
+@app.route('/api/cellintella/config', methods=['GET'])
+def cellintella_config_get():
+    """Get current CellIntella config."""
+    kv_cache_mb = int(_cellintella_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
     return api_response({
-        "n_ctx": _cintelia_config['n_ctx'],
-        "n_threads": _cintelia_config['n_threads'],
-        "timeout": _cintelia_config['timeout'],
+        "n_ctx": _cellintella_config['n_ctx'],
+        "n_threads": _cellintella_config['n_threads'],
+        "timeout": _cellintella_config['timeout'],
         "kv_cache_mb": kv_cache_mb,
         "model_mb": 1918,
-        "loaded": _cintelia is not None and _cintelia.local_ai is not None,
+        "loaded": _cellintella is not None and _cellintella.local_ai is not None,
     })
 
 
-@app.route('/api/cintelia/config', methods=['POST'])
-def cintelia_config_set():
+@app.route('/api/cellintella/config', methods=['POST'])
+def cellintella_config_set():
     """
-    Update cintelia config and reload model.
+    Update CellIntella config and reload model.
     Body: { "n_ctx": 8192 } or { "n_threads": 12 }
     """
-    global _cintelia, _cintelia_loading
+    global _cellintella, _cellintella_loading
     body = request.get_json()
 
     changed = False
     for key in ('n_ctx', 'n_threads', 'timeout'):
         if key in body:
             new_val = int(body[key])
-            if new_val != _cintelia_config[key]:
-                _cintelia_config[key] = new_val
+            if new_val != _cellintella_config[key]:
+                _cellintella_config[key] = new_val
                 changed = True
 
     if not changed:
         return api_response({"reloaded": False, "reason": "no changes"})
 
     # Kill existing model
-    print(f"[cintelia] Reloading with config: {_cintelia_config}", flush=True)
+    print(f"[CellIntella] Reloading with config: {_cellintella_config}", flush=True)
     try:
-        if _cintelia and _cintelia.local_ai:
-            _cintelia.local_ai.shutdown()
+        if _cellintella and _cellintella.local_ai:
+            _cellintella.local_ai.shutdown()
     except:
         pass
-    _cintelia = None
-    _cintelia_loading = False
+    _cellintella = None
+    _cellintella_loading = False
 
     # Reload
-    ai = _get_cintelia()
+    ai = _get_cellintella()
 
-    kv_cache_mb = int(_cintelia_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
+    kv_cache_mb = int(_cellintella_config['n_ctx'] * 28 * 128 * 2 * 2 / 1024 / 1024)
     return api_response({
         "reloaded": True,
-        "n_ctx": _cintelia_config['n_ctx'],
-        "n_threads": _cintelia_config['n_threads'],
+        "n_ctx": _cellintella_config['n_ctx'],
+        "n_threads": _cellintella_config['n_threads'],
         "kv_cache_mb": kv_cache_mb,
     })
 
@@ -8456,8 +8456,8 @@ def _generate_cornealia_batch_report(project, ws_id, pipeline_id):
     # ── 4. Interpretation Placeholder ──
     lines.append(f'## 4. Interpretation')
     lines.append(f'')
-    lines.append(f'<!-- cintelia placeholder: AI-generated narrative will go here in a future version -->')
-    lines.append(f'*No AI interpretation generated. Enable cintelia narrative in a future version.*')
+    lines.append(f'<!-- CellIntella placeholder: AI-generated narrative will go here in a future version -->')
+    lines.append(f'*No AI interpretation generated. Enable CellIntella narrative in a future version.*')
     lines.append(f'')
 
     # ── Footer ──

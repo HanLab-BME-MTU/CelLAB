@@ -33,6 +33,7 @@ const state = {
     moduleCounter: 0,
     subtabCounter: 0,
     collapsedGroups: new Set(), // track collapsed pipeline tab groups
+    focusedGroups: new Map(),  // pipelineId → focused stepId (single-tab view with springs)
 };
 
 // ═════════════════════════════════════════════
@@ -128,14 +129,17 @@ function renameWorkspace(wsId) {
 // SUB-TABS (Level 2) — grouped by pipeline
 // ═════════════════════════════════════════════
 
-function openModuleSubtab(pipelineId, stepId) {
+function openModuleSubtab(pipelineId, stepId, focused = false) {
     const ws = getActiveWorkspace();
     if (!ws) return;
 
-    // Already open? Expand group if collapsed, then switch to it.
+    // Already open? Switch to it, apply focus mode if requested
     for (const [subId, sub] of ws.subtabs) {
         if (sub.pipelineId === pipelineId && sub.stepId === stepId) {
             state.collapsedGroups.delete(pipelineId);
+            if (focused) {
+                state.focusedGroups.set(pipelineId, stepId);
+            }
             switchSubtab(subId);
             return;
         }
@@ -161,8 +165,13 @@ function openModuleSubtab(pipelineId, stepId) {
     // Insert in step-order position (not at end)
     _insertTabOrdered(ws, subId, newTab);
 
-    // Expand group if collapsed
+    // Expand group if collapsed, set focus mode if requested
     state.collapsedGroups.delete(pipelineId);
+    if (focused) {
+        state.focusedGroups.set(pipelineId, stepId);
+    } else {
+        state.focusedGroups.delete(pipelineId);
+    }
 
     switchSubtab(subId);
     updateStatus(`Opened ${stepDef.name}`);
@@ -346,14 +355,223 @@ function closeSubtabsForPipeline(pipelineId) {
 }
 
 function toggleTabGroup(pipelineId) {
+    // If focused, expand to full view
+    if (state.focusedGroups.has(pipelineId)) {
+        state.focusedGroups.delete(pipelineId);
+        renderSubtabs();
+        return;
+    }
+    // Normal collapse/expand toggle
     if (state.collapsedGroups.has(pipelineId)) state.collapsedGroups.delete(pipelineId);
     else state.collapsedGroups.add(pipelineId);
+    state.focusedGroups.delete(pipelineId);
     renderSubtabs();
 }
 
 function closeTabGroup(pipelineId, ev) {
     if (ev) ev.stopPropagation();
     closeSubtabsForPipeline(pipelineId);
+}
+
+function openRadialNavigator(pipelineId, ev) {
+    // Remove existing overlay
+    const existing = document.querySelector('.radial-nav-overlay');
+    if (existing) existing.remove();
+
+    const ws = getActiveWorkspace();
+    if (!ws) return;
+    const pipeline = ws.pipelines.get(pipelineId);
+    if (!pipeline) return;
+    const def = getPipelineDef(pipeline.type);
+    const steps = def.steps || [];
+    if (steps.length === 0) return;
+
+    const accent = getAccent(pipeline.type);
+    const stepIcons = ['📥', '🔬', '📊', '📈', '⚙️', '📦', '🎯', '🧪', '📉', '🔍'];
+    const n = steps.length;
+    const outerR = 135;
+    const innerR = 80;
+    const navSize = outerR * 2 + 20;
+
+    // Clamp position to keep within viewport
+    let cx = ev.clientX;
+    let cy = ev.clientY;
+    const margin = outerR + 15;
+    cx = Math.max(margin, Math.min(window.innerWidth - margin, cx));
+    cy = Math.max(margin, Math.min(window.innerHeight - margin, cy));
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'radial-nav-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    // Create radial container
+    const nav = document.createElement('div');
+    nav.className = 'radial-nav';
+    nav.style.left = cx + 'px';
+    nav.style.top = cy + 'px';
+    nav.style.width = navSize + 'px';
+    nav.style.height = navSize + 'px';
+
+    // Build SVG ring with pie segments
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'radial-nav-ring');
+    svg.setAttribute('viewBox', `0 0 ${navSize} ${navSize}`);
+    svg.style.position = 'absolute';
+    svg.style.top = '0';
+    svg.style.left = '0';
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+
+    const ctr = navSize / 2;
+    const gapAngle = 3;
+    const segAngle = 360 / n;
+
+    steps.forEach((step, i) => {
+        const startDeg = -90 + i * segAngle + gapAngle / 2;
+        const endDeg = -90 + (i + 1) * segAngle - gapAngle / 2;
+        const startRad = startDeg * Math.PI / 180;
+        const endRad = endDeg * Math.PI / 180;
+
+        // Outer arc points
+        const x1o = ctr + outerR * Math.cos(startRad);
+        const y1o = ctr + outerR * Math.sin(startRad);
+        const x2o = ctr + outerR * Math.cos(endRad);
+        const y2o = ctr + outerR * Math.sin(endRad);
+        // Inner arc points
+        const x1i = ctr + innerR * Math.cos(endRad);
+        const y1i = ctr + innerR * Math.sin(endRad);
+        const x2i = ctr + innerR * Math.cos(startRad);
+        const y2i = ctr + innerR * Math.sin(startRad);
+
+        const largeArc = (endDeg - startDeg > 180) ? 1 : 0;
+
+        // Segment path
+        const path = document.createElementNS(svgNS, 'path');
+        const d = [
+            `M ${x1o} ${y1o}`,
+            `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2o} ${y2o}`,
+            `L ${x1i} ${y1i}`,
+            `A ${innerR} ${innerR} 0 ${largeArc} 0 ${x2i} ${y2i}`,
+            'Z'
+        ].join(' ');
+        path.setAttribute('d', d);
+
+        const isOpen = [...ws.subtabs.values()].some(
+            s => s.pipelineId === pipelineId && s.stepId === step.id
+        );
+
+        path.setAttribute('fill', isOpen
+            ? `color-mix(in srgb, ${accent} 45%, #1a1a2e)`
+            : 'rgba(30,30,50,0.85)');
+        path.setAttribute('stroke', accent);
+        path.setAttribute('stroke-width', isOpen ? '2' : '1');
+        path.setAttribute('cursor', 'pointer');
+        path.style.transition = 'all .15s';
+
+        path.onmouseenter = () => {
+            path.setAttribute('fill', `color-mix(in srgb, ${accent} 60%, #1a1a2e)`);
+            path.setAttribute('stroke-width', '2.5');
+        };
+        path.onmouseleave = () => {
+            path.setAttribute('fill', isOpen
+                ? `color-mix(in srgb, ${accent} 45%, #1a1a2e)`
+                : 'rgba(30,30,50,0.85)');
+            path.setAttribute('stroke-width', isOpen ? '2' : '1');
+        };
+        path.onclick = () => {
+            overlay.remove();
+            openModuleSubtab(pipelineId, step.id, true);
+        };
+        svg.appendChild(path);
+
+        // Icon at mid-radius, mid-angle
+        const midDeg = (startDeg + endDeg) / 2;
+        const midRad = midDeg * Math.PI / 180;
+        const iconR = innerR + (outerR - innerR) * 0.35;
+        const ix = ctr + iconR * Math.cos(midRad);
+        const iy = ctr + iconR * Math.sin(midRad);
+
+        const icon = document.createElementNS(svgNS, 'text');
+        icon.setAttribute('x', ix);
+        icon.setAttribute('y', iy - 4);
+        icon.setAttribute('text-anchor', 'middle');
+        icon.setAttribute('dominant-baseline', 'central');
+        icon.setAttribute('font-size', '14');
+        icon.setAttribute('pointer-events', 'none');
+        icon.textContent = stepIcons[i] || '📋';
+        svg.appendChild(icon);
+
+        // Step number below icon
+        const stepNum = document.createElementNS(svgNS, 'text');
+        stepNum.setAttribute('x', ix);
+        stepNum.setAttribute('y', iy + 10);
+        stepNum.setAttribute('text-anchor', 'middle');
+        stepNum.setAttribute('dominant-baseline', 'central');
+        stepNum.setAttribute('font-size', '8');
+        stepNum.setAttribute('font-weight', '700');
+        stepNum.setAttribute('fill', 'rgba(255,255,255,0.5)');
+        stepNum.setAttribute('pointer-events', 'none');
+        stepNum.textContent = `${i + 1}/${n}`;
+        svg.appendChild(stepNum);
+
+        // Angular text — positioned at outer part, rotated to follow arc
+        const textR = innerR + (outerR - innerR) * 0.75;
+        const tx = ctr + textR * Math.cos(midRad);
+        const ty = ctr + textR * Math.sin(midRad);
+
+        const cleanName = step.name.replace(/^\d+\.\s*/, '');
+        const displayName = cleanName.length > 14 ? cleanName.slice(0, 13) + '…' : cleanName;
+
+        // Text rotation: follow CW tangent, flip if it would read right-to-left
+        // CW tangent angle = midDeg + 90
+        // Flip when tangent points leftward (cos < 0)
+        let textRotation = midDeg + 90;
+        // Normalize to [0, 360)
+        let normRot = ((textRotation % 360) + 360) % 360;
+        // If tangent points into left half (between 110° and 250°), flip by 180°
+        // Using 110/250 instead of 90/270 gives tolerance near vertical positions
+        if (normRot > 110 && normRot < 250) {
+            textRotation += 180;
+        }
+
+        const textEl = document.createElementNS(svgNS, 'text');
+        textEl.setAttribute('x', tx);
+        textEl.setAttribute('y', ty);
+        textEl.setAttribute('text-anchor', 'middle');
+        textEl.setAttribute('dominant-baseline', 'central');
+        textEl.setAttribute('font-size', '9');
+        textEl.setAttribute('font-weight', '600');
+        textEl.setAttribute('fill', 'rgba(255,255,255,0.9)');
+        textEl.setAttribute('pointer-events', 'none');
+        textEl.setAttribute('transform', `rotate(${textRotation}, ${tx}, ${ty})`);
+        textEl.textContent = displayName;
+        svg.appendChild(textEl);
+    });
+
+    // Hollow center circle (visual ring gap)
+    const hollowCircle = document.createElementNS(svgNS, 'circle');
+    hollowCircle.setAttribute('cx', ctr);
+    hollowCircle.setAttribute('cy', ctr);
+    hollowCircle.setAttribute('r', innerR - 2);
+    hollowCircle.setAttribute('fill', 'rgba(15,15,25,0.95)');
+    hollowCircle.setAttribute('stroke', accent);
+    hollowCircle.setAttribute('stroke-width', '1');
+    svg.appendChild(hollowCircle);
+
+    nav.appendChild(svg);
+
+    // Center button
+    const center = document.createElement('div');
+    center.className = 'radial-nav-center';
+    center.style.borderColor = accent;
+    center.innerHTML = pipeline.shortName;
+    center.onclick = () => overlay.remove();
+    nav.appendChild(center);
+
+    overlay.appendChild(nav);
+    document.body.appendChild(overlay);
 }
 
 // ═════════════════════════════════════════════
@@ -526,6 +744,8 @@ function renderSubtabs() {
 
         const hasActive = tabs.some(t => t.id === ws.activeSubtab);
         const isCollapsed = state.collapsedGroups.has(pid);
+        const isFocused = state.focusedGroups.has(pid);
+        const focusedStepId = state.focusedGroups.get(pid);
 
         const group = document.createElement('div');
         group.className = `tab-group ${hasActive ? 'has-active' : ''}`;
@@ -533,19 +753,76 @@ function renderSubtabs() {
         // Group header (colored by pipeline type)
         const header = document.createElement('div');
         header.className = `tab-group-header ${pipeline.type}`;
-        header.onclick = () => toggleTabGroup(pid);
+        // Click on header (not collapse icon) → open radial navigator
+        header.onclick = (e) => {
+            if (e.target.closest('.group-collapse-btn') || e.target.closest('.group-close')) return;
+            openRadialNavigator(pid, e);
+        };
+        header.oncontextmenu = (e) => {
+            e.preventDefault();
+            if (e.target.closest('.group-collapse-btn') || e.target.closest('.group-close')) return;
+            openRadialNavigator(pid, e);
+        };
+        const collapseState = isCollapsed ? 'collapsed' : (isFocused ? '' : '');
+        const arrowSvg = `<svg width="10" height="10" viewBox="0 0 10 10" style="transition:transform .15s${isCollapsed ? ';transform:rotate(-90deg)' : ''}"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>`;
         header.innerHTML = `
             <span class="group-icon">${getPipelineDef(pipeline.type).icon}</span>
             <span class="group-label">${pipeline.shortName}</span>
-            <span class="group-arrow ${isCollapsed ? 'collapsed' : ''}">▼</span>
+            <span class="group-collapse-btn ${isCollapsed ? 'collapsed' : ''}" onclick="toggleTabGroup('${pid}');event.stopPropagation()">${arrowSvg}</span>
             <span class="group-close" onclick="closeTabGroup('${pid}',event)">×</span>
         `;
 
-        // Step tabs
+        // Step tabs — three modes: collapsed, focused, expanded
         const tabsContainer = document.createElement('div');
-        tabsContainer.className = `tab-group-tabs ${isCollapsed ? 'collapsed' : ''}`;
-        const totalTabs = tabs.length;
-        tabs.forEach((sub, idx) => tabsContainer.appendChild(makeSubtabEl(sub, ws, idx, totalTabs)));
+        if (isCollapsed) {
+            tabsContainer.className = 'tab-group-tabs collapsed';
+        } else if (isFocused) {
+            tabsContainer.className = 'tab-group-tabs';
+            // Find tabs before and after the focused tab
+            const focusedIdx = tabs.findIndex(t => t.stepId === focusedStepId);
+            const tabsBefore = focusedIdx > 0 ? tabs.slice(0, focusedIdx) : [];
+            const tabsAfter = focusedIdx < tabs.length - 1 ? tabs.slice(focusedIdx + 1) : [];
+            const focusedTab = focusedIdx >= 0 ? tabs[focusedIdx] : null;
+
+            // Left spring (tabs before focused)
+            if (tabsBefore.length > 0) {
+                const springLeft = document.createElement('div');
+                springLeft.className = 'tab-spring';
+                springLeft.title = tabsBefore.map(t => t.label).join(', ');
+                springLeft.innerHTML = `<span class="spring-dots">${'·'.repeat(tabsBefore.length)}</span>`;
+                springLeft.onclick = () => {
+                    state.focusedGroups.delete(pid);
+                    renderSubtabs();
+                };
+                const accent = getAccent(pipeline.type);
+                springLeft.style.borderTop = `2px solid ${accent}`;
+                tabsContainer.appendChild(springLeft);
+            }
+
+            // Focused tab
+            if (focusedTab) {
+                tabsContainer.appendChild(makeSubtabEl(focusedTab, ws, 0, 1));
+            }
+
+            // Right spring (tabs after focused)
+            if (tabsAfter.length > 0) {
+                const springRight = document.createElement('div');
+                springRight.className = 'tab-spring';
+                springRight.title = tabsAfter.map(t => t.label).join(', ');
+                springRight.innerHTML = `<span class="spring-dots">${'·'.repeat(tabsAfter.length)}</span>`;
+                springRight.onclick = () => {
+                    state.focusedGroups.delete(pid);
+                    renderSubtabs();
+                };
+                const accent = getAccent(pipeline.type);
+                springRight.style.borderTop = `2px solid ${accent}`;
+                tabsContainer.appendChild(springRight);
+            }
+        } else {
+            tabsContainer.className = 'tab-group-tabs';
+            const totalTabs = tabs.length;
+            tabs.forEach((sub, idx) => tabsContainer.appendChild(makeSubtabEl(sub, ws, idx, totalTabs)));
+        }
 
         group.appendChild(header);
         group.appendChild(tabsContainer);
@@ -4811,6 +5088,7 @@ function buildGuiState() {
         left_panel_width: document.getElementById('leftPanel')?.offsetWidth || 240,
         right_panel_width: document.getElementById('rightPanel')?.offsetWidth || 200,
         collapsed_groups: [...state.collapsedGroups],
+        focused_groups: [...state.focusedGroups.entries()],
         workspace_states: buildWorkspaceStates(),
     };
 }
@@ -4843,6 +5121,10 @@ function restoreFromState(fullState) {
 
     // Restore collapsed groups
     (gui.collapsed_groups || []).forEach(g => state.collapsedGroups.add(g));
+
+    // Restore focused groups
+    state.focusedGroups.clear();
+    (gui.focused_groups || []).forEach(([k, v]) => state.focusedGroups.set(k, v));
 
     // Restore workspaces
     for (const wsData of fullState.workspaces) {
@@ -11996,8 +12278,8 @@ const MENUS = {
         { label: 'Python Console (Isolated)', action: 'openIsolatedConsole()' },
         { label: 'Git Terminal', shortcut: 'Ctrl+Shift+G', action: 'openGitConsole()' },
         { sep: true },
-        { label: 'cintelia (Shared)', action: 'togglecinteliaPanel()' },
-        { label: 'cintelia (Fresh)', action: 'opencinteliaFresh()' },
+        { label: 'CellIntella (Shared)', action: 'togglecinteliaPanel()' },
+        { label: 'CellIntella (Fresh)', action: 'opencinteliaFresh()' },
         { sep: true },
         { label: 'Task Manager', action: 'openTaskManager()' },
         { label: 'Package Manager', action: 'openPackageManager()' },
@@ -12110,6 +12392,7 @@ function openSharedConsole() { if (!_consoleOpen) toggleConsole(); else addConso
 function openIsolatedConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('isolated'); }
 function openGitConsole() { if (!_consoleOpen) toggleConsole(); else addConsoleTab('git'); }
 function opencinteliaFresh() { if (!_consoleOpen) toggleConsole(); addConsoleTab('cintelia_fresh'); }
+const openCellIntellaFresh = opencinteliaFresh;
 
 function showPipelineContextMenu(e, pipeline) {
     e.preventDefault();
@@ -12222,7 +12505,7 @@ async function aiMiniSend() {
     // Handle /config command
     if (msg === '/config') {
         try {
-            const res = await api('cintelia/config', 'GET');
+            const res = await api('cellintella/config', 'GET');
             if (res.success) {
                 const c = res.data;
                 body.innerHTML += `<div class="ai-mini-msg ai-mini-ai">⚙ n_ctx=${c.n_ctx}, threads=${c.n_threads}, KV=${c.kv_cache_mb}MB, model=${c.model_mb}MB<br>Use: /config n_ctx 8192</div>`;
@@ -12238,7 +12521,7 @@ async function aiMiniSend() {
             body.innerHTML += `<div class="ai-mini-msg ai-mini-ai">⏳ Reloading with ${parts[0]}=${parts[1]}...</div>`;
             body.scrollTop = body.scrollHeight;
             try {
-                const res = await api('cintelia/config', 'POST', bdy);
+                const res = await api('cellintella/config', 'POST', bdy);
                 if (res.success && res.data.reloaded) {
                     body.innerHTML += `<div class="ai-mini-msg ai-mini-ai">✅ Reloaded. n_ctx=${res.data.n_ctx}, KV=${res.data.kv_cache_mb}MB</div>`;
                 }
@@ -12261,7 +12544,7 @@ async function aiMiniSend() {
 
     try {
         const scope = JSON.parse(chat.dataset.scope || '{}');
-        const res = await api('cintelia/query', 'POST', {
+        const res = await api('cellintella/query', 'POST', {
             message: msg,
             scope,
             accumulated_context: buildAIContextText('mini-chat'),
@@ -12485,7 +12768,7 @@ function showHelpLink(type) {
             bullets: [
                 'Define pipeline steps (Import → Process → Analyze → Export)',
                 'Create plotters for your results (batch + single)',
-                'Add hierarchical documentation for cintelia',
+                'Add hierarchical documentation for CellIntella',
                 'Publish as a CelLAB extension package',
             ],
             action: 'https://github.com/MAjidROSTAM/CelLAB/issues/new?title=Package+Integration+Request&labels=package',
@@ -12878,7 +13161,7 @@ let _consoleTabCounter = 0;
 let _cinteliaModelLoaded = false;
 
 // AI Context Accumulation
-// Each cintelia chat (mini-chat or console tab) can accumulate context items
+// Each CellIntella chat (mini-chat or console tab) can accumulate context items
 // Items are sent with every query from that chat
 let _aiContextStore = new Map();  // chatId → [{type, label, data}]
 
@@ -12897,7 +13180,7 @@ function addAIContext(chatId, item) {
 }
 
 function getOpenAIChats() {
-    // Collect all open cintelia chats (console tabs + mini-chat)
+    // Collect all open CellIntella chats (console tabs + mini-chat)
     const chats = [];
     // Console tabs
     for (const tab of _consoleTabs) {
@@ -12942,7 +13225,7 @@ function buildAISubmenu(contextItem) {
         ).join('');
     }
     addToItems += `<div class="ctx-item" onclick="aiAddContextNewFromMenu(${idx})">
-        <span style="opacity:.6">＋</span> New cintelia tab
+        <span style="opacity:.6">＋</span> New CellIntella tab
     </div>`;
 
     return `
@@ -13011,8 +13294,8 @@ const CONSOLE_TYPES = {
     shared:       { label: '🐍 Python',     color: '#89b4fa', prompt: '>>> ', welcome: 'Python (shared namespace) — has access to project, results, all imports' },
     isolated:     { label: '🐍 Python',     color: '#a6e3a1', prompt: '>>> ', welcome: 'Python (isolated) — fresh namespace, import what you need' },
     git:          { label: '📦 CelLAB Git', color: '#fab387', prompt: '$ ',  welcome: 'CelLAB Git — type "help" for available commands' },
-    cintelia:      { label: '🤖 cintelia',    color: '#cba6f7', prompt: '🤖 ', welcome: 'cintelia (shared memory) — Cell Intelligent Autonomous Interface — conversation history preserved across messages' },
-    cintelia_fresh:{ label: '🤖 cintelia',    color: '#b4befe', prompt: '🤖 ', welcome: 'cintelia (fresh) — Cell Intelligent Autonomous Interface — no history, fast one-off questions' },
+    cintelia:      { label: '🤖 CellIntella',    color: '#cba6f7', prompt: '🤖 ', welcome: 'CellIntella (shared memory) — Cell Intelligent Autonomous Interface — conversation history preserved across messages' },
+    cintelia_fresh:{ label: '🤖 CellIntella',    color: '#b4befe', prompt: '🤖 ', welcome: 'CellIntella (fresh) — Cell Intelligent Autonomous Interface — no history, fast one-off questions' },
 };
 
 function toggleConsole() {
@@ -13056,7 +13339,7 @@ function toggleConsole() {
 async function addConsoleTab(type, scope = null) {
     let sessionId = null;
 
-    // cintelia tabs don't need a console session
+    // CellIntella tabs don't need a console session
     if (type === 'cintelia' || type === 'cintelia_fresh') {
         sessionId = `cintelia_${Date.now()}`;
     } else {
@@ -13153,8 +13436,8 @@ function showAddTerminalMenu(e) {
         <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('isolated')"><span style="color:#a6e3a1">●</span> Python (Isolated)</div>
         <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('git')"><span style="color:#fab387">●</span> CelLAB Git</div>
         <div class="ctx-separator"></div>
-        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia')"><span style="color:#cba6f7">●</span> cintelia (Shared)</div>
-        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia_fresh')"><span style="color:#b4befe">●</span> cintelia (Fresh)</div>
+        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia')"><span style="color:#cba6f7">●</span> CellIntella (Shared)</div>
+        <div class="ctx-item" onclick="hideContextMenu();addConsoleTab('cintelia_fresh')"><span style="color:#b4befe">●</span> CellIntella (Fresh)</div>
     `;
     document.body.appendChild(menu);
     const rect = e.target.getBoundingClientRect();
@@ -13228,7 +13511,7 @@ async function consoleExec(code) {
     const tab = getActiveConsoleTab();
     if (!tab) return;
 
-    // Route cintelia tabs to AI endpoint
+    // Route CellIntella tabs to AI endpoint
     if (tab.type === 'cintelia' || tab.type === 'cintelia_fresh') {
         await cinteliaConsoleExec(tab, code);
         return;
@@ -13267,10 +13550,10 @@ async function cinteliaConsoleExec(tab, message) {
         if (!arg) {
             // Show current config
             try {
-                const res = await api('cintelia/config', 'GET');
+                const res = await api('cellintella/config', 'GET');
                 if (res.success) {
                     const c = res.data;
-                    tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">⚙ cintelia Config:\n  n_ctx = ${c.n_ctx} tokens (context window)\n  n_threads = ${c.n_threads}\n  KV cache = ${c.kv_cache_mb} MB\n  Model = ${c.model_mb} MB\n  Total RAM ≈ ${c.model_mb + c.kv_cache_mb} MB\n  Loaded: ${c.loaded ? 'yes' : 'no'}\n\nUsage: /config n_ctx 8192</span>` });
+                    tab.lines.push({ html: `<span class="console-result" style="color:#cba6f7">⚙ CellIntella Config:\n  n_ctx = ${c.n_ctx} tokens (context window)\n  n_threads = ${c.n_threads}\n  KV cache = ${c.kv_cache_mb} MB\n  Model = ${c.model_mb} MB\n  Total RAM ≈ ${c.model_mb + c.kv_cache_mb} MB\n  Loaded: ${c.loaded ? 'yes' : 'no'}\n\nUsage: /config n_ctx 8192</span>` });
                 }
             } catch(e) { tab.lines.push({ html: `<span class="console-err">Error: ${e.message}</span>` }); }
         } else {
@@ -13286,7 +13569,7 @@ async function cinteliaConsoleExec(tab, message) {
                     renderConsoleBody();
                     try {
                         const body = {}; body[key] = val;
-                        const res = await api('cintelia/config', 'POST', body);
+                        const res = await api('cellintella/config', 'POST', body);
                         if (res.success && res.data.reloaded) {
                             tab.lines.push({ html: `<span class="console-result" style="color:#a6e3a1">✅ Model reloaded. n_ctx=${res.data.n_ctx}, KV cache=${res.data.kv_cache_mb}MB</span>` });
                         } else {
@@ -13365,7 +13648,7 @@ async function cinteliaConsoleExec(tab, message) {
     renderConsoleBody();
 
     try {
-        const res = await api('cintelia/query', 'POST', {
+        const res = await api('cellintella/query', 'POST', {
             message: message,
             session_id: tab.sessionId,
             fresh: tab.type === 'cintelia_fresh',
@@ -13704,6 +13987,8 @@ function togglecinteliaPanel() {
         addConsoleTab('cintelia');
     }
 }
+// Alias for renamed HTML references
+const toggleCellIntellaPanel = togglecinteliaPanel;
 
 // ═════════════════════════════════════════════
 // INIT
