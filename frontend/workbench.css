@@ -913,3 +913,18 @@ body.light-theme .status-bar .status-info{color:rgba(255,255,255,.5)}
 .pb-key::after{content:"="}
 .pb-error{color:var(--status-error);font-size:10px;margin-left:8px}
 
+
+/* Batch Progress Board */
+.batch-board{margin:8px 0;border:1px solid var(--chrome-border);border-radius:var(--r-md);overflow:hidden;font-size:var(--fs-xs)}
+.bb-header{padding:6px 10px;background:var(--surface-2);font-weight:700;color:var(--text-secondary);border-bottom:1px solid var(--chrome-border);font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.bb-progress-bar{height:6px;background:var(--surface-1);margin:0}
+.bb-progress-fill{height:100%;transition:width .3s ease;border-radius:0 3px 3px 0}
+.bb-stats{display:flex;gap:2px;padding:8px 10px;flex-wrap:wrap}
+.bb-stat{display:flex;flex-direction:column;align-items:center;min-width:60px;padding:4px 8px;background:var(--surface-1);border-radius:var(--r-sm)}
+.bb-stat-val{font-size:16px;font-weight:700;color:var(--text-primary);font-family:var(--font-mono)}
+.bb-stat-label{font-size:9px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.3px}
+.bb-stat-ok .bb-stat-val{color:var(--status-ok)}
+.bb-stat-fail .bb-stat-val{color:var(--status-error)}
+.bb-current{padding:4px 10px 8px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bb-summary{display:flex;gap:12px;padding:6px 10px;border-top:1px solid var(--chrome-border);background:var(--surface-1)}
+.bb-summary-item{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);font-weight:600}

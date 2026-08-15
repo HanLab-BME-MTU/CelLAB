@@ -2918,7 +2918,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
     // ── CORNEALIA ─────────────────────────────────
     if (moduleType === 'cornealia') {
         if (id === 'select-image') return wrap(`
-            <div class="form-row"><span class="form-label">Image File</span><input class="form-input" data-param="input_file" placeholder="Select image..." readonly><button class="btn btn-default" onclick="selectInputFile(this)">Browse</button></div>
+            <div class="form-row" style="flex-direction:column;align-items:stretch"><span class="form-label">Image File</span><input class="form-input" data-param="input_file" placeholder="Select image..." readonly><button class="btn btn-default" onclick="selectInputFile(this)" style="margin-top:4px">Browse</button></div>
             <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Select a corneal endothelium image (specular microscopy or raw).</p>`);
 
         if (id === 'image-type') return wrap(`
@@ -2952,7 +2952,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
     // ── CORNEALIA BATCH ──────────────────────────
     if (moduleType === 'cornealia_batch') {
         if (id === 'batch-folder') return wrap(`
-            <div class="form-row"><span class="form-label">Image Folder</span><input class="form-input" data-param="batch_folder" placeholder="Select folder..." readonly><button class="btn btn-default" onclick="selectBatchFolder(this)">Browse</button></div>
+            <div class="form-row" style="flex-direction:column;align-items:stretch"><span class="form-label">Image Folder</span><input class="form-input" data-param="batch_folder" placeholder="Select folder..." readonly><button class="btn btn-default" onclick="selectBatchFolder(this)" style="margin-top:4px">Browse</button></div>
             <div id="batchFolderInfo" style="margin-top:8px;font-size:var(--fs-xs);color:var(--text-tertiary)"></div>`);
 
         if (id === 'image-type') return wrap(`
@@ -6175,6 +6175,55 @@ function renderPipelineBoard(board) {
     return html;
 }
 
+function renderBatchBoard(b) {
+    const isDone = b.status === 'done';
+    const pct = b.pct || 0;
+    const barColor = isDone ? 'var(--status-ok)' : b.failed > 0 ? 'var(--status-warning)' : 'var(--brand-accent)';
+
+    // Format time
+    const fmtTime = (s) => {
+        if (s == null || s === 0) return '0s';
+        if (s < 60) return `${Math.round(s)}s`;
+        if (s < 3600) return `${Math.floor(s/60)}m ${Math.round(s%60)}s`;
+        return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+    };
+
+    let html = `<div class="batch-board">`;
+    html += `<div class="bb-header">${isDone ? '✅ Batch Complete' : '⏳ Batch Processing'}</div>`;
+
+    // Progress bar
+    html += `<div class="bb-progress-bar"><div class="bb-progress-fill" style="width:${pct}%;background:${barColor}"></div></div>`;
+
+    // Stats grid
+    html += `<div class="bb-stats">`;
+    html += `<div class="bb-stat"><span class="bb-stat-val">${b.completed}</span><span class="bb-stat-label">/ ${b.total}</span></div>`;
+    html += `<div class="bb-stat bb-stat-ok"><span class="bb-stat-val">${b.succeeded}</span><span class="bb-stat-label">succeeded</span></div>`;
+    html += `<div class="bb-stat bb-stat-fail"><span class="bb-stat-val">${b.failed}</span><span class="bb-stat-label">failed</span></div>`;
+    html += `<div class="bb-stat"><span class="bb-stat-val">${fmtTime(b.elapsed)}</span><span class="bb-stat-label">elapsed</span></div>`;
+    if (!isDone) {
+        html += `<div class="bb-stat"><span class="bb-stat-val">${fmtTime(b.eta)}</span><span class="bb-stat-label">remaining</span></div>`;
+        html += `<div class="bb-stat"><span class="bb-stat-val">${b.rate}</span><span class="bb-stat-label">img/s</span></div>`;
+    }
+    html += `</div>`;
+
+    // Current image
+    if (!isDone && b.current_image) {
+        html += `<div class="bb-current">📷 ${b.current_image}</div>`;
+    }
+
+    // Summary stats (only when done)
+    if (isDone && (b.K_mean || b.n_cells_mean)) {
+        html += `<div class="bb-summary">`;
+        if (b.K_mean !== 'N/A') html += `<span class="bb-summary-item">K̄ = ${b.K_mean}</span>`;
+        if (b.K_std !== 'N/A') html += `<span class="bb-summary-item">σ(K) = ${b.K_std}</span>`;
+        if (b.n_cells_mean !== 'N/A') html += `<span class="bb-summary-item">n̄_cells = ${b.n_cells_mean}</span>`;
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
 function _persistRunLog(sub, moduleType, stepId, html) {
     if (!sub) return;
     if (!sub._runLogs) sub._runLogs = {};
@@ -6306,7 +6355,9 @@ async function doRunAnalysis(moduleType, stepId) {
                     logHtml += `<div style="opacity:.5">${result.results_dir || ''}</div>`;
 
                     // Render pipeline status board if available
-                    if (outputs.pipeline_board) {
+                    if (outputs.batch_board) {
+                        logHtml += renderBatchBoard(outputs.batch_board);
+                    } else if (outputs.pipeline_board) {
                         logHtml += renderPipelineBoard(outputs.pipeline_board);
                     } else {
                         for (const [k, v] of Object.entries(outputs)) {
@@ -6357,8 +6408,10 @@ async function doRunAnalysis(moduleType, stepId) {
                 const labelEl = document.getElementById(`runProgressLabel-${moduleType}-${stepId}`);
                 if (fillEl) fillEl.style.width = `${p.pct || 0}%`;
 
-                // Render pipeline board if available (real-time)
-                if (p.pipeline_board && labelEl) {
+                // Render pipeline board or batch board if available (real-time)
+                if (p.batch_board && labelEl) {
+                    labelEl.innerHTML = renderBatchBoard(p.batch_board);
+                } else if (p.pipeline_board && labelEl) {
                     labelEl.innerHTML = renderPipelineBoard(p.pipeline_board);
                 } else if (labelEl) {
                     const newMsg = `${p.phase || ''}: ${p.message || ''} (${Math.round(p.pct || 0)}%)`;

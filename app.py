@@ -1263,7 +1263,7 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
     }
 
 
-def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir):
+def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir, progress_cb=None):
     """
     Run Cornealia batch processing.
     
@@ -1346,10 +1346,51 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
 
             print(f"  [BATCH] Starting batch on {folder} with {n_workers} workers")
 
+            import time as _time
+            _batch_start = _time.time()
+
+            # Batch progress callback
+            def _batch_progress(current, total, phase='', message='', n_failed=0):
+                elapsed = _time.time() - _batch_start
+                if current > 0:
+                    rate = current / elapsed
+                    eta = (total - current) / rate if rate > 0 else 0
+                else:
+                    rate = 0
+                    eta = 0
+
+                batch_board = {
+                    'total': total,
+                    'completed': current,
+                    'failed': n_failed,
+                    'succeeded': current - n_failed,
+                    'current_image': message,
+                    'pct': round(current / max(total, 1) * 100, 1),
+                    'elapsed': round(elapsed, 1),
+                    'eta': round(eta, 1),
+                    'rate': round(rate, 2),
+                    'status': 'running',
+                }
+
+                if progress_cb:
+                    progress_cb(current, total, phase=phase,
+                                message=f"{message} ({n_failed} failed)")
+                    with _run_progress_lock:
+                        for key, prog in _run_progress.items():
+                            if isinstance(prog, dict):
+                                prog['batch_board'] = batch_board
+
+            # Send initial board at 0/total immediately
+            from pathlib import Path as _Path
+            n_images = len([f for f in _Path(folder).rglob('*.*')
+                          if f.suffix.lower() in ('.jpg', '.jpeg', '.png', '.tiff', '.tif', '.bmp')])
+            _batch_progress(0, n_images, phase='Starting...', message='Initializing workers')
+
             engine = Cornealia(**config)
             batch_results = engine.collective_order_batch(
                 folder_path=folder,
                 n_workers=n_workers,
+                progress_cb=_batch_progress,
             )
 
             # Clean up engine
@@ -1447,6 +1488,9 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
                 with open(results_dir / "batch_summary.json", 'w') as f:
                     json.dump(summary, f, indent=2, default=str)
 
+                import time as _time2
+                total_elapsed = round(_time2.time() - _batch_start, 1)
+
                 return {
                     "status": "done",
                     "outputs": {
@@ -1456,6 +1500,21 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
                         "csv_path": "batch_results.csv",
                         "K_mean": summary.get('K_mean', 'N/A'),
                         "K_std": summary.get('K_std', 'N/A'),
+                        "batch_board": {
+                            'total': len(batch_results),
+                            'completed': len(batch_results),
+                            'failed': len(failures),
+                            'succeeded': len(successes),
+                            'current_image': 'Done',
+                            'pct': 100,
+                            'elapsed': total_elapsed,
+                            'eta': 0,
+                            'rate': round(len(batch_results) / max(total_elapsed, 0.1), 2),
+                            'status': 'done',
+                            'K_mean': summary.get('K_mean', 'N/A'),
+                            'K_std': summary.get('K_std', 'N/A'),
+                            'n_cells_mean': summary.get('n_cells_mean', 'N/A'),
+                        },
                     },
                 }
             else:
@@ -5578,7 +5637,8 @@ def _run_step_async(task_key, project, ws_id, pipeline_id, step_id, p_type, para
             run_result = _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir,
                                         progress_cb=progress_cb)
         elif p_type == 'cornealia_batch':
-            run_result = _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir)
+            run_result = _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir,
+                                                progress_cb=progress_cb)
         elif p_type == 'immunia':
             run_result = _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir,
                                       progress_cb=progress_cb, cancel_evt=cancel_evt)

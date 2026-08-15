@@ -1417,7 +1417,8 @@ class cornealia :
 
 
     def collective_order_batch(self, folder_path, n_workers=1,
-                           extensions=('.jpg', '.jpeg', '.png', '.tiff', '.bmp')):
+                           extensions=('.jpg', '.jpeg', '.png', '.tiff', '.bmp'),
+                           progress_cb=None):
         valid_extensions = extensions
         p = Path(folder_path)
         image_paths = [img_path for img_path in p.rglob('*.*')
@@ -1436,12 +1437,13 @@ class cornealia :
 
         n_failed = 0
         results = []
-        pbar = tqdm(total=len(image_paths), desc="Processing", unit="img",
+        total = len(image_paths)
+        pbar = tqdm(total=total, desc="Processing", unit="img",
                     bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} "
                             "[{elapsed}<{remaining}, {rate_fmt}] {postfix}")
 
         if n_workers <= 1:
-            for img_path in image_paths:
+            for idx, img_path in enumerate(image_paths):
                 pbar.set_postfix_str(img_path.name, refresh=False)
                 r = self._collective_order_safe(img_path)
                 if 'error' in r:
@@ -1449,6 +1451,11 @@ class cornealia :
                     pbar.set_postfix_str(f"FAILED: {img_path.name}", refresh=False)
                 results.append(r)
                 pbar.update(1)
+                if progress_cb:
+                    progress_cb(idx + 1, total,
+                                phase=f"Image {idx+1}/{total}",
+                                message=img_path.name,
+                                n_failed=n_failed)
         else:
             config = {
                 'pixel_size':               self.pixel_size,
@@ -1468,10 +1475,12 @@ class cornealia :
             str_paths = [str(p) for p in image_paths]
             print(f"Launching {n_workers} workers ...")
 
+            idx = 0
             with Pool(processes=n_workers,
                     initializer=_worker_init,
                     initargs=(config,)) as pool:
                 for r in pool.imap_unordered(_worker_process_image, str_paths):
+                    idx += 1
                     if 'error' in r:
                         n_failed += 1
                         pbar.set_postfix_str(f"FAILED: {Path(r['image_path']).name}",
@@ -1480,6 +1489,11 @@ class cornealia :
                         pbar.set_postfix_str(Path(r['image_path']).name, refresh=False)
                     results.append(r)
                     pbar.update(1)
+                    if progress_cb:
+                        progress_cb(idx, total,
+                                    phase=f"Image {idx}/{total}",
+                                    message=Path(r['image_path']).name,
+                                    n_failed=n_failed)
 
         pbar.close()
         self.verbose = original_verbose
