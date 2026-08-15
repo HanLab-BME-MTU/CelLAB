@@ -1410,7 +1410,7 @@ class cornealia :
     def _collective_order_safe(self, image_path):
         """Wrapper for parallel use — catches exceptions so one failure doesn't kill the pool."""
         try:
-            return self.collective_order_pipeline(image_path)
+            return self.mechanical_state(image_path)
         except Exception as e:
             print(f"  FAILED: {Path(image_path).name} — {e}")
             return {'image_path': str(image_path), 'error': str(e)}
@@ -1449,6 +1449,16 @@ class cornealia :
                 if 'error' in r:
                     n_failed += 1
                     pbar.set_postfix_str(f"FAILED: {img_path.name}", refresh=False)
+                # Strip heavy data — keep only scalars and small dicts
+                for key in ('segmentation', 'cell_area', 'input_image',
+                            'dot_centroids', 'residual_field', '_reporter',
+                            'r_values', 'g_r', 'g_r_smooth', 'v_r',
+                            'r_valid', 'v_r_valid',
+                            'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
+                            'r_fit_ds', 'v_fit_ds',
+                            'popt_qc', 'coeffs_qr', 'coeffs_qg',
+                            'popt_mr', 'popt_mg', 'popt_ds'):
+                    r.pop(key, None)
                 results.append(r)
                 pbar.update(1)
                 if progress_cb:
@@ -1529,11 +1539,11 @@ def _worker_init(config):
 def _worker_process_image(image_path):
     """Process one image using the worker's persistent cornealia instance."""
     try:
-        result = _worker_instance.collective_order_pipeline(image_path)
+        result = _worker_instance.mechanical_state(image_path)
 
         # Remove heavy data that can't fit through the pipe
         for key in ('segmentation', 'cell_area', 'input_image',
-                     'dot_centroids',
+                     'dot_centroids', 'residual_field', '_reporter',
                      'r_values', 'g_r', 'g_r_smooth', 'v_r',
                      'r_valid', 'v_r_valid'):
             result.pop(key, None)
@@ -1566,7 +1576,7 @@ def _cli_process_one(args):
     )
 
     try:
-        r = proc.collective_order_pipeline(str(img_path))
+        r = proc.mechanical_state(str(img_path))
 
         def safe(key, scale=1):
             v = r.get(key, np.nan)
@@ -1595,6 +1605,10 @@ def _cli_process_one(args):
                                    if not np.isnan(r.get('r0_fit', np.nan)) else np.nan,
             'v_min':               r.get('v_min', np.nan),
             'g_peak':              r.get('g_peak', np.nan),
+            'mean_F':              r.get('mean_F', np.nan),
+            'frac_compression':    r.get('frac_compression', np.nan),
+            'spatial_cv':          r.get('spatial_cv', np.nan),
+            'n_hot_spots':         r.get('n_hot_spots', 0),
             'reliable':            r.get('reliable', False),
             'R2_damped':           r.get('R2_damped', np.nan),
             'R2_full':             r.get('R2_full', np.nan),
