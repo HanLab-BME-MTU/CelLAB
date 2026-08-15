@@ -1699,7 +1699,7 @@ function renderModuleView(vp, sub, ws) {
     }
 
     vp.innerHTML = `
-    <div class="module-view fade-in">
+    <div class="module-view fade-in" >
         <div class="module-view-bar" style="border-left:4px solid ${accent};">
             <div class="mvt-breadcrumb">
                 <span class="mvt-accent" style="background:${accent}"></span>
@@ -1784,6 +1784,24 @@ function renderModuleView(vp, sub, ws) {
         const bodyEl = document.getElementById(`settingsBody-${sub.id}`);
         if (bodyEl && sub._localParams) {
             _restoreParams(bodyEl, sub, activeItem.id);
+        }
+
+        // Add workspace radial nav on right-click (only on areas without existing context menu)
+        const modView = vp.querySelector('.module-view');
+        if (modView) {
+            modView.addEventListener('contextmenu', (e) => {
+                // Skip if target has its own context menu
+                const hasOwnMenu = e.target.closest('.result-item, .mtree-item, .ctx-item, .console-input, .form-input, .run-log, textarea, input');
+                if (hasOwnMenu) return;
+                // Skip if any ancestor between target and module-view has oncontextmenu
+                let el = e.target;
+                while (el && el !== modView) {
+                    if (el.getAttribute && el.getAttribute('oncontextmenu')) return;
+                    el = el.parentElement;
+                }
+                e.preventDefault();
+                openWorkspaceRadialNav(e);
+            });
         }
     }, 0);
 }
