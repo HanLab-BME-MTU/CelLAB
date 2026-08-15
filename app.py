@@ -662,7 +662,7 @@ def pipeline_connect():
 # PACKAGE RUNNERS
 # ═════════════════════════════════════════════
 
-def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir):
+def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, progress_cb=None):
     """
     Run Cornealia analysis step.
     
@@ -806,7 +806,7 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir):
                 if isinstance(v, dict):
                     all_params.update(v)
 
-            return _run_cornealia_segmentation(project, results_dir, str(resolved), all_params)
+            return _run_cornealia_segmentation(project, results_dir, str(resolved), all_params, progress_cb=progress_cb)
 
         # ── STEP: MORPHOMETRY ─────────────────────────
         if step_id == 'morphometry':
@@ -843,7 +843,7 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir):
             if not seg_pickle.exists():
                 return {"status": "error", "error_msg": "Run Cell Segmentation first."}
 
-            return _run_cornealia_morphometry(project, results_dir, str(resolved), all_params, seg_pickle)
+            return _run_cornealia_morphometry(project, results_dir, str(resolved), all_params, seg_pickle, progress_cb=progress_cb)
 
         if step_id == 'batch':
             return {"status": "error", "error_msg": "Batch processing: TODO"}
@@ -923,7 +923,7 @@ def _extract_safe_results(results):
     return safe_results
 
 
-def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
+def _run_cornealia_segmentation(project, results_dir, image_path, all_params, progress_cb=None):
     """
     Run segmentation only: detect cell boundaries and centroids.
     Saves segmentation data to pickle for morphometry step.
@@ -934,18 +934,38 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
     import pickle
     import cv2
 
-    from cornealia.cornealia import cornealia as Cornealia
+    from cornealia.cornealia import cornealia as Cornealia, PipelineReporter, PIPELINE_STEPS
+
+    # Create reporter with GUI callback
+    def _reporter_cb(step_id, status, board):
+        if progress_cb:
+            completed = board['completed']
+            total = board['total']
+            step = board['steps'][step_id]
+            progress_cb(completed, total, phase=step['name'],
+                        message=f"{step['name']}: {status}")
+            # Also store board in progress for real-time rendering
+            with _run_progress_lock:
+                for key, prog in _run_progress.items():
+                    if isinstance(prog, dict):
+                        prog['pipeline_board'] = board
+
+    reporter = PipelineReporter(PIPELINE_STEPS, callback=_reporter_cb)
 
     config = _cornealia_config(all_params)
     engine = Cornealia(**config)
 
     # Load and preprocess
-    print("  [DIAG] Loading image...")
+    reporter.start('load')
     input_image = engine._load_image(image_path)
+    reporter.done('load')
 
     if config['is_input_image_machine_output']:
+        reporter.start('preprocess')
         cell_area, machine_metrics, dot_centroids = engine.cleaning_preprocessing(input_image)
+        reporter.done('preprocess')
     else:
+        reporter.skip('preprocess')
         cell_area = input_image
         machine_metrics = None
         dot_centroids = None
@@ -954,10 +974,10 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
         cell_area = 255 - cell_area
 
     # Run segmentation
-    print("  [DIAG] Running segmentation...")
+    reporter.start('segment')
     objects, segmentor = engine.segmentation(cell_area)
     n_cells = len(objects)
-    print(f"  [DIAG] Segmentation done, {n_cells} cells detected")
+    reporter.done('segment', {'n_cells': n_cells})
 
     # Save segmentation results for morphometry step (plain arrays only)
     centroids = np.array([o.centroid for o in objects])
@@ -975,7 +995,6 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
     }
     with open(results_dir / "segmentation_results.pkl", 'wb') as f:
         pickle.dump(seg_data, f)
-    print("  [DIAG] Segmentation pickle saved")
 
     # Generate segmentation preview plot
     plots_dir = results_dir / "plots"
@@ -1039,49 +1058,91 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params):
         "outputs": {
             "n_cells": n_cells,
             "image_size": f"{cell_area.shape[1]} x {cell_area.shape[0]}",
+            "pipeline_board": reporter.get_board(),
         },
     }
 
 
-def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg_pickle):
+def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg_pickle, progress_cb=None):
     """
     Run morphometric analysis using saved segmentation centroids.
-    Computes cell metrics, g(r), V(r), and collective order K.
+    Computes cell metrics, g(r), V(r), collective order K, and force field.
     """
     import json
     import numpy as np
     import pickle
 
-    from cornealia.cornealia import cornealia as Cornealia
+    from cornealia.cornealia import cornealia as Cornealia, PipelineReporter, PIPELINE_STEPS
+
+    # Create reporter with GUI callback
+    def _reporter_cb(step_id, status, board):
+        if progress_cb:
+            completed = board['completed']
+            total = board['total']
+            step = board['steps'][step_id]
+            progress_cb(completed, total, phase=step['name'],
+                        message=f"{step['name']}: {status}")
+            # Also store board in progress for real-time rendering
+            with _run_progress_lock:
+                for key, prog in _run_progress.items():
+                    if isinstance(prog, dict):
+                        prog['pipeline_board'] = board
+
+    reporter = PipelineReporter(PIPELINE_STEPS, callback=_reporter_cb)
 
     # Load segmentation results (plain arrays)
-    print("  [DIAG] Loading segmentation data...")
+    reporter.skip('load')
+    reporter.skip('preprocess')
+    reporter.skip('segment')
+
     with open(seg_pickle, 'rb') as f:
         seg_data = pickle.load(f)
-    print("  [DIAG] Loaded OK")
 
     config = _cornealia_config(all_params)
     engine = Cornealia(**config)
 
-    # Run morphometry using centroid-only mode
-    print("  [DIAG] Running morphometric analysis...")
+    # Classic metrics
+    reporter.start('metrics')
+    classic_metrics = engine._compute_classic_metrics(
+        seg_data['centroids'], seg_data['areas'],
+        seg_data['image_dims'][0], seg_data['image_dims'][1],
+        method='segmentation'
+    )
+    reporter.done('metrics', {
+        'CD_calc': round(classic_metrics.get('CD_calc', 0), 1),
+        'Ave_calc': round(classic_metrics.get('Ave_calc', 0), 1),
+        'HEX_calc': round(classic_metrics.get('HEX_calc', 0), 1),
+    })
+
+    # Collective order (g(r) + quality gate + fitting)
+    reporter.start('gr')
     results = engine.compute_collective_order(
         centroids=seg_data['centroids'],
         image_dims=seg_data['image_dims'],
     )
+    reporter.done('gr', {
+        'n_interior': results.get('n_interior'),
+        'g_peak': round(results.get('g_peak', 0), 3),
+    })
+    reporter.done('quality', {
+        'reliable': results.get('reliable'),
+        'R2_damped': results.get('R2_damped'),
+        'SNR': results.get('SNR'),
+    })
+    reporter.done('fitting', {
+        'K': results.get('K'),
+        'K_ds': results.get('K_ds'),
+        'r0_fit': results.get('r0_fit'),
+    })
+
     # Add image data and segmentation for plotter
     results['input_image'] = seg_data['input_image']
     results['cell_area'] = seg_data['cell_area']
     results['machine_metrics'] = seg_data['machine_metrics']
     results['dot_centroids'] = seg_data['dot_centroids']
     results['image_path'] = image_path
-    # Compute classic metrics from saved arrays
-    classic_metrics = engine._compute_classic_metrics(
-        seg_data['centroids'], seg_data['areas'],
-        seg_data['image_dims'][0], seg_data['image_dims'][1],
-        method='segmentation'
-    )
     results.update(classic_metrics)
+
     # Carry forward segmentation data (needed by comprehensive/pipeline_figure plots)
     results['segmentation'] = {
         'H': seg_data['image_dims'][0],
@@ -1105,10 +1166,9 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
                     results['segmentation'][key] = seg_from_full[key]
         except Exception:
             pass
-    print(f"  [DIAG] Morphometry done, K={results.get('K', 'N/A')}")
 
-    # Compute residual force field
-    print("  [DIAG] Computing residual force field...")
+    # Force field
+    reporter.start('force')
     rf = engine._compute_residual_field(results)
     results['residual_field'] = rf
     if rf is not None:
@@ -1116,13 +1176,16 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
         results['frac_compression'] = rf['frac_compression']
         results['spatial_cv'] = rf['spatial_cv']
         results['n_hot_spots'] = rf['n_hot_spots']
-        print(f"  [DIAG] Force field: mean_F={rf['mean_F']:.4f}, hot_spots={rf['n_hot_spots']}")
+        reporter.done('force', {
+            'mean_F': round(rf['mean_F'], 4),
+            'n_hot_spots': rf['n_hot_spots'],
+        })
     else:
         results['mean_F'] = None
         results['frac_compression'] = None
         results['spatial_cv'] = None
         results['n_hot_spots'] = 0
-        print("  [DIAG] Force field: insufficient data")
+        reporter.skip('force')
 
     # Extract safe results
     safe_results = _extract_safe_results(results)
@@ -1169,6 +1232,7 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
             "frac_compression": scalar_results.get('frac_compression', 'N/A'),
             "spatial_cv": scalar_results.get('spatial_cv', 'N/A'),
             "n_hot_spots": scalar_results.get('n_hot_spots', 0),
+            "pipeline_board": reporter.get_board(),
         },
     }
 
@@ -5485,7 +5549,8 @@ def _run_step_async(task_key, project, ws_id, pipeline_id, step_id, p_type, para
             run_result = _run_fastia(project, ws_id, pipeline_id, step_id, params, results_dir,
                                      progress_cb=progress_cb, cancel_evt=cancel_evt)
         elif p_type == 'cornealia':
-            run_result = _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir)
+            run_result = _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir,
+                                        progress_cb=progress_cb)
         elif p_type == 'cornealia_batch':
             run_result = _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir)
         elif p_type == 'immunia':

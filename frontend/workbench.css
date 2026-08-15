@@ -892,3 +892,24 @@ body.light-theme .canvas-view.show-grid{background-image:url("data:image/svg+xml
 body.light-theme .status-bar{background:linear-gradient(180deg,#1a5276,#0e3a56);color:rgba(255,255,255,.8);border-top:1px solid rgba(0,0,0,.2)}
 body.light-theme .status-bar .status-text{color:rgba(255,255,255,.8)}
 body.light-theme .status-bar .status-info{color:rgba(255,255,255,.5)}
+
+/* Pipeline Status Board */
+.pipeline-board{margin:8px 0;border:1px solid var(--chrome-border);border-radius:var(--r-md);overflow:hidden;font-size:var(--fs-xs)}
+.pb-header{padding:6px 10px;background:var(--surface-2);font-weight:700;color:var(--text-secondary);border-bottom:1px solid var(--chrome-border);font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.pb-step{display:flex;align-items:center;gap:6px;padding:4px 10px;border-bottom:1px solid rgba(255,255,255,.03);transition:background .12s}
+.pb-step:last-child{border-bottom:none}
+.pb-step.pb-done{background:rgba(166,227,161,.04)}
+.pb-step.pb-failed{background:rgba(243,139,168,.08)}
+.pb-step.pb-running{background:rgba(249,226,175,.06)}
+.pb-step.pb-skipped{opacity:.4}
+.pb-step.pb-idle{opacity:.35}
+.pb-num{font-size:9px;font-weight:700;color:var(--text-tertiary);width:14px;text-align:center;flex-shrink:0}
+.pb-icon{font-size:11px;flex-shrink:0;width:16px;text-align:center}
+.pb-name{font-weight:600;color:var(--text-primary);min-width:120px}
+.pb-time{color:var(--text-tertiary);font-size:10px;margin-left:4px}
+.pb-outputs{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.pb-val{color:var(--text-secondary);font-family:var(--font-mono);font-size:10px}
+.pb-key{color:var(--text-tertiary);margin-right:2px}
+.pb-key::after{content:"="}
+.pb-error{color:var(--status-error);font-size:10px;margin-left:8px}
+

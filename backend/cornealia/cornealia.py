@@ -114,7 +114,18 @@ class PipelineReporter:
         self.board[step_id]['status'] = self.DONE
         self.board[step_id]['time'] = round(elapsed, 2)
         if outputs:
-            self.board[step_id]['outputs'] = outputs
+            # Convert numpy types to Python natives for JSON serialization
+            clean = {}
+            for k, v in outputs.items():
+                if isinstance(v, (np.bool_,)):
+                    clean[k] = bool(v)
+                elif isinstance(v, (np.integer,)):
+                    clean[k] = int(v)
+                elif isinstance(v, (np.floating,)):
+                    clean[k] = round(float(v), 6)
+                else:
+                    clean[k] = v
+            self.board[step_id]['outputs'] = clean
         self._emit(step_id)
 
     def fail(self, step_id, error):

@@ -1228,6 +1228,7 @@ function renderWorkspaceTabs() {
 function renderSubtabs() {
     const ws = getActiveWorkspace();
     if (!ws) return;
+    if (ws.type === 'codechat') return; // codechat has no subtabs
     const bar = document.getElementById('subtabScroll');
     bar.innerHTML = '';
 
@@ -1372,6 +1373,7 @@ function makeSubtabEl(sub, ws, tabIdx = 0, totalTabs = 1) {
 
 function renderLeftPanel() {
     const ws = getActiveWorkspace();
+    if (ws && ws.type === 'codechat') return;
     const panel = document.getElementById('leftPanel');
     const resizer = document.getElementById('leftResizer');
     const sub = ws ? ws.subtabs.get(ws.activeSubtab) : null;
@@ -1433,6 +1435,7 @@ function buildCat(title, catId, items, open = false) {
 function renderViewport() {
     const ws = getActiveWorkspace();
     if (!ws) return;
+    if (ws.type === 'codechat') return; // codechat renders its own viewport
     const vp = document.getElementById('viewport');
     const sub = ws.subtabs.get(ws.activeSubtab);
 
@@ -4828,6 +4831,7 @@ function updateOpenModulesList() {
     const ws = getActiveWorkspace();
     const c = document.getElementById('openModulesList');
     if (!ws || !c) return;
+    if (ws.type === 'codechat') return;
     const mods = [...ws.subtabs.values()].filter(s => s.type === 'module');
     if (mods.length === 0) { c.innerHTML = '<p class="placeholder-text">No modules open</p>'; return; }
     c.innerHTML = mods.map(s => `
@@ -6132,6 +6136,45 @@ async function discoverExistingResults(subId) {
 // RUN ANALYSIS
 // ═════════════════════════════════════════════
 
+function renderPipelineBoard(board) {
+    const icons = { idle: '⚪', running: '🟡', done: '🟢', failed: '🔴', skipped: '⚫', locked: '🔒' };
+    // Use ordered step IDs from the board
+    const orderedIds = ['load', 'preprocess', 'segment', 'metrics', 'gr', 'quality', 'fitting', 'force'];
+    let html = `<div class="pipeline-board">`;
+    html += `<div class="pb-header">Pipeline Status — ${board.completed}/${board.total} complete</div>`;
+
+    let stepNum = 0;
+    for (const stepId of orderedIds) {
+        const step = board.steps[stepId];
+        if (!step) continue;
+        stepNum++;
+
+        const status = step.status || 'idle';
+        const icon = icons[status] || '⚪';
+        const timeStr = step.time != null && status === 'done' ? `<span class="pb-time">${step.time}s</span>` : '';
+        const errorStr = step.error ? `<span class="pb-error">${step.error}</span>` : '';
+
+        let outputsStr = '';
+        if (step.outputs && Object.keys(step.outputs).length > 0 && status === 'done') {
+            outputsStr = Object.entries(step.outputs)
+                .map(([k, v]) => `<span class="pb-val"><span class="pb-key">${k}</span>${v}</span>`)
+                .join('');
+        }
+
+        html += `<div class="pb-step pb-${status}">`;
+        html += `<span class="pb-num">${stepNum}</span>`;
+        html += `<span class="pb-icon">${icon}</span>`;
+        html += `<span class="pb-name">${step.name}</span>`;
+        html += timeStr;
+        html += `<span class="pb-outputs">${outputsStr}</span>`;
+        html += errorStr;
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
 function _persistRunLog(sub, moduleType, stepId, html) {
     if (!sub) return;
     if (!sub._runLogs) sub._runLogs = {};
@@ -6261,9 +6304,15 @@ async function doRunAnalysis(moduleType, stepId) {
                     if (labelEl) labelEl.textContent = outputs.message || 'Done';
                     logHtml += `<div style="color:var(--status-ok);margin-top:6px">✓ Completed</div>`;
                     logHtml += `<div style="opacity:.5">${result.results_dir || ''}</div>`;
-                    for (const [k, v] of Object.entries(outputs)) {
-                        if (k !== 'message' && k !== 'plots') {
-                            logHtml += `<div style="opacity:.7">${k}: ${v}</div>`;
+
+                    // Render pipeline status board if available
+                    if (outputs.pipeline_board) {
+                        logHtml += renderPipelineBoard(outputs.pipeline_board);
+                    } else {
+                        for (const [k, v] of Object.entries(outputs)) {
+                            if (k !== 'message' && k !== 'plots' && k !== 'pipeline_board') {
+                                logHtml += `<div style="opacity:.7">${k}: ${v}</div>`;
+                            }
                         }
                     }
                     _persistRunLog(sub, moduleType, stepId, logHtml);
@@ -6307,15 +6356,17 @@ async function doRunAnalysis(moduleType, stepId) {
                 const fillEl = document.getElementById(`runProgressFill-${moduleType}-${stepId}`);
                 const labelEl = document.getElementById(`runProgressLabel-${moduleType}-${stepId}`);
                 if (fillEl) fillEl.style.width = `${p.pct || 0}%`;
-                if (labelEl) {
+
+                // Render pipeline board if available (real-time)
+                if (p.pipeline_board && labelEl) {
+                    labelEl.innerHTML = renderPipelineBoard(p.pipeline_board);
+                } else if (labelEl) {
                     const newMsg = `${p.phase || ''}: ${p.message || ''} (${Math.round(p.pct || 0)}%)`;
-                    // Append if message changed, keep last 15 lines
                     if (!labelEl._lastMsg || labelEl._lastMsg !== newMsg) {
                         labelEl._lastMsg = newMsg;
                         const line = document.createElement('div');
                         line.textContent = newMsg;
                         labelEl.appendChild(line);
-                        // Trim old lines
                         while (labelEl.children.length > 15) labelEl.removeChild(labelEl.firstChild);
                         labelEl.scrollTop = labelEl.scrollHeight;
                     }
@@ -14562,12 +14613,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     updateStatus('Ready — CELLAB v3.1');
 
-    // Create default Code & Chat if none exists
+    // Create default Code & Chat if none exists (silently, don't switch to it)
     const hasCodeChat = [...state.workspaces.values()].some(w => w.type === 'codechat');
     if (!hasCodeChat) {
-        createCodeChat('Code & Chat');
-        // Switch back to first workspace
-        const firstWs = [...state.workspaces.values()].find(w => w.type === 'workspace');
-        if (firstWs) switchWorkspace(firstWs.id);
+        _codeChatCounter++;
+        const ccId = `cc-${_codeChatCounter}`;
+        const ccInfo = CONSOLE_TYPES['shared'];
+        const ccTabId = `cctab_${Date.now()}`;
+        const ccWs = {
+            id: ccId,
+            name: 'Code & Chat',
+            type: 'codechat',
+            _isDefault: true,
+            consoleTabs: [{
+                id: ccTabId,
+                sessionId: null,
+                type: 'shared',
+                name: `${ccInfo.label} 1`,
+                scope: { level: 'none' },
+                lines: [{ html: `<span class="console-welcome">CelLAB Console — ${ccInfo.welcome}</span>` }],
+                history: [],
+                histIdx: -1,
+            }],
+            activeConsoleTab: ccTabId,
+        };
+        state.workspaces.set(ccId, ccWs);
+        // Create backend session async (don't block)
+        api('console/create', 'POST', { type: 'shared' }).then(res => {
+            if (res.success) ccWs.consoleTabs[0].sessionId = res.data.session_id;
+        });
+        renderWorkspaceTabs();
     }
 });
