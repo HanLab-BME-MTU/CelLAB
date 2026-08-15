@@ -469,11 +469,14 @@ function openModuleSubtab(pipelineId, stepId, focused = false) {
     const ws = getActiveWorkspace();
     if (!ws) return;
 
-    // Already open? Switch to it, apply focus mode if requested
+    const wasCollapsed = state.collapsedGroups.has(pipelineId);
+
+    // Already open? Switch to it without changing expand/collapse
     for (const [subId, sub] of ws.subtabs) {
         if (sub.pipelineId === pipelineId && sub.stepId === stepId) {
-            state.collapsedGroups.delete(pipelineId);
-            if (focused) {
+            // If collapsed, use focused mode to show just this tab
+            if (wasCollapsed) {
+                state.collapsedGroups.delete(pipelineId);
                 state.focusedGroups.set(pipelineId, stepId);
             }
             switchSubtab(subId);
@@ -501,12 +504,13 @@ function openModuleSubtab(pipelineId, stepId, focused = false) {
     // Insert in step-order position (not at end)
     _insertTabOrdered(ws, subId, newTab);
 
-    // Expand group if collapsed, set focus mode if requested
-    state.collapsedGroups.delete(pipelineId);
-    if (focused) {
+    // If was collapsed, open in focused mode (only this tab visible)
+    // If was expanded, stay expanded (just add the new tab)
+    if (wasCollapsed) {
+        state.collapsedGroups.delete(pipelineId);
         state.focusedGroups.set(pipelineId, stepId);
-    } else {
-        state.focusedGroups.delete(pipelineId);
+    } else if (focused) {
+        state.focusedGroups.set(pipelineId, stepId);
     }
 
     switchSubtab(subId);
@@ -985,7 +989,7 @@ function openRadialNavigator(pipelineId, ev) {
         };
         path.onclick = () => {
             overlay.remove();
-            openModuleSubtab(pipelineId, step.id, true);
+            openModuleSubtab(pipelineId, step.id);
         };
         svg.appendChild(path);
 
