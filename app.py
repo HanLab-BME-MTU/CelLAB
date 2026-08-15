@@ -689,6 +689,23 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
 
         # ── STEP: IMPORT ──────────────────────────────
         if step_id == 'import':
+            from cornealia.cornealia import PipelineReporter, PIPELINE_STEPS
+
+            # Create reporter for import step
+            def _import_reporter_cb(step_id_r, status, board):
+                if progress_cb:
+                    completed = board['completed']
+                    total = board['total']
+                    step = board['steps'][step_id_r]
+                    progress_cb(completed, total, phase=step['name'],
+                                message=f"{step['name']}: {status}")
+                    with _run_progress_lock:
+                        for key, prog in _run_progress.items():
+                            if isinstance(prog, dict):
+                                prog['pipeline_board'] = board
+
+            reporter = PipelineReporter(PIPELINE_STEPS, callback=_import_reporter_cb)
+
             input_file = all_params.get('input_file', '')
             if not input_file:
                 return {"status": "error", "error_msg": "No image selected. Click Browse to select an image."}
@@ -699,11 +716,14 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
 
             image_path = str(resolved)
 
-            # Load image using cornealia's method
+            # Load image
+            reporter.start('load')
             img = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
             if img is None:
+                reporter.fail('load', f"Could not load image: {image_path}")
                 return {"status": "error", "error_msg": f"Could not load image: {image_path}"}
             img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            reporter.done('load', {'size': f"{img_rgb.shape[1]}×{img_rgb.shape[0]}"})
 
             plots_dir = results_dir / "plots"
             plots_dir.mkdir(exist_ok=True)
@@ -723,6 +743,7 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
             outputs['is_machine_output'] = is_machine
 
             if is_machine:
+                reporter.start('preprocess')
                 try:
                     from cornealia.cornealia import cornealia as Cornealia
                     engine = Cornealia(
@@ -731,6 +752,9 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
                         verbose=False,
                     )
                     cell_area, machine_metrics, dot_centroids = engine.cleaning_preprocessing(img_rgb)
+                    reporter.done('preprocess', {
+                        'machine_CD': machine_metrics.get('CD', '?') if machine_metrics else '?',
+                    })
 
                     # Clean up OCR reader immediately
                     engine._ocr_reader = None
@@ -741,7 +765,6 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
                     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
                     axes[0].imshow(img_rgb)
                     axes[0].set_title('Original (Machine Output)')
-                    # Draw crop rectangle
                     from matplotlib.patches import Rectangle
                     rect = Rectangle((24, 261), 684, 514, linewidth=2, edgecolor='lime', facecolor='none')
                     axes[0].add_patch(rect)
@@ -760,14 +783,14 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
 
                     if machine_metrics:
                         outputs['machine_metrics'] = machine_metrics
-                        # Save metrics as JSON
                         with open(results_dir / "machine_metrics.json", 'w') as f:
                             json.dump(machine_metrics, f, indent=2)
 
                 except Exception as preprocess_err:
+                    reporter.fail('preprocess', str(preprocess_err))
                     outputs['preprocess_warning'] = str(preprocess_err)
             else:
-                # Non-machine: just save the raw image as preview
+                reporter.skip('preprocess')
                 fig, ax = plt.subplots(1, 1, figsize=(8, 6))
                 ax.imshow(img_rgb)
                 ax.set_title(f'Raw Image ({img_rgb.shape[1]}×{img_rgb.shape[0]})')
@@ -778,6 +801,7 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
 
             plt.close('all')
             outputs['plots'] = ['original.png', 'import_preview.png']
+            outputs['pipeline_board'] = reporter.get_board()
             return {"status": "done", "outputs": outputs}
 
         # ── STEP: SEGMENTATION ────────────────────────
@@ -1090,13 +1114,15 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
 
     reporter = PipelineReporter(PIPELINE_STEPS, callback=_reporter_cb)
 
-    # Load segmentation results (plain arrays)
-    reporter.skip('load')
-    reporter.skip('preprocess')
-    reporter.skip('segment')
+    # Previous steps already completed in segmentation step
+    reporter.done('load')
+    reporter.done('preprocess')
+    reporter.done('segment')
 
     with open(seg_pickle, 'rb') as f:
         seg_data = pickle.load(f)
+    
+    reporter.board['segment']['outputs'] = {'n_cells': len(seg_data['centroids'])}
 
     config = _cornealia_config(all_params)
     engine = Cornealia(**config)
