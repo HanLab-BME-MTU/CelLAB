@@ -812,6 +812,9 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
             plt.close('all')
             outputs['plots'] = ['original.png', 'import_preview.png']
             outputs['pipeline_board'] = reporter.get_board()
+            _generate_run_report(results_dir, 'import', all_params,
+                                 board=reporter.get_board(), outputs=outputs,
+                                 image_name=os.path.basename(image_path))
             return {"status": "done", "outputs": outputs}
 
         # ── STEP: SEGMENTATION ────────────────────────
@@ -889,6 +892,206 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
         traceback.print_exc()
         plt.close('all')
         return {"status": "error", "error_msg": str(e)}
+
+
+def _generate_instance_report(pipeline_dir, all_params, outputs, board=None, image_name=None):
+    """Generate a root-level compiled Markdown report for the whole pipeline instance."""
+    from datetime import datetime
+
+    lines = []
+    lines.append("# Cornealia — Analysis Report")
+    lines.append(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if image_name:
+        lines.append(f"**Image:** {image_name}")
+    lines.append(f"**Instance:** {pipeline_dir.name}")
+    lines.append("")
+
+    # Configuration
+    lines.append("## Configuration")
+    lines.append("| Parameter | Value |")
+    lines.append("|-----------|-------|")
+    config_items = {
+        'pixel_size': 'Pixel Size (µm/px)',
+        'machine_type': 'Image Source',
+        'sigma_mode': 'Sigma Detection',
+        'fcm_method': 'FCM Method',
+        'fitting_method': 'Fitting Method',
+        'exclusion_ratio': 'Exclusion Ratio',
+        'min_expansion_shells': 'Min Expansion Shells',
+    }
+    for key, label in config_items.items():
+        if key in all_params:
+            val = all_params[key]
+            if key == 'machine_type':
+                val = 'Raw Image' if val == 'none' else val.replace('_', ' ').title()
+            lines.append(f"| {label} | {val} |")
+    lines.append("")
+
+    # Pipeline status
+    if board and 'steps' in board:
+        icons = {'idle': '⚪', 'running': '🟡', 'done': '✅', 'failed': '❌', 'skipped': '⚫'}
+        lines.append("## Pipeline Status")
+        lines.append(f"**{board['completed']}/{board['total']} steps complete**")
+        lines.append("")
+        lines.append("| # | Step | Status | Time | Key Outputs |")
+        lines.append("|---|------|--------|------|-------------|")
+        step_order = ['load', 'preprocess', 'segment', 'metrics', 'gr', 'quality', 'fitting', 'force']
+        num = 0
+        for sid in step_order:
+            if sid not in board['steps']:
+                continue
+            num += 1
+            s = board['steps'][sid]
+            icon = icons.get(s['status'], '⚪')
+            time_str = f"{s['time']}s" if s.get('time') is not None else ''
+            out_str = ', '.join(f"{k}={v}" for k, v in s.get('outputs', {}).items())
+            lines.append(f"| {num} | {s['name']} | {icon} | {time_str} | {out_str} |")
+        lines.append("")
+
+    # Key results
+    lines.append("## Key Results")
+    lines.append("")
+    result_groups = {
+        'Segmentation': [('n_cells', 'Cells Detected', '')],
+        'Classic Metrics': [
+            ('CD_calc', 'Cell Density (CD)', ' cells/mm²'),
+            ('Ave_calc', 'Average Cell Area', ' µm²'),
+            ('CV_calc', 'Coefficient of Variation', '%'),
+            ('HEX_calc', 'Hexagonality', '%'),
+        ],
+        'Collective Order': [
+            ('K', 'K (Morse guided)', ' px⁻²'),
+            ('K_ds', 'K_ds (damped sine)', ' px⁻²'),
+            ('r0_fit', 'Equilibrium distance r₀', ' px'),
+            ('g_peak', 'g(r) peak height', ''),
+            ('reliable', 'Quality gate', ''),
+        ],
+        'Mechanical State': [
+            ('mean_F', 'Mean |F|', ''),
+            ('frac_compression', 'Fraction in compression', ''),
+            ('n_hot_spots', 'Hot spots', ''),
+            ('spatial_cv', 'Spatial CV', ''),
+        ],
+    }
+    for group_name, items in result_groups.items():
+        has_any = any(k in outputs and outputs[k] is not None and outputs[k] != 'N/A' for k, _, _ in items)
+        if has_any:
+            lines.append(f"### {group_name}")
+            for key, label, unit in items:
+                if key in outputs and outputs[key] is not None and outputs[key] != 'N/A':
+                    val = outputs[key]
+                    if isinstance(val, float):
+                        val = f"{val:.4f}" if abs(val) < 1 else f"{val:.2f}"
+                    lines.append(f"- **{label}:** {val}{unit}")
+            lines.append("")
+
+    # Write
+    report_path = pipeline_dir / "run_report.md"
+    report_path.write_text('\n'.join(lines), encoding='utf-8')
+    return str(report_path)
+
+
+def _generate_run_report(results_dir, step_id, all_params, board=None, outputs=None, image_name=None):
+    """Generate a human-readable Markdown report for a pipeline step."""
+    from datetime import datetime
+
+    lines = []
+    lines.append(f"# Cornealia — {step_id.replace('_', ' ').title()} Report")
+    lines.append(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if image_name:
+        lines.append(f"**Image:** {image_name}")
+    lines.append("")
+
+    # Parameters table
+    lines.append("## Parameters")
+    lines.append("| Parameter | Value |")
+    lines.append("|-----------|-------|")
+
+    param_labels = {
+        'pixel_size': 'Pixel Size (µm/px)',
+        'machine_type': 'Image Source',
+        'sigma_mode': 'Sigma Detection',
+        'fcm_method': 'FCM Method',
+        'fitting_method': 'Fitting Method',
+        'log_min_sigma': 'LoG Min Sigma',
+        'log_max_sigma': 'LoG Max Sigma',
+        'log_num_sigma': 'LoG Num Sigma',
+        'log_threshold': 'LoG Threshold',
+        'min_area': 'Min Cell Area (px²)',
+        'clahe_clip': 'CLAHE Clip',
+        'exclusion_ratio': 'Exclusion Ratio',
+        'min_expansion_shells': 'Min Expansion Shells',
+        'savgol_window': 'Savitzky-Golay Window',
+        'savgol_order': 'Savitzky-Golay Order',
+        'n_workers': 'Workers',
+        'batch_folder': 'Batch Folder',
+        'input_file': 'Input File',
+    }
+    for key, label in param_labels.items():
+        if key in all_params:
+            val = all_params[key]
+            if key == 'machine_type':
+                val = 'Raw Image' if val == 'none' else val.replace('_', ' ').title()
+            lines.append(f"| {label} | {val} |")
+    lines.append("")
+
+    # Pipeline board
+    if board and 'steps' in board:
+        icons = {'idle': '⚪', 'running': '🟡', 'done': '✅', 'failed': '❌', 'skipped': '⚫'}
+        lines.append("## Pipeline Status")
+        lines.append(f"**{board['completed']}/{board['total']} steps complete**")
+        lines.append("")
+        lines.append("| # | Step | Status | Time | Key Outputs |")
+        lines.append("|---|------|--------|------|-------------|")
+        step_order = ['load', 'preprocess', 'segment', 'metrics', 'gr', 'quality', 'fitting', 'force']
+        num = 0
+        for sid in step_order:
+            if sid not in board['steps']:
+                continue
+            num += 1
+            s = board['steps'][sid]
+            icon = icons.get(s['status'], '⚪')
+            time_str = f"{s['time']}s" if s.get('time') is not None else ''
+            out_str = ', '.join(f"{k}={v}" for k, v in s.get('outputs', {}).items())
+            lines.append(f"| {num} | {s['name']} | {icon} | {time_str} | {out_str} |")
+        lines.append("")
+
+    # Key results
+    if outputs:
+        lines.append("## Key Results")
+        result_labels = {
+            'n_cells': ('Cells Detected', ''),
+            'image_size': ('Image Size', ''),
+            'CD_calc': ('Cell Density', ' cells/mm²'),
+            'Ave_calc': ('Average Cell Area', ' µm²'),
+            'CV_calc': ('Coefficient of Variation', '%'),
+            'HEX_calc': ('Hexagonality', '%'),
+            'K': ('K (collective order)', ' µm⁻²'),
+            'K_ds': ('K_ds (damped sine)', ' µm⁻²'),
+            'r0_fit': ('Equilibrium distance r₀', ' px'),
+            'g_peak': ('g(r) peak height', ''),
+            'reliable': ('Quality gate', ''),
+            'mean_F': ('Mean residual force |F|', ''),
+            'n_hot_spots': ('Hot spots', ''),
+            'frac_compression': ('Fraction in compression', ''),
+            'n_total': ('Total images', ''),
+            'n_success': ('Successful', ''),
+            'n_failed': ('Failed', ''),
+            'K_mean': ('K mean', ''),
+            'K_std': ('K std', ''),
+        }
+        for key, (label, unit) in result_labels.items():
+            if key in outputs and outputs[key] is not None:
+                val = outputs[key]
+                if isinstance(val, float):
+                    val = f"{val:.4f}" if abs(val) < 1 else f"{val:.2f}"
+                lines.append(f"- **{label}:** {val}{unit}")
+        lines.append("")
+
+    # Write
+    report_path = results_dir / "run_report.md"
+    report_path.write_text('\n'.join(lines), encoding='utf-8')
+    return str(report_path)
 
 
 def _cornealia_config(all_params):
@@ -1115,13 +1318,18 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params, pr
     import gc
     gc.collect()
 
+    seg_outputs = {
+        "n_cells": n_cells,
+        "image_size": f"{cell_area.shape[1]} x {cell_area.shape[0]}",
+        "pipeline_board": reporter.get_board(),
+    }
+    _generate_run_report(results_dir, 'segmentation', all_params,
+                         board=reporter.get_board(), outputs=seg_outputs,
+                         image_name=os.path.basename(image_path))
+
     return {
         "status": "done",
-        "outputs": {
-            "n_cells": n_cells,
-            "image_size": f"{cell_area.shape[1]} x {cell_area.shape[0]}",
-            "pipeline_board": reporter.get_board(),
-        },
+        "outputs": seg_outputs,
     }
 
 
@@ -1279,25 +1487,46 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
                        'fitting', 'mechanical_field', 'comprehensive', 'publication_gr',
                        'publication_vr', 'pipeline_figure']
 
+    morph_outputs = {
+        "n_cells": scalar_results.get('n_cells', 0),
+        "K": scalar_results.get('K', 'N/A'),
+        "K_ds": scalar_results.get('K_ds', 'N/A'),
+        "r0_fit": scalar_results.get('r0_fit', 'N/A'),
+        "reliable": scalar_results.get('reliable', False),
+        "g_peak": scalar_results.get('g_peak', 'N/A'),
+        "available_plots": available_plots,
+        "CD_calc": scalar_results.get('CD_calc', 'N/A'),
+        "Ave_calc": scalar_results.get('Ave_calc', 'N/A'),
+        "CV_calc": scalar_results.get('CV_calc', 'N/A'),
+        "HEX_calc": scalar_results.get('HEX_calc', 'N/A'),
+        "mean_F": scalar_results.get('mean_F', 'N/A'),
+        "frac_compression": scalar_results.get('frac_compression', 'N/A'),
+        "spatial_cv": scalar_results.get('spatial_cv', 'N/A'),
+        "n_hot_spots": scalar_results.get('n_hot_spots', 0),
+        "pipeline_board": reporter.get_board(),
+    }
+    _generate_run_report(results_dir, 'morphometry', all_params,
+                         board=reporter.get_board(), outputs=morph_outputs,
+                         image_name=os.path.basename(image_path))
+
+    # Generate root-level compiled report for the whole pipeline instance
+    pipeline_dir = results_dir.parent.parent  # up from morphometry/results/ to cornealia-N/
+    _generate_instance_report(pipeline_dir, all_params, morph_outputs, reporter.get_board(),
+                              image_name=os.path.basename(image_path))
+
+    # Clean up empty step dirs that don't belong to cornealia
+    valid_steps = {'import', 'segmentation', 'morphometry'}
+    for d in pipeline_dir.iterdir():
+        if d.is_dir() and d.name not in valid_steps and d.name != 'pipeline.json':
+            # Check if it's empty (only has empty 'results' subdir)
+            contents = list(d.rglob('*'))
+            real_files = [f for f in contents if f.is_file()]
+            if not real_files:
+                shutil.rmtree(str(d))
+
     return {
         "status": "done",
-        "outputs": {
-            "n_cells": scalar_results.get('n_cells', 0),
-            "K": scalar_results.get('K', 'N/A'),
-            "r0_fit": scalar_results.get('r0_fit', 'N/A'),
-            "reliable": scalar_results.get('reliable', False),
-            "g_peak": scalar_results.get('g_peak', 'N/A'),
-            "available_plots": available_plots,
-            "CD_calc": scalar_results.get('CD_calc', 'N/A'),
-            "Ave_calc": scalar_results.get('Ave_calc', 'N/A'),
-            "CV_calc": scalar_results.get('CV_calc', 'N/A'),
-            "HEX_calc": scalar_results.get('HEX_calc', 'N/A'),
-            "mean_F": scalar_results.get('mean_F', 'N/A'),
-            "frac_compression": scalar_results.get('frac_compression', 'N/A'),
-            "spatial_cv": scalar_results.get('spatial_cv', 'N/A'),
-            "n_hot_spots": scalar_results.get('n_hot_spots', 0),
-            "pipeline_board": reporter.get_board(),
-        },
+        "outputs": morph_outputs,
     }
 
 
@@ -1541,31 +1770,35 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
                     import time as _time2
                     total_elapsed = round(_time2.time() - _batch_start, 1)
 
+                    batch_outputs = {
+                        "n_total": len(batch_results),
+                        "n_success": len(successes),
+                        "n_failed": len(failures),
+                        "csv_path": "batch_results.csv",
+                        "K_mean": summary.get('K_mean', 'N/A'),
+                        "K_std": summary.get('K_std', 'N/A'),
+                        "batch_board": {
+                            'total': len(batch_results),
+                            'completed': len(batch_results),
+                            'failed': len(failures),
+                            'succeeded': len(successes),
+                            'current_image': 'Done',
+                            'pct': 100,
+                            'elapsed': total_elapsed,
+                            'eta': 0,
+                            'rate': round(len(batch_results) / max(total_elapsed, 0.1), 2),
+                            'status': 'done',
+                            'K_mean': summary.get('K_mean', 'N/A'),
+                            'K_std': summary.get('K_std', 'N/A'),
+                            'n_cells_mean': summary.get('n_cells_mean', 'N/A'),
+                        },
+                    }
+                    _generate_run_report(results_dir, 'batch_run', all_params,
+                                         outputs=batch_outputs)
+
                     return {
                         "status": "done",
-                        "outputs": {
-                            "n_total": len(batch_results),
-                            "n_success": len(successes),
-                            "n_failed": len(failures),
-                            "csv_path": "batch_results.csv",
-                            "K_mean": summary.get('K_mean', 'N/A'),
-                            "K_std": summary.get('K_std', 'N/A'),
-                            "batch_board": {
-                                'total': len(batch_results),
-                                'completed': len(batch_results),
-                                'failed': len(failures),
-                                'succeeded': len(successes),
-                                'current_image': 'Done',
-                                'pct': 100,
-                                'elapsed': total_elapsed,
-                                'eta': 0,
-                                'rate': round(len(batch_results) / max(total_elapsed, 0.1), 2),
-                                'status': 'done',
-                                'K_mean': summary.get('K_mean', 'N/A'),
-                                'K_std': summary.get('K_std', 'N/A'),
-                                'n_cells_mean': summary.get('n_cells_mean', 'N/A'),
-                            },
-                        },
+                        "outputs": batch_outputs,
                     }
                 else:
                     return {
