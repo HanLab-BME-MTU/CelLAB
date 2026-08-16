@@ -872,8 +872,24 @@ function openWorkspaceRadialNav(ev, fromCodeChat = false) {
     const center = document.createElement('div');
     center.className = 'radial-nav-center';
     center.style.borderColor = accent;
-    center.innerHTML = ws ? ws.name : 'CelLAB';
-    center.onclick = () => overlay.remove();
+    center.innerHTML = 'Home';
+    center.onclick = () => {
+        overlay.remove();
+        const ws = getActiveWorkspace();
+        if (ws && ws.type !== 'codechat') {
+            const canvasTab = [...ws.subtabs.values()].find(s => s.type === 'canvas');
+            if (canvasTab) {
+                ws.activeSubtab = canvasTab.id;
+                renderSubtabs();
+                renderLeftPanel();
+                renderViewport();
+                updateOpenModulesList();
+            }
+        } else if (ws && ws.type === 'codechat') {
+            const mainWs = [...state.workspaces.values()].find(w => w.type === 'workspace' || w.type === undefined);
+            if (mainWs) switchWorkspace(mainWs.id);
+        }
+    };
     nav.appendChild(center);
 
     overlay.appendChild(nav);
@@ -1790,15 +1806,11 @@ function renderModuleView(vp, sub, ws) {
         const modView = vp.querySelector('.module-view');
         if (modView) {
             modView.addEventListener('contextmenu', (e) => {
-                // Skip if target has its own context menu
-                const hasOwnMenu = e.target.closest('.result-item, .mtree-item, .ctx-item, .console-input, .form-input, .run-log, textarea, input');
-                if (hasOwnMenu) return;
-                // Skip if any ancestor between target and module-view has oncontextmenu
-                let el = e.target;
-                while (el && el !== modView) {
-                    if (el.getAttribute && el.getAttribute('oncontextmenu')) return;
-                    el = el.parentElement;
-                }
+                // Skip if another handler already handled this event
+                if (e.defaultPrevented) return;
+                // Skip if target is inside an element with its own context menu
+                const hasOwnMenu = e.target.closest('.result-item, .mtree-item, .ctx-item, .console-input, .form-input, .run-log, .mtree-section-head, textarea, input, [oncontextmenu]');
+                if (hasOwnMenu && hasOwnMenu !== modView) return;
                 e.preventDefault();
                 openWorkspaceRadialNav(e);
             });
@@ -10541,20 +10553,16 @@ function getAvailablePlots(moduleType, stepId) {
     }
     if (moduleType === 'cornealia_batch') {
         if (stepId === 'batch_results') return [
-            { id: 'batch_table',            icon: '📊', label: 'Results Table' },
-            { id: 'distributions',          icon: '📈', label: 'K Distributions' },
-            { id: 'histogram',              icon: '📊', label: 'Histogram' },
-            { id: 'as_vs_bs_boxplots',      icon: '📦', label: 'AS vs BS — Boxplots' },
-            { id: 'as_vs_bs_scatter',       icon: '⚬', label: 'AS vs BS — Scatter' },
-            { id: 'as_vs_bs_histograms',    icon: '📊', label: 'AS vs BS — Histograms' },
-            { id: 'validation_scatter',     icon: '✓', label: 'Validation Scatter' },
-            { id: 'validation_bland_altman', icon: '📉', label: 'Bland-Altman Plot' },
-            { id: 'deep_dive',             icon: '🔬', label: 'K Deep Dive' },
-            { id: 'pub_boxplots',          icon: '📄', label: 'Publication — Boxplots' },
-            { id: 'pub_K_deep_dive',       icon: '📄', label: 'Publication — K Deep Dive' },
-            { id: 'pub_validation',        icon: '📄', label: 'Publication — Validation' },
-            { id: 'pub_K_independence',    icon: '📄', label: 'Publication — K Independence' },
-            { id: 'pub_comprehensive',     icon: '📄', label: 'Publication — Comprehensive' },
+            { id: 'batch_table',                icon: '📊', label: 'Results Table' },
+            { id: 'distributions',              icon: '📈', label: 'Distributions' },
+            { id: 'as_vs_bs_improvement',       icon: '📉', label: 'AS vs BS — Improvement' },
+            { id: 'pub_boxplots',               icon: '📄', label: 'Publication — Boxplots' },
+            { id: 'pub_K_deep_dive',            icon: '📄', label: 'Publication — K Deep Dive' },
+            { id: 'pub_validation',             icon: '📄', label: 'Publication — Validation' },
+            { id: 'pub_K_independence',         icon: '📄', label: 'Publication — K Independence' },
+            { id: 'pub_comprehensive',          icon: '📄', label: 'Publication — Comprehensive' },
+            { id: 'pub_collective_order',       icon: '📄', label: 'Publication — Collective Order' },
+            { id: 'pub_mechanical_disequilibrium', icon: '📄', label: 'Publication — Mechanical Disequilibrium' },
         ];
         return [];
     }

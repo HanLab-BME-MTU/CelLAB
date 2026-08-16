@@ -1452,7 +1452,7 @@ class cornealia :
                 # Strip heavy data — keep only scalars and small dicts
                 for key in ('segmentation', 'cell_area', 'input_image',
                             'dot_centroids', 'residual_field', '_reporter',
-                            'r_values', 'g_r', 'g_r_smooth', 'v_r',
+                            'g_r_smooth', 'v_r',
                             'r_valid', 'v_r_valid',
                             'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
                             'r_fit_ds', 'v_fit_ds',
@@ -1542,10 +1542,15 @@ def _worker_process_image(image_path):
         result = _worker_instance.mechanical_state(image_path)
 
         # Remove heavy data that can't fit through the pipe
+        # Keep r_values and g_r (small arrays ~76 floats) for g(r) population NPZ
         for key in ('segmentation', 'cell_area', 'input_image',
                      'dot_centroids', 'residual_field', '_reporter',
-                     'r_values', 'g_r', 'g_r_smooth', 'v_r',
-                     'r_valid', 'v_r_valid'):
+                     'g_r_smooth', 'v_r',
+                     'r_valid', 'v_r_valid',
+                     'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
+                     'r_fit_ds', 'v_fit_ds',
+                     'popt_qc', 'coeffs_qr', 'coeffs_qg',
+                     'popt_mr', 'popt_mg', 'popt_ds'):
             result.pop(key, None)
 
         return result

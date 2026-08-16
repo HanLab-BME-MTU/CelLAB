@@ -1401,129 +1401,155 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
 
             print(f"  [BATCH] Done, {len(batch_results)} results")
 
-            # Separate successes and failures
-            successes = [r for r in batch_results if 'error' not in r]
-            failures = [r for r in batch_results if 'error' in r]
+            try:
+                # Separate successes and failures
+                successes = [r for r in batch_results if 'error' not in r]
+                failures = [r for r in batch_results if 'error' in r]
+                print(f"  [BATCH] {len(successes)} successes, {len(failures)} failures")
 
-            # Build DataFrame from scalar results
-            if successes:
-                # Extract scalar columns
-                scalar_keys = [k for k, v in successes[0].items()
-                               if isinstance(v, (int, float, str, bool, np.integer, np.floating, np.bool_))]
+                # Build DataFrame from scalar results
+                if successes:
+                    # Extract scalar columns
+                    scalar_keys = [k for k, v in successes[0].items()
+                                   if isinstance(v, (int, float, str, bool, np.integer, np.floating, np.bool_))]
 
-                rows = []
-                for r in successes:
-                    row = {}
-                    for k in scalar_keys:
-                        v = r.get(k)
-                        if isinstance(v, (np.integer,)):
-                            row[k] = int(v)
-                        elif isinstance(v, (np.floating,)):
-                            row[k] = float(v)
-                        elif isinstance(v, np.bool_):
-                            row[k] = bool(v)
-                        else:
-                            row[k] = v
-                    rows.append(row)
+                    rows = []
+                    for r in successes:
+                        row = {}
+                        for k in scalar_keys:
+                            v = r.get(k)
+                            if isinstance(v, (np.integer,)):
+                                row[k] = int(v)
+                            elif isinstance(v, (np.floating,)):
+                                row[k] = float(v)
+                            elif isinstance(v, np.bool_):
+                                row[k] = bool(v)
+                            else:
+                                row[k] = v
+                        rows.append(row)
 
-                df = pd.DataFrame(rows)
+                    df = pd.DataFrame(rows)
 
-                # Rename image_path → Image_Name
-                if 'image_path' in df.columns:
-                    import os.path
-                    df['Image_Name'] = df['image_path'].apply(lambda p: os.path.basename(p) if isinstance(p, str) else p)
-                    df.drop(columns=['image_path'], inplace=True)
-                    cols = ['Image_Name'] + [c for c in df.columns if c != 'Image_Name']
-                    df = df[cols]
+                    # Add Image_Name column (keep image_path for folder lookup)
+                    if 'image_path' in df.columns:
+                        import os.path
+                        df['Image_Name'] = df['image_path'].apply(lambda p: os.path.basename(p) if isinstance(p, str) else p)
+                        cols = ['Image_Name', 'image_path'] + [c for c in df.columns if c not in ('Image_Name', 'image_path')]
+                        df = df[cols]
 
-                # Compute micrometer-converted columns for batch plotter
-                px = float(all_params.get('pixel_size', 0.58))
-                px2 = px * px
-                if 'K' in df.columns:
-                    df['K_um'] = df['K'] / px2
-                if 'K_ds' in df.columns:
-                    df['K_ds_um'] = df['K_ds'] / px2
-                if 'K_Vmin' in df.columns:
-                    df['K_Vmin_um'] = df['K_Vmin'] / px2
-                if 'K_gpeak' in df.columns:
-                    df['K_gpeak_um'] = df['K_gpeak'] / px2
-                if 'K_quad_raw' in df.columns:
-                    df['K_quad_raw_um'] = df['K_quad_raw'] / px2
-                if 'K_morse_raw' in df.columns:
-                    df['K_morse_raw_um'] = df['K_morse_raw'] / px2
-                if 'K_quad_guided' in df.columns:
-                    df['K_quad_guided_um'] = df['K_quad_guided'] / px2
-                if 'K_morse_guided' in df.columns:
-                    df['K_morse_guided_um'] = df['K_morse_guided'] / px2
-                if 'r0_fit' in df.columns:
-                    df['r_0_um'] = df['r0_fit'] * px
-                    df['r_0_px'] = df['r0_fit']
-                if 'g_peak' in df.columns and 'g_peak' not in df.columns:
-                    pass  # already there
+                    # Compute micrometer-converted columns for batch plotter
+                    px = float(all_params.get('pixel_size', 0.58))
+                    px2 = px * px
+                    if 'K' in df.columns:
+                        df['K_um'] = df['K'] / px2
+                    if 'K_ds' in df.columns:
+                        df['K_ds_um'] = df['K_ds'] / px2
+                    if 'K_Vmin' in df.columns:
+                        df['K_Vmin_um'] = df['K_Vmin'] / px2
+                    if 'K_gpeak' in df.columns:
+                        df['K_gpeak_um'] = df['K_gpeak'] / px2
+                    if 'K_quad_raw' in df.columns:
+                        df['K_quad_raw_um'] = df['K_quad_raw'] / px2
+                    if 'K_morse_raw' in df.columns:
+                        df['K_morse_raw_um'] = df['K_morse_raw'] / px2
+                    if 'K_quad_guided' in df.columns:
+                        df['K_quad_guided_um'] = df['K_quad_guided'] / px2
+                    if 'K_morse_guided' in df.columns:
+                        df['K_morse_guided_um'] = df['K_morse_guided'] / px2
+                    if 'r0_fit' in df.columns:
+                        df['r_0_um'] = df['r0_fit'] * px
+                        df['r_0_px'] = df['r0_fit']
 
-                # Save CSV
-                csv_path = results_dir / "batch_results.csv"
-                df.to_csv(csv_path, index=False)
-                print(f"  [BATCH] CSV saved: {csv_path}")
+                    # Save CSV
+                    csv_path = results_dir / "batch_results.csv"
+                    df.to_csv(csv_path, index=False)
+                    print(f"  [BATCH] CSV saved: {csv_path}")
 
-                # Save JSON summary
-                summary = {
-                    "n_total": len(batch_results),
-                    "n_success": len(successes),
-                    "n_failed": len(failures),
-                    "columns": list(df.columns),
-                    "failures": [{"image": r.get('image_path', '?'), "error": r.get('error', '?')} for r in failures],
-                }
-
-                # Add basic stats
-                for col in ['K', 'n_cells', 'r0_fit', 'g_peak']:
-                    if col in df.columns:
-                        valid = df[col].dropna()
-                        if len(valid) > 0:
-                            summary[f"{col}_mean"] = round(float(valid.mean()), 4)
-                            summary[f"{col}_std"] = round(float(valid.std()), 4)
-                            summary[f"{col}_min"] = round(float(valid.min()), 4)
-                            summary[f"{col}_max"] = round(float(valid.max()), 4)
-
-                with open(results_dir / "batch_summary.json", 'w') as f:
-                    json.dump(summary, f, indent=2, default=str)
-
-                import time as _time2
-                total_elapsed = round(_time2.time() - _batch_start, 1)
-
-                return {
-                    "status": "done",
-                    "outputs": {
+                    # Save JSON summary
+                    summary = {
                         "n_total": len(batch_results),
                         "n_success": len(successes),
                         "n_failed": len(failures),
-                        "csv_path": "batch_results.csv",
-                        "K_mean": summary.get('K_mean', 'N/A'),
-                        "K_std": summary.get('K_std', 'N/A'),
-                        "batch_board": {
-                            'total': len(batch_results),
-                            'completed': len(batch_results),
-                            'failed': len(failures),
-                            'succeeded': len(successes),
-                            'current_image': 'Done',
-                            'pct': 100,
-                            'elapsed': total_elapsed,
-                            'eta': 0,
-                            'rate': round(len(batch_results) / max(total_elapsed, 0.1), 2),
-                            'status': 'done',
-                            'K_mean': summary.get('K_mean', 'N/A'),
-                            'K_std': summary.get('K_std', 'N/A'),
-                            'n_cells_mean': summary.get('n_cells_mean', 'N/A'),
+                        "columns": list(df.columns),
+                        "failures": [{"image": r.get('image_path', '?'), "error": r.get('error', '?')} for r in failures],
+                    }
+
+                    # Add basic stats
+                    for col in ['K', 'n_cells', 'r0_fit', 'g_peak']:
+                        if col in df.columns:
+                            valid = df[col].dropna()
+                            if len(valid) > 0:
+                                summary[f"{col}_mean"] = round(float(valid.mean()), 4)
+                                summary[f"{col}_std"] = round(float(valid.std()), 4)
+                                summary[f"{col}_min"] = round(float(valid.min()), 4)
+                                summary[f"{col}_max"] = round(float(valid.max()), 4)
+
+                    with open(results_dir / "batch_summary.json", 'w') as f:
+                        json.dump(summary, f, indent=2, default=str)
+
+                    # Save g(r) population data as NPZ for batch plotter
+                    gr_names, gr_curves = [], []
+                    for r in successes:
+                        r_vals = r.get('r_values')
+                        g_r = r.get('g_r')
+                        img_name = os.path.basename(r.get('image_path', ''))
+                        if r_vals is not None and g_r is not None and len(r_vals) > 0:
+                            gr_names.append(img_name)
+                            gr_curves.append(g_r)
+
+                    if gr_curves:
+                        min_len = min(len(c) for c in gr_curves)
+                        r_common = successes[0]['r_values'][:min_len]
+                        g_arr = np.array([c[:min_len] for c in gr_curves])
+                        npz_path = results_dir / 'gr_population_data.npz'
+                        np.savez(npz_path, r=r_common, curves=g_arr,
+                                 names=np.array(gr_names))
+                        print(f"  [BATCH] Saved g(r) population data: {len(gr_curves)} curves → {npz_path.name}")
+
+                    import time as _time2
+                    total_elapsed = round(_time2.time() - _batch_start, 1)
+
+                    return {
+                        "status": "done",
+                        "outputs": {
+                            "n_total": len(batch_results),
+                            "n_success": len(successes),
+                            "n_failed": len(failures),
+                            "csv_path": "batch_results.csv",
+                            "K_mean": summary.get('K_mean', 'N/A'),
+                            "K_std": summary.get('K_std', 'N/A'),
+                            "batch_board": {
+                                'total': len(batch_results),
+                                'completed': len(batch_results),
+                                'failed': len(failures),
+                                'succeeded': len(successes),
+                                'current_image': 'Done',
+                                'pct': 100,
+                                'elapsed': total_elapsed,
+                                'eta': 0,
+                                'rate': round(len(batch_results) / max(total_elapsed, 0.1), 2),
+                                'status': 'done',
+                                'K_mean': summary.get('K_mean', 'N/A'),
+                                'K_std': summary.get('K_std', 'N/A'),
+                                'n_cells_mean': summary.get('n_cells_mean', 'N/A'),
+                            },
                         },
-                    },
-                }
-            else:
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "error_msg": f"All {len(failures)} images failed.",
+                        "outputs": {
+                            "failures": [r.get('error', '?') for r in failures[:5]],
+                        },
+                    }
+            except Exception as post_err:
+                import traceback
+                print(f"  [BATCH] ❌ Post-processing error: {post_err}")
+                traceback.print_exc()
                 return {
                     "status": "error",
-                    "error_msg": f"All {len(failures)} images failed.",
-                    "outputs": {
-                        "failures": [r.get('error', '?') for r in failures[:5]],
-                    },
+                    "error_msg": f"Batch post-processing failed: {post_err}",
                 }
 
         # ── STEP: BATCH RESULTS ───────────────────────
@@ -3494,19 +3520,15 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                 )
 
                 batch_plot_map = {
-                    'distributions':           ('distributions',           '01_distributions.png'),
-                    'histogram':               ('histogram',               '01_K_um_histogram.png'),
-                    'as_vs_bs_boxplots':       ('as_vs_bs_boxplots',       '02_as_vs_bs_boxplots.png'),
-                    'as_vs_bs_scatter':        ('as_vs_bs_scatter',        '03_as_vs_bs_scatter.png'),
-                    'as_vs_bs_histograms':     ('as_vs_bs_histograms',     '04_as_vs_bs_histograms.png'),
-                    'validation_scatter':      ('validation_scatter',      '07_validation_scatter.png'),
-                    'validation_bland_altman': ('validation_bland_altman', '08_validation_bland_altman.png'),
-                    'deep_dive':               ('deep_dive',               '06_K_um_deep_dive.png'),
-                    'pub_boxplots':            ('pub_boxplots',            'fig2_as_vs_bs_boxplots.png'),
-                    'pub_K_deep_dive':         ('pub_K_deep_dive',         'fig3_K_deep_dive.png'),
-                    'pub_validation':          ('pub_validation',          'fig4_validation.png'),
-                    'pub_K_independence':      ('pub_K_independence',      'fig6_K_independence.png'),
-                    'pub_comprehensive':       ('pub_comprehensive',       None),
+                    'distributions':               ('distributions',               '01_distributions.png'),
+                    'as_vs_bs_improvement':         ('as_vs_bs_improvement_all',    None),
+                    'pub_boxplots':                ('pub_boxplots',                'fig2_as_vs_bs_boxplots.png'),
+                    'pub_K_deep_dive':             ('pub_K_deep_dive',             'fig3_K_deep_dive.png'),
+                    'pub_validation':              ('pub_validation',              'fig4_validation.png'),
+                    'pub_K_independence':           ('pub_K_independence',          'fig6_K_independence.png'),
+                    'pub_comprehensive':           ('pub_comprehensive',           None),
+                    'pub_collective_order':         ('pub_collective_order',        'fig4_collective_order.png'),
+                    'pub_mechanical_disequilibrium':('pub_mechanical_disequilibrium','fig5_mechanical_disequilibrium.png'),
                 }
 
                 if plot_type not in batch_plot_map:
