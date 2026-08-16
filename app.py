@@ -26,6 +26,7 @@ matplotlib.use('Agg')
 import os
 import sys
 import json
+import shutil
 import traceback
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
@@ -679,6 +680,11 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
     import cv2
 
     try:
+        # Clear stale results from previous run
+        if results_dir.exists():
+            shutil.rmtree(str(results_dir))
+        results_dir.mkdir(parents=True, exist_ok=True)
+
         # Collect all params from all sections
         all_params = {}
         for key, val in params.items():
@@ -883,6 +889,25 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
 
 def _cornealia_config(all_params):
     """Build Cornealia engine config from GUI params."""
+    # CellADE overrides
+    cellade_params = {}
+    sigma_mode = all_params.get('sigma_mode', 'auto')
+    if sigma_mode == 'manual':
+        cellade_params['use_fft_sigma'] = False
+        cellade_params['log_min_sigma'] = float(all_params.get('log_min_sigma', 6))
+        cellade_params['log_max_sigma'] = float(all_params.get('log_max_sigma', 30))
+    else:
+        cellade_params['use_fft_sigma'] = True
+
+    if 'log_num_sigma' in all_params:
+        cellade_params['log_num_sigma'] = int(all_params['log_num_sigma'])
+    if 'log_threshold' in all_params:
+        cellade_params['log_threshold'] = float(all_params['log_threshold'])
+    if 'min_area' in all_params:
+        cellade_params['min_area'] = int(all_params['min_area'])
+    if 'clahe_clip' in all_params:
+        cellade_params['clahe_clip'] = float(all_params['clahe_clip'])
+
     return {
         'pixel_size': float(all_params.get('pixel_size', 0.58)),
         'is_input_image_machine_output': all_params.get('is_machine_output', 'Yes') == 'Yes',
@@ -894,6 +919,7 @@ def _cornealia_config(all_params):
         'fitting_half_width': int(all_params.get('fitting_half_width', 10)),
         'SAVGOL_WINDOW': int(all_params.get('savgol_window', 11)),
         'SAVGOL_ORDER': int(all_params.get('savgol_order', 3)),
+        'cellade_params': cellade_params,
         'verbose': True,
     }
 
@@ -1280,6 +1306,11 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
     import pandas as pd
 
     try:
+        # Clear stale results from previous run
+        if results_dir.exists():
+            shutil.rmtree(str(results_dir))
+        results_dir.mkdir(parents=True, exist_ok=True)
+
         # Collect all params
         all_params = {}
         for key, val in params.items():
@@ -1330,19 +1361,8 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
 
             from cornealia.cornealia import cornealia as Cornealia
 
-            config = {
-                'pixel_size': float(all_params.get('pixel_size', 0.58)),
-                'is_input_image_machine_output': all_params.get('is_machine_output', 'Yes') == 'Yes',
-                'fcm_method': all_params.get('fcm_method', 'local'),
-                'fitting_method': all_params.get('fitting_method', 'morse'),
-                'min_expansion_shells': int(all_params.get('min_expansion_shells', 5)),
-                'exclusion_ratio': float(all_params.get('exclusion_ratio', 0.15)),
-                'shell_thickness': int(all_params.get('shell_thickness', 1)),
-                'fitting_half_width': int(all_params.get('fitting_half_width', 10)),
-                'SAVGOL_WINDOW': int(all_params.get('savgol_window', 11)),
-                'SAVGOL_ORDER': int(all_params.get('savgol_order', 3)),
-                'verbose': False,
-            }
+            config = _cornealia_config(all_params)
+            config['verbose'] = False  # batch workers don't need verbose
 
             print(f"  [BATCH] Starting batch on {folder} with {n_workers} workers")
 

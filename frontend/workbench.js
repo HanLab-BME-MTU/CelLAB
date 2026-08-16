@@ -1141,15 +1141,34 @@ function deletePipeline(pid, ev) {
     if (ev) ev.stopPropagation();
     const ws = getActiveWorkspace();
     if (!ws) return;
-    if (!confirm('Delete pipeline and close all its tabs?')) return;
-    closeSubtabsForPipeline(pid);
-    ws.pipelines.delete(pid);
-    renderViewport();
-    updateStatus('Pipeline deleted');
+    const pipeline = ws.pipelines.get(pid);
+    const pName = pipeline ? pipeline.shortName || pid : pid;
+    if (!confirm(`Delete "${pName}" and all its data? This cannot be undone.`)) return;
 
-    // Sync to backend
+    // Close all tabs for this pipeline
+    closeSubtabsForPipeline(pid);
+
+    // Clean up group state
+    state.collapsedGroups.delete(pid);
+    state.focusedGroups.delete(pid);
+
+    // Remove from workspace
+    ws.pipelines.delete(pid);
+
+    // Re-render everything
+    renderSubtabs();
+    renderViewport();
+    renderLeftPanel();
+    updateOpenModulesList();
+    updateStatus(`Deleted ${pName}`);
+
+    // Sync to backend (deletes from disk)
     if (state._projectOpen) {
-        api(`pipeline/${ws.id}/${pid}/delete`, 'DELETE');
+        api(`pipeline/${ws.id}/${pid}/delete`, 'DELETE').then(res => {
+            if (res.success) {
+                console.log(`Pipeline ${pid} deleted from disk`);
+            }
+        });
     }
 }
 
@@ -2964,13 +2983,17 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
 
         if (id === 'seg-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">CellADE Segmentation Parameters</p>
-            <div class="form-row"><span class="form-label">FCM Method</span><select class="form-select" data-param="fcm_method"><option value="local">Local</option><option value="global">Global</option></select></div>
-            <div class="form-row"><span class="form-label">LoG Min Sigma</span><input class="form-input" data-param="log_min_sigma" type="number" value="5" style="width:80px"></div>
-            <div class="form-row"><span class="form-label">LoG Max Sigma</span><input class="form-input" data-param="log_max_sigma" type="number" value="30" style="width:80px"></div>
+            <div class="form-row"><span class="form-label">Sigma Detection</span><select class="form-select" data-param="sigma_mode" onchange="toggleSigmaFields(this)"><option value="auto">Auto (FFT)</option><option value="manual">Manual</option></select></div>
+            <div class="sigma-manual-fields" style="display:none">
+                <div class="form-row"><span class="form-label">LoG Min Sigma</span><input class="form-input" data-param="log_min_sigma" type="number" value="6" step="0.5" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
+                <div class="form-row"><span class="form-label">LoG Max Sigma</span><input class="form-input" data-param="log_max_sigma" type="number" value="30" step="0.5" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
+            </div>
             <div class="form-row"><span class="form-label">LoG Num Sigma</span><input class="form-input" data-param="log_num_sigma" type="number" value="15" style="width:80px"></div>
             <div class="form-row"><span class="form-label">LoG Threshold</span><input class="form-input" data-param="log_threshold" type="number" value="0.01" step="0.001" style="width:80px"></div>
-            <div class="form-row"><span class="form-label">FCM Threshold</span><input class="form-input" data-param="fcm_threshold" type="number" value="0.4" step="0.05" style="width:80px"></div>
-            <div class="form-row"><span class="form-label">Min Cell Area</span><input class="form-input" data-param="min_area" type="number" value="30" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>`);
+            <div class="form-row"><span class="form-label">FCM Method</span><select class="form-select" data-param="fcm_method"><option value="local">Local</option><option value="global">Global</option></select></div>
+            <div class="form-row"><span class="form-label">CLAHE Clip</span><input class="form-input" data-param="clahe_clip" type="number" value="0.03" step="0.01" style="width:80px"></div>
+            <div class="form-row"><span class="form-label">Min Cell Area</span><input class="form-input" data-param="min_area" type="number" value="30" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px²</span></div>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Auto mode uses FFT to estimate cell size and set sigma range automatically.</p>`);
 
         if (id === 'morph-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">Collective Order Analysis</p>
@@ -2995,11 +3018,17 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
 
         if (id === 'seg-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">CellADE Segmentation Parameters</p>
-            <div class="form-row"><span class="form-label">FCM Method</span><select class="form-select" data-param="fcm_method"><option value="local">Local</option><option value="global">Global</option></select></div>
-            <div class="form-row"><span class="form-label">LoG Min Sigma</span><input class="form-input" data-param="log_min_sigma" type="number" value="5" style="width:80px"></div>
-            <div class="form-row"><span class="form-label">LoG Max Sigma</span><input class="form-input" data-param="log_max_sigma" type="number" value="30" style="width:80px"></div>
+            <div class="form-row"><span class="form-label">Sigma Detection</span><select class="form-select" data-param="sigma_mode" onchange="toggleSigmaFields(this)"><option value="auto">Auto (FFT)</option><option value="manual">Manual</option></select></div>
+            <div class="sigma-manual-fields" style="display:none">
+                <div class="form-row"><span class="form-label">LoG Min Sigma</span><input class="form-input" data-param="log_min_sigma" type="number" value="6" step="0.5" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
+                <div class="form-row"><span class="form-label">LoG Max Sigma</span><input class="form-input" data-param="log_max_sigma" type="number" value="30" step="0.5" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
+            </div>
+            <div class="form-row"><span class="form-label">LoG Num Sigma</span><input class="form-input" data-param="log_num_sigma" type="number" value="15" style="width:80px"></div>
             <div class="form-row"><span class="form-label">LoG Threshold</span><input class="form-input" data-param="log_threshold" type="number" value="0.01" step="0.001" style="width:80px"></div>
-            <div class="form-row"><span class="form-label">Min Cell Area</span><input class="form-input" data-param="min_area" type="number" value="30" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>`);
+            <div class="form-row"><span class="form-label">FCM Method</span><select class="form-select" data-param="fcm_method"><option value="local">Local</option><option value="global">Global</option></select></div>
+            <div class="form-row"><span class="form-label">CLAHE Clip</span><input class="form-input" data-param="clahe_clip" type="number" value="0.03" step="0.01" style="width:80px"></div>
+            <div class="form-row"><span class="form-label">Min Cell Area</span><input class="form-input" data-param="min_area" type="number" value="30" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px²</span></div>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Auto mode uses FFT to estimate cell size and set sigma range automatically.</p>`);
 
         if (id === 'morph-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">Analysis Parameters</p>
@@ -5904,17 +5933,17 @@ const PLOT_FILENAME_MAP = {
     'pipeline_figure':          'pipeline_figure',
     // Cornealia — batch plotter
     '01_distributions':         'distributions',
-    '01_K_um_histogram':        'histogram',
-    '02_as_vs_bs_boxplots':     'as_vs_bs_boxplots',
-    '03_as_vs_bs_scatter':      'as_vs_bs_scatter',
-    '04_as_vs_bs_histograms':   'as_vs_bs_histograms',
-    '07_validation_scatter':    'validation_scatter',
-    '08_validation_bland_altman': 'validation_bland_altman',
-    '06_K_um_deep_dive':        'deep_dive',
     'fig2_as_vs_bs_boxplots':   'pub_boxplots',
     'fig3_K_deep_dive':         'pub_K_deep_dive',
     'fig4_validation':          'pub_validation',
+    'fig4_collective_order':    'pub_collective_order',
+    'fig5_mechanical_disequilibrium': 'pub_mechanical_disequilibrium',
     'fig6_K_independence':      'pub_K_independence',
+    'fig_comprehensive_K_ds_um':'pub_comprehensive',
+    '05_K_ds_um_improvement':   'as_vs_bs_improvement',
+    '05_K_um_improvement':      'as_vs_bs_improvement',
+    '05_K_Vmin_um_improvement': 'as_vs_bs_improvement',
+    '05_r_0_um_improvement':    'as_vs_bs_improvement',
     // FASTIA — import
     'frame_montage':            'frame_montage',
     // FASTIA — detection
@@ -6402,6 +6431,10 @@ async function doRunAnalysis(moduleType, stepId) {
                     }
                     _persistRunLog(sub, moduleType, stepId, logHtml);
                     updateStepStatus(pipelineId, stepId, 'done');
+                    // If batch_run completed, also mark batch_results as done
+                    if (stepId === 'batch_run' && moduleType === 'cornealia_batch') {
+                        updateStepStatus(pipelineId, 'batch_results', 'done');
+                    }
                     updateStatus(`Done: ${moduleType} → ${stepId}`);
                     completeTask(task.id, 'done', null, result.log || '');
                     // Invalidate this step's existing plots + downstream
@@ -7630,6 +7663,14 @@ function autoFillWavelengths(selectEl, chIndex) {
         emInput.dispatchEvent(new Event('change', { bubbles: true }));
         exInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
+}
+
+function toggleSigmaFields(selectEl) {
+    const form = selectEl.closest('.settings-form');
+    if (!form) return;
+    const manualFields = form.querySelector('.sigma-manual-fields');
+    if (!manualFields) return;
+    manualFields.style.display = selectEl.value === 'manual' ? '' : 'none';
 }
 
 async function selectInputFile(btnEl) {
