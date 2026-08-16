@@ -1144,6 +1144,7 @@ def _cornealia_config(all_params):
         'fitting_half_width': int(all_params.get('fitting_half_width', 10)),
         'SAVGOL_WINDOW': int(all_params.get('savgol_window', 11)),
         'SAVGOL_ORDER': int(all_params.get('savgol_order', 3)),
+        'invert_image': all_params.get('invert_image', 'No') == 'Yes',
         'cellade_params': cellade_params,
         'verbose': True,
     }

@@ -1675,6 +1675,7 @@ function renderModuleView(vp, sub, ws) {
     const accent = getAccent(sub.moduleType);
     const treeItems = getModuleTreeItems(sub.moduleType, sub.stepId);
     const activeItem = sub.activeTreeItem || { id: treeItems[0]?.id || 'params' };
+    if (!sub.activeTreeItem) sub.activeTreeItem = activeItem;
 
     // Group tree items by their group field
     const groups = new Map();
@@ -2019,6 +2020,11 @@ function _restoreParams(bodyEl, sub, itemId) {
                 }
             }
         }
+    });
+
+    // Re-trigger conditional field visibility after restore
+    bodyEl.querySelectorAll('[data-param="sigma_mode"]').forEach(el => {
+        toggleSigmaFields(el);
     });
 }
 
@@ -2999,7 +3005,8 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
 
         if (id === 'image-type') return wrap(`
             <div class="form-row"><span class="form-label">Image Source</span><select class="form-select" data-param="machine_type"><option value="none">Raw Image (no machine)</option><option value="cellchek_d">CellChek D (Konan Medical)</option></select></div>
-            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics (CD, Ave, SD, CV, HEX) via OCR from the info panel.</p>`);
+            <div class="form-row"><span class="form-label">Invert Image</span><select class="form-select" data-param="invert_image"><option value="No">No</option><option value="Yes">Yes (bright-field)</option></select></div>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics (CD, Ave, SD, CV, HEX) via OCR from the info panel.<br>Invert: Use for bright-field images where cells are dark on light background.</p>`);
 
         if (id === 'preview') return `
             <p style="font-size:var(--fs-sm);color:var(--text-tertiary)">Select an image first, then preview will appear in the Graphics panel.</p>`;
@@ -3037,7 +3044,8 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
 
         if (id === 'image-type') return wrap(`
             <div class="form-row"><span class="form-label">Image Source</span><select class="form-select" data-param="machine_type"><option value="none">Raw Image (no machine)</option><option value="cellchek_d">CellChek D (Konan Medical)</option></select></div>
-            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics via OCR.</p>`);
+            <div class="form-row"><span class="form-label">Invert Image</span><select class="form-select" data-param="invert_image"><option value="No">No</option><option value="Yes">Yes (bright-field)</option></select></div>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics via OCR.<br>Invert: Use for bright-field images where cells are dark on light background.</p>`);
 
         if (id === 'seg-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">CellADE Segmentation Parameters</p>
@@ -5867,6 +5875,11 @@ function populateFormFromParams(formEl, savedParams) {
             else el.value = sectionParams[key];
         }
     });
+
+    // Re-trigger conditional field visibility
+    formEl.querySelectorAll('[data-param="sigma_mode"]').forEach(el => {
+        toggleSigmaFields(el);
+    });
 }
 
 // ═════════════════════════════════════════════
@@ -5937,9 +5950,9 @@ async function populateModuleSettings(subId) {
         }
     }
 
-    // Populate current form if visible
-    const form = document.querySelector(`#settingsBody-${subId} .settings-form`);
-    if (form) populateFormFromParams(form, saved);
+    // Populate current forms if visible
+    const forms = document.querySelectorAll(`#settingsBody-${subId} .settings-form`);
+    forms.forEach(form => populateFormFromParams(form, saved));
 }
 
 // Map plotter output filenames back to plot type IDs
