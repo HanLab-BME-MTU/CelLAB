@@ -1427,34 +1427,47 @@ function renderLeftPanel() {
     panel.style.display = '';
     if (resizer) resizer.style.display = '';
 
+    // Filter items by enabled modules
+    const m = state._modulesConfig || {};
+    const isEnabled = (id) => {
+        if (!m[id]) return true; // not in config = visible (default)
+        return m[id].enabled !== false;
+    };
+
+    const pipelines = [
+        { id:'fastia', icon: ICONS.fastia(14), label:'FASTIA — Focal Adhesion' },
+        { id:'immunia', icon: ICONS.immunia(14), label:'IMMUNIA — Immune Cell' },
+        { id:'cornealia', icon:'👁', label:'Cornealia — Single Image' },
+        { id:'cornealia_batch', icon:'👁', label:'Cornealia — Batch' },
+        { id:'cellfade', icon:'🧫', label:'CellFADE — FA (DL)' },
+    ].filter(i => isEnabled(i.id));
+
+    const modules = [
+        { id:'cellvisia', icon: ICONS.cellvisia(14), label:'CellVisia — Image Processing', asModule: true },
+        { id:'associa', icon: ICONS.associa(14), label:'Associa — Signal Coupling', asModule: true },
+        { id:'cellade', icon: ICONS.cellade(14), label:'CellADE — Cell Segmentation', asModule: true },
+        { id:'cellfade', icon: ICONS.cellfade(14), label:'CellFADE — FA Detection', asModule: true },
+        { id:'data-import', icon:'📥', label:'Data Import' },
+        { id:'detection', icon:'🔍', label:'Detection' },
+        { id:'tracking', icon:'📈', label:'Tracking' },
+        { id:'analysis', icon:'📊', label:'Analysis' },
+    ].filter(i => isEnabled(i.id));
+
+    const tools = [
+        { id:'annotade', icon: ICONS.annotade(14), label:'AnnotADE — Annotation', asModule: true },
+        { id:'plot-manager', icon:'📈', label:'Plot Manager' },
+        { id:'file-explorer', icon:'📁', label:'File Explorer' },
+    ].filter(i => isEnabled(i.id));
+
     panel.innerHTML = `
         <div class="left-panel-header">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M1 4h10M4 4v7" stroke="currentColor" stroke-width="1.2"/></svg>
             Toolbox
         </div>
         <div class="left-panel-body">
-            ${buildCat('Pipelines', 'pipelines', [
-                { id:'fastia', icon: ICONS.fastia(14), label:'FASTIA — Focal Adhesion' },
-                { id:'immunia', icon: ICONS.immunia(14), label:'IMMUNIA — Immune Cell' },
-                { id:'cornealia', icon:'👁', label:'Cornealia — Single Image' },
-                { id:'cornealia_batch', icon:'👁', label:'Cornealia — Batch' },
-                { id:'cellfade', icon:'🧫', label:'CellFADE — FA (DL)' },
-            ], true)}
-            ${buildCat('Modules', 'modules', [
-                { id:'cellvisia', icon: ICONS.cellvisia(14), label:'CellVisia — Image Processing', asModule: true },
-                { id:'associa', icon: ICONS.associa(14), label:'Associa — Signal Coupling', asModule: true },
-                { id:'cellade', icon: ICONS.cellade(14), label:'CellADE — Cell Segmentation', asModule: true },
-                { id:'cellfade', icon: ICONS.cellfade(14), label:'CellFADE — FA Detection', asModule: true },
-                { id:'data-import', icon:'📥', label:'Data Import' },
-                { id:'detection', icon:'🔍', label:'Detection' },
-                { id:'tracking', icon:'📈', label:'Tracking' },
-                { id:'analysis', icon:'📊', label:'Analysis' },
-            ], true)}
-            ${buildCat('Tools', 'tools', [
-                { id:'annotade', icon: ICONS.annotade(14), label:'AnnotADE — Annotation', asModule: true },
-                { id:'plot-manager', icon:'📈', label:'Plot Manager' },
-                { id:'file-explorer', icon:'📁', label:'File Explorer' },
-            ])}
+            ${pipelines.length ? buildCat('Pipelines', 'pipelines', pipelines, true) : ''}
+            ${modules.length ? buildCat('Modules', 'modules', modules, true) : ''}
+            ${tools.length ? buildCat('Tools', 'tools', tools) : ''}
         </div>`;
 }
 
@@ -14732,6 +14745,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     initResizers();
     initContextMenu();
     initMenuBar();
+
+    // Load module visibility config
+    try {
+        const modRes = await api('modules');
+        if (modRes.success !== false) {
+            state._modulesConfig = modRes;
+        }
+    } catch (e) {
+        state._modulesConfig = {};
+    }
 
     // Check if a project is already open on the server
     const res = await api('status');

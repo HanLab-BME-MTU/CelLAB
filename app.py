@@ -144,6 +144,16 @@ def serve_frontend(filename):
     return response
 
 
+@app.route('/api/modules')
+def get_modules_config():
+    """Serve module visibility config from modules.json."""
+    modules_path = os.path.join(BASE_DIR, 'modules.json')
+    if os.path.exists(modules_path):
+        with open(modules_path) as f:
+            return jsonify(json.load(f))
+    return jsonify({})
+
+
 # ═════════════════════════════════════════════
 # STATUS
 # ═════════════════════════════════════════════
