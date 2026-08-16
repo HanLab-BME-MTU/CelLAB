@@ -50,9 +50,12 @@ if SHARED_TOOLS_DIR not in sys.path:
 from project_manager import CellabProject, DATA_COPY, DATA_LINK, DATA_MOVE
 
 # ─── CellVisia backend (parametric feature-tree engine) ─────────────────────
-# Import the module-level singleton; Flask routes mutate pipelines through it.
-# Importing cellvisia also imports operations/*.py which register feature types.
-from cellvisia.cellvisia import manager as cv_manager
+try:
+    from cellvisia.cellvisia import manager as cv_manager
+    print("✅ CellVisia manager loaded")
+except ImportError:
+    cv_manager = None
+    print("⚠️ CellVisia not available")
 
 # Associa — Signal Coupling module
 try:
