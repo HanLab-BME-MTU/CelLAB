@@ -744,16 +744,19 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
             plt.savefig(str(plots_dir / "original.png"), dpi=150, bbox_inches='tight')
             plt.close()
 
-            is_machine = all_params.get('is_machine_output', 'Yes') == 'Yes'
+            is_machine = all_params.get('machine_type', 'none') != 'none'
             outputs['image_size'] = f"{img_rgb.shape[1]} x {img_rgb.shape[0]}"
-            outputs['is_machine_output'] = is_machine
+            outputs['machine_type'] = all_params.get('machine_type', 'none')
 
             if is_machine:
                 reporter.start('preprocess')
                 try:
-                    from cornealia.cornealia import cornealia as Cornealia
+                    from cornealia.cornealia import cornealia as Cornealia, MACHINE_PROFILES
+                    machine_type = all_params.get('machine_type', 'cellchek_d')
+                    profile = MACHINE_PROFILES.get(machine_type, MACHINE_PROFILES['cellchek_d'])
                     engine = Cornealia(
                         is_input_image_machine_output=True,
+                        machine_type=machine_type,
                         fcm_method=all_params.get('fcm_method', 'local'),
                         verbose=False,
                     )
@@ -772,7 +775,8 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
                     axes[0].imshow(img_rgb)
                     axes[0].set_title('Original (Machine Output)')
                     from matplotlib.patches import Rectangle
-                    rect = Rectangle((24, 261), 684, 514, linewidth=2, edgecolor='lime', facecolor='none')
+                    pr = profile['preview_rect']
+                    rect = Rectangle((pr['x'], pr['y']), pr['w'], pr['h'], linewidth=2, edgecolor='lime', facecolor='none')
                     axes[0].add_patch(rect)
                     axes[0].axis('off')
 
@@ -908,9 +912,14 @@ def _cornealia_config(all_params):
     if 'clahe_clip' in all_params:
         cellade_params['clahe_clip'] = float(all_params['clahe_clip'])
 
+    # Machine type
+    machine_type = all_params.get('machine_type', 'none')
+    is_machine = machine_type != 'none'
+
     return {
         'pixel_size': float(all_params.get('pixel_size', 0.58)),
-        'is_input_image_machine_output': all_params.get('is_machine_output', 'Yes') == 'Yes',
+        'is_input_image_machine_output': is_machine,
+        'machine_type': machine_type,
         'fcm_method': all_params.get('fcm_method', 'local'),
         'fitting_method': all_params.get('fitting_method', 'morse'),
         'min_expansion_shells': int(all_params.get('min_expansion_shells', 5)),
@@ -1092,7 +1101,10 @@ def _run_cornealia_segmentation(project, results_dir, image_path, all_params, pr
     }
     # For machine output, metrics_area is a different crop
     if config['is_input_image_machine_output'] and input_image is not None:
-        safe_seg['metrics_area'] = input_image[812:968, 114:307]
+        from cornealia.cornealia import MACHINE_PROFILES
+        profile = MACHINE_PROFILES.get(config.get('machine_type', 'cellchek_d'), MACHINE_PROFILES['cellchek_d'])
+        ma = profile['metrics_area']
+        safe_seg['metrics_area'] = input_image[ma['y1']:ma['y2'], ma['x1']:ma['x2']]
 
     with open(results_dir / "full_results.pkl", 'wb') as f:
         pickle.dump(safe_seg, f)

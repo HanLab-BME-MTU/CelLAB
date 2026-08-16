@@ -1830,6 +1830,16 @@ function renderModuleView(vp, sub, ws) {
                 // Skip if target is inside an element with its own context menu
                 const hasOwnMenu = e.target.closest('.result-item, .mtree-item, .ctx-item, .console-input, .form-input, .run-log, .mtree-section-head, textarea, input, [oncontextmenu]');
                 if (hasOwnMenu && hasOwnMenu !== modView) return;
+
+                // In the settings/tree area → open pipeline radial navigator
+                const inLeftCols = e.target.closest('.module-cols-left, .module-col-tree, .module-col-settings');
+                if (inLeftCols && sub.pipelineId) {
+                    e.preventDefault();
+                    openRadialNavigator(sub.pipelineId, e);
+                    return;
+                }
+
+                // Everywhere else → workspace radial nav
                 e.preventDefault();
                 openWorkspaceRadialNav(e);
             });
@@ -2975,8 +2985,8 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Select a corneal endothelium image (specular microscopy or raw).</p>`);
 
         if (id === 'image-type') return wrap(`
-            <div class="form-row"><span class="form-label">Machine Output?</span><select class="form-select" data-param="is_machine_output"><option>Yes</option><option>No</option></select></div>
-            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">"Yes" if the image has built-in cell detection dots from the specular microscope.</p>`);
+            <div class="form-row"><span class="form-label">Image Source</span><select class="form-select" data-param="machine_type"><option value="none">Raw Image (no machine)</option><option value="cellchek_d">CellChek D (Konan Medical)</option></select></div>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics (CD, Ave, SD, CV, HEX) via OCR from the info panel.</p>`);
 
         if (id === 'preview') return `
             <p style="font-size:var(--fs-sm);color:var(--text-tertiary)">Select an image first, then preview will appear in the Graphics panel.</p>`;
@@ -3013,8 +3023,8 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <div id="batchFolderInfo" style="margin-top:8px;font-size:var(--fs-xs);color:var(--text-tertiary)"></div>`);
 
         if (id === 'image-type') return wrap(`
-            <div class="form-row"><span class="form-label">Machine Output?</span><select class="form-select" data-param="is_machine_output"><option>Yes</option><option>No</option></select></div>
-            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">"Yes" if images have built-in cell detection dots.</p>`);
+            <div class="form-row"><span class="form-label">Image Source</span><select class="form-select" data-param="machine_type"><option value="none">Raw Image (no machine)</option><option value="cellchek_d">CellChek D (Konan Medical)</option></select></div>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics via OCR.</p>`);
 
         if (id === 'seg-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">CellADE Segmentation Parameters</p>

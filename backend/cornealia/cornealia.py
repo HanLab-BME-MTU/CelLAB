@@ -19,7 +19,29 @@ from .plotters.cornealia_plotter import cornealia_plotter
 
 
 # ═══════════════════════════════════════════════════════════
-# Pipeline step contract — defines the ordered stages,
+# Machine profiles — crop regions and calibration for
+# different specular microscopes.
+# ═══════════════════════════════════════════════════════════
+
+MACHINE_PROFILES = {
+    'cellchek_d': {
+        'name': 'CellChek D (Konan Medical)',
+        'description': 'Crops cell area from machine output image and reads classical metrics (CD, Ave, SD, CV, HEX) via OCR.',
+        'cell_area':    {'x1': 24, 'y1': 261, 'x2': 708, 'y2': 775},
+        'metrics_area': {'x1': 114, 'y1': 812, 'x2': 307, 'y2': 968},
+        'preview_rect': {'x': 24, 'y': 261, 'w': 684, 'h': 514},
+        'default_pixel_size': 0.58,
+        'green_dot_detection': True,
+    },
+    # Future machines:
+    # 'topcon_sp3000p': { ... },
+    # 'tomey_em4000': { ... },
+}
+
+
+# ═══════════════════════════════════════════════════════════
+# Pipeline step contract
+# ═══════════════════════════════════════════════════════════
 # their display names, and which key outputs to surface.
 # ═══════════════════════════════════════════════════════════
 
@@ -173,7 +195,7 @@ class PipelineReporter:
 
 class cornealia :
     
-    def __init__(self, is_input_image_machine_output=True, fcm_method='local', min_expansion_shells=5,min_interior_cells_ratio=0.4,exclusion_ratio=0.15,
+    def __init__(self, is_input_image_machine_output=True, machine_type='cellchek_d', fcm_method='local', min_expansion_shells=5,min_interior_cells_ratio=0.4,exclusion_ratio=0.15,
                 shell_thickness=1,fitting_half_width=10,SAVGOL_WINDOW=11,SAVGOL_ORDER=3, fitting_method='morse',pixel_size=0.58,verbose=True,invert_image=False,cellade_params=None):
         """
         Parameters-only constructor. No image is loaded here.
@@ -181,13 +203,15 @@ class cornealia :
         This allows the same configured object to be reused across many images,
         including parallel batch processing via multiprocessing.Pool.
         
-        pixel_size : float  μm/px
-        verbose    : bool   True → print per-image details; False → silent (used in batch)
+        pixel_size   : float  μm/px
+        machine_type : str    Machine profile key (e.g. 'cellchek_d') or 'none'
+        verbose      : bool   True → print per-image details; False → silent (used in batch)
         """
 
         self.pixel_size=pixel_size
         self.pixel_size_ref=0.58   # reference pixel size (clinical specular microscopy) # the unit should be  μm/px
         self.is_input_image_machine_output=is_input_image_machine_output
+        self.machine_type=machine_type
         self.fcm_method = fcm_method
         self.min_expansion_shells=min_expansion_shells
         self.min_interior_cells_ratio=min_interior_cells_ratio
@@ -241,15 +265,13 @@ class cornealia :
 
     def cleaning_preprocessing(self, input_image):
 
-        # cropping image area: these values are hard-coded based machine output layout
-        x1, y1 = 24, 261
-        x2, y2 = 708, 775
-        cell_area = input_image[y1:y2, x1:x2]
+        # Get crop regions from machine profile
+        profile = MACHINE_PROFILES.get(self.machine_type, MACHINE_PROFILES.get('cellchek_d'))
+        ca = profile['cell_area']
+        ma = profile['metrics_area']
 
-        # cropping text info area:
-        x3, y3 = 114, 812
-        x4, y4 = 307, 968
-        metrics_area = input_image[y3:y4, x3:x4]
+        cell_area = input_image[ca['y1']:ca['y2'], ca['x1']:ca['x2']]
+        metrics_area = input_image[ma['y1']:ma['y2'], ma['x1']:ma['x2']]
 
         # detecting green dots
         HSV = cv2.cvtColor(cell_area, cv2.COLOR_RGB2HSV)
