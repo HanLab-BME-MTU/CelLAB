@@ -2,7 +2,11 @@ import cv2
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import easyocr
+try:
+    import easyocr
+    _HAS_EASYOCR = True
+except ImportError:
+    _HAS_EASYOCR = False
 from collections import defaultdict
 from scipy.signal import savgol_filter
 from pathlib import Path
@@ -245,6 +249,9 @@ class cornealia :
     def _get_ocr_reader(self):
         """Return a cached EasyOCR reader, creating it on first call.
         Stderr is suppressed during creation to hide the GPU warning."""
+        if not _HAS_EASYOCR:
+            print("⚠️ EasyOCR not available — machine output OCR disabled")
+            return None
         if self._ocr_reader is None:
             with open(os.devnull, 'w') as devnull:
                 old_stderr = sys.stderr
@@ -297,22 +304,24 @@ class cornealia :
 
         # extracting text OCR
         reader = self._get_ocr_reader()
-        gray = cv2.cvtColor(metrics_area, cv2.COLOR_RGB2GRAY)
-        enhanced = cv2.convertScaleAbs(gray, alpha=2.0, beta=3)
-        enhanced_enlarged = cv2.resize(enhanced, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+        machine_metrics = None
+        if reader is not None:
+            gray = cv2.cvtColor(metrics_area, cv2.COLOR_RGB2GRAY)
+            enhanced = cv2.convertScaleAbs(gray, alpha=2.0, beta=3)
+            enhanced_enlarged = cv2.resize(enhanced, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
 
-        result = reader.readtext(enhanced_enlarged)
-        text = [item[1] for item in result]
-        numbers = [int(t.replace(',', '')) for t in text if t.replace(',', '').isdigit()]
+            result = reader.readtext(enhanced_enlarged)
+            text = [item[1] for item in result]
+            numbers = [int(t.replace(',', '')) for t in text if t.replace(',', '').isdigit()]
 
-        machine_metrics = {
-            'CD (cells/mm^2)': numbers[0] if len(numbers) > 0 else None,
-            'CV':              numbers[1] if len(numbers) > 1 else None,
-            'HEX(%)':          numbers[2] if len(numbers) > 2 else None,
-            'SD':              numbers[3] if len(numbers) > 3 else None,
-            'Ave(micrometer^2)': numbers[4] if len(numbers) > 4 else None,
-            'Num':             numbers[5] if len(numbers) > 5 else None,
-        }
+            machine_metrics = {
+                'CD (cells/mm^2)': numbers[0] if len(numbers) > 0 else None,
+                'CV':              numbers[1] if len(numbers) > 1 else None,
+                'HEX(%)':          numbers[2] if len(numbers) > 2 else None,
+                'SD':              numbers[3] if len(numbers) > 3 else None,
+                'Ave(micrometer^2)': numbers[4] if len(numbers) > 4 else None,
+                'Num':             numbers[5] if len(numbers) > 5 else None,
+            }
 
         return cell_area, machine_metrics, dot_centroids
 

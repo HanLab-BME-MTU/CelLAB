@@ -32,7 +32,7 @@ from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
 
 # Add backend to path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.environ.get('CELLAB_BASE_DIR', os.path.dirname(os.path.abspath(__file__)))
 BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
 sys.path.insert(0, BACKEND_DIR)
 # FASTIA internal imports (components/, wrapper_classes/, utils/) need this
