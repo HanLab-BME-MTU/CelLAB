@@ -17,17 +17,20 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files, coll
 block_cipher = None
 base_dir = os.path.dirname(os.path.abspath(SPEC))
 
-# Nuclear option: collect everything from skimage
+# Nuclear option: collect everything from packages with deep submodules
 skimage_datas, skimage_binaries, skimage_imports = collect_all('skimage')
+sm_datas, sm_binaries, sm_imports = collect_all('statsmodels')
 
 a = Analysis(
     ['cellab_launcher.py'],
     pathex=[base_dir],
     binaries=[
         *skimage_binaries,
+        *sm_binaries,
     ],
     datas=[
         *skimage_datas,
+        *sm_datas,
         # Frontend
         ('frontend', 'frontend'),
         # Backend modules (released only)
@@ -43,6 +46,7 @@ a = Analysis(
     ],
     hiddenimports=[
         *skimage_imports,
+        *sm_imports,
         # Web/GUI
         'flask',
         'webview',
