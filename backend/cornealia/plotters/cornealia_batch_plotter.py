@@ -1403,19 +1403,20 @@ class cornealia_batch_plotter:
         box_data, box_pos = [], []
         for i in range(n_bins_d):
             mb = (cd_c >= bed[i]) & (cd_c < bed[i+1])
-            if mb.sum() > 5:
+            if mb.sum() > 3:
                 box_data.append(kv_c[mb])
                 box_pos.append(bcd[i])
-        bp = ax_d_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6,
-                               patch_artist=True, showfliers=False,
-                               medianprops=dict(color='#E65100', linewidth=1),
-                               whiskerprops=dict(color='#888', linewidth=0.6),
-                               capprops=dict(color='#888', linewidth=0.6))
-        for patch in bp['boxes']:
-            patch.set_facecolor('#FFE0B2')
-            patch.set_edgecolor('#888')
-            patch.set_linewidth(0.5)
-            patch.set_alpha(0.8)
+        if box_data:
+            bp = ax_d_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6,
+                                   patch_artist=True, showfliers=False,
+                                   medianprops=dict(color='#E65100', linewidth=1),
+                                   whiskerprops=dict(color='#888', linewidth=0.6),
+                                   capprops=dict(color='#888', linewidth=0.6))
+            for patch in bp['boxes']:
+                patch.set_facecolor('#FFE0B2')
+                patch.set_edgecolor('#888')
+                patch.set_linewidth(0.5)
+                patch.set_alpha(0.8)
         ax_d_bot.set_xlabel('CD (x1000 cells/mm$^2$)', fontsize=6)
         ax_d_bot.set_ylabel('K range', fontsize=5)
         ax_d_bot.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:.1f}'))
@@ -1634,13 +1635,14 @@ class cornealia_batch_plotter:
         box_data, box_pos = [], []
         for i in range(n_bins):
             mb = (cd_c >= bed[i]) & (cd_c < bed[i+1])
-            if mb.sum() > 5:
+            if mb.sum() > 3:
                 box_data.append(kv_c[mb]); box_pos.append(bcd[i])
-        bp = ax_a_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6, patch_artist=True, showfliers=False,
-                              medianprops=dict(color='#E65100', linewidth=1), whiskerprops=dict(color='#888', linewidth=0.6),
-                              capprops=dict(color='#888', linewidth=0.6))
-        for patch in bp['boxes']:
-            patch.set_facecolor('#FFE0B2'); patch.set_edgecolor('#888'); patch.set_linewidth(0.5); patch.set_alpha(0.8)
+        if box_data:
+            bp = ax_a_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6, patch_artist=True, showfliers=False,
+                                  medianprops=dict(color='#E65100', linewidth=1), whiskerprops=dict(color='#888', linewidth=0.6),
+                                  capprops=dict(color='#888', linewidth=0.6))
+            for patch in bp['boxes']:
+                patch.set_facecolor('#FFE0B2'); patch.set_edgecolor('#888'); patch.set_linewidth(0.5); patch.set_alpha(0.8)
         ax_a_bot.set_xlabel('CD (cells/mm$^2$)')
         ax_a_bot.set_ylabel('K range', fontsize=7)
         ax_a_bot.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:.1f}k'))
