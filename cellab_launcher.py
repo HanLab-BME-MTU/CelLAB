@@ -73,20 +73,31 @@ def main():
         print("ERROR: Flask server failed to start")
         sys.exit(1)
 
-    print(f"Server ready. Opening CelLAB window...")
+    print(f"Server ready. Opening CelLAB...")
 
-    # Open PyWebView window
-    import webview
-    window = webview.create_window(
-        title='CelLAB — Cellular Analysis Workbench',
-        url=f'http://127.0.0.1:{port}',
-        width=1400,
-        height=900,
-        min_size=(1024, 700),
-        resizable=True,
-        text_select=True,
-    )
-    webview.start(debug=False)
+    # Try PyWebView first, fall back to browser
+    try:
+        import webview
+        window = webview.create_window(
+            title='CelLAB — Cellular Analysis Workbench',
+            url=f'http://127.0.0.1:{port}',
+            width=1400,
+            height=900,
+            min_size=(1024, 700),
+            resizable=True,
+            text_select=True,
+        )
+        webview.start(debug=False)
+    except Exception as e:
+        print(f"PyWebView unavailable ({e}), opening in browser...")
+        import webbrowser
+        webbrowser.open(f'http://127.0.0.1:{port}')
+        # Keep running until Ctrl+C
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
 
     # Window closed — exit
     print("CelLAB closed.")
