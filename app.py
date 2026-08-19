@@ -149,12 +149,13 @@ def serve_frontend(filename):
 
 @app.route('/api/modules')
 def get_modules_config():
-    """Serve module visibility config from modules.json."""
-    modules_path = os.path.join(BASE_DIR, 'modules.json')
-    if os.path.exists(modules_path):
-        with open(modules_path) as f:
-            return jsonify(json.load(f))
-    return jsonify({})
+    """Serve module visibility config from modules.json or modules.lab.json."""
+    for name in ('modules.json', 'modules.lab.json'):
+        modules_path = os.path.join(BASE_DIR, name)
+        if os.path.isfile(modules_path):
+            with open(modules_path) as f:
+                return api_response(json.load(f))
+    return api_response({})
 
 
 # ═════════════════════════════════════════════
@@ -8281,7 +8282,7 @@ def browse_open():
 _cellintella = None
 _cellintella_loading = False
 _cellintella_config = {
-    'n_ctx': 4096,
+    'n_ctx': 8192,
     'n_threads': 10,
     'timeout': 500,
 }
@@ -8324,7 +8325,10 @@ def _retrieve_docs(query):
     cornealia_kw = ['cornea', 'endotheli', 'specular', 'morphometr', 'cell density', 'hexagonal',
                     'g(r)', 'v(r)', 'radial distribution', 'collective order', 'pixel_size',
                     'pixel size', 'k value', 'morse', 'batch', 'as vs bs', 'cd_calc', 'cv_calc',
-                    'hex_calc', 'ave_calc', 'cornealia']
+                    'hex_calc', 'ave_calc', 'cornealia', 'setpoint', 'k*', 'k_ds', 'homeostatic',
+                    'attractor', 'force field', 'mean_f', 'delaunay', 'truss', 'residual force',
+                    'exclusion', 'interior cell', 'cellchek', 'green dot', 'passage', 'culture',
+                    'phase contrast', 'damped sine', 'quality gate', 'reliable', 'noise']
     fastia_kw = ['focal adhesion', 'fa ', 'timelapse', 'tracking', 'detection', 'paxillin',
                  'assembly', 'disassembly', 'kinetics', 'fastia']
     immunia_kw = ['immune', 'nk cell', 'natural killer', 'tumor', 'chemotaxis', 'keller-segel',
@@ -8355,28 +8359,76 @@ def _retrieve_docs(query):
     # Level 2: Load detail files if query is specific
     detail_kw = {
         'cornealia': {
-            'pixel': 'cornealia/API.md',
-            'parameter': 'cornealia/API.md',
-            'constructor': 'cornealia/API.md',
-            'collective_order': 'cornealia/collective_order.md',
-            'batch': 'cornealia/batch_processing.md',
+            # Plotters (light file, ~1278 tokens)
             'plot': 'cornealia/plotters.md',
+            'visual': 'cornealia/plotters.md',
+            'figure': 'cornealia/plotters.md',
+            'publication': 'cornealia/plotters.md',
+            # Troubleshooting (light file, ~1137 tokens)
             'error': 'cornealia/troubleshooting.md',
             'fail': 'cornealia/troubleshooting.md',
             'crash': 'cornealia/troubleshooting.md',
-            'reliable': 'cornealia/troubleshooting.md',
+            'segment': 'cornealia/troubleshooting.md',
+            'cultur': 'cornealia/troubleshooting.md',
+            'nan': 'cornealia/troubleshooting.md',
+            'wrong': 'cornealia/troubleshooting.md',
+            "don't": 'cornealia/troubleshooting.md',
+            "doesn't": 'cornealia/troubleshooting.md',
+            # API (medium file, ~1339 tokens)
+            'pixel': 'cornealia/API.md',
+            'parameter': 'cornealia/API.md',
+            'constructor': 'cornealia/API.md',
+            'cellade_param': 'cornealia/API.md',
+            'invert': 'cornealia/API.md',
+            'machine_type': 'cornealia/API.md',
+            # Batch (medium file, ~1430 tokens)
+            'batch': 'cornealia/batch_processing.md',
+            'as vs bs': 'cornealia/batch_processing.md',
+            'as_vs_bs': 'cornealia/batch_processing.md',
+            'paired': 'cornealia/batch_processing.md',
+            'csv': 'cornealia/batch_processing.md',
+            'cli': 'cornealia/batch_processing.md',
+            'command line': 'cornealia/batch_processing.md',
+            # Collective order (heavy file, ~2186 tokens) — last to avoid overflow
+            'collective_order': 'cornealia/collective_order.md',
+            'k_ds': 'cornealia/collective_order.md',
+            'k value': 'cornealia/collective_order.md',
+            'spring constant': 'cornealia/collective_order.md',
+            'quality gate': 'cornealia/collective_order.md',
+            'damped sine': 'cornealia/collective_order.md',
+            'force field': 'cornealia/collective_order.md',
+            'rmse': 'cornealia/collective_order.md',
+            'morse': 'cornealia/collective_order.md',
+            'fitting': 'cornealia/collective_order.md',
+            'reliable': 'cornealia/collective_order.md',
         },
         'platform': {
             'project': 'platform/project_format.md',
             '.cellab': 'platform/project_format.md',
+            'manifest': 'platform/project_format.md',
+            'folder structure': 'platform/project_format.md',
+            'save': 'platform/project_format.md',
+            'open': 'platform/project_format.md',
+            'archive': 'platform/project_format.md',
             'console': 'platform/console_commands.md',
             'terminal': 'platform/console_commands.md',
+            'python': 'platform/console_commands.md',
             'git': 'platform/console_commands.md',
             'commit': 'platform/console_commands.md',
+            'variable': 'platform/console_commands.md',
+            'namespace': 'platform/console_commands.md',
             'gui': 'platform/gui_architecture.md',
             'layout': 'platform/gui_architecture.md',
             'menu': 'platform/gui_architecture.md',
             'toolbar': 'platform/gui_architecture.md',
+            'panel': 'platform/gui_architecture.md',
+            'shortcut': 'platform/gui_architecture.md',
+            'keyboard': 'platform/gui_architecture.md',
+            'task manager': 'platform/gui_architecture.md',
+            'cli': 'platform/cli_usage.md',
+            'command line': 'platform/cli_usage.md',
+            'headless': 'platform/cli_usage.md',
+            'script': 'platform/cli_usage.md',
         },
     }
 
@@ -9442,6 +9494,122 @@ def console_exec():
         return api_response({"stdout": "", "stderr": "", "result": None, "magic": "clear"})
     if code in ('exit', 'quit'):
         return api_response({"stdout": "Use Ctrl+` to close the console", "stderr": "", "result": None})
+
+    # ── Shell-like aliases ──────────────────────────────────────────
+    if code == 'help':
+        help_text = (
+            "CelLAB Python Console — Quick Reference\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "  pwd                          — current directory\n"
+            "  ls                           — list current directory\n"
+            "  ls <path>                    — list a specific path\n"
+            "  cd <path>                    — change directory\n"
+            "  cd                           — go to project root\n"
+            "  cd ..                        — go up one level\n"
+            "  clear / cls / clc            — clear console\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "  workspaces                   — list all workspaces & pipelines\n"
+            "  results <ws> <pipe> <step>   — get results directory\n"
+            "  load <ws> <pipe> <step>      — load full_results.pkl as 'data'\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "  Available: project, np, pd, plt, os, json, Path\n"
+            "  Example:   results workspace_1 cornealia-1 morphometry\n"
+            "  Example:   load workspace_1 cornealia-1 morphometry\n"
+        )
+        return api_response({"stdout": help_text, "stderr": "", "result": None})
+
+    if code == 'pwd':
+        cwd = ns.get('_cwd', str(_project.root) if _project else os.getcwd())
+        return api_response({"stdout": cwd, "stderr": "", "result": None})
+
+    if code == 'workspaces':
+        if not _project:
+            return api_response({"stdout": "", "stderr": "No project open", "result": None})
+        lines = []
+        for ws in _project.list_workspaces():
+            lines.append(f"📁 {ws['name']} ({ws['id']})")
+            for p in ws.get('pipelines', []):
+                lines.append(f"   └─ {p['name']} ({p['id']}) [{p['type']}]")
+        return api_response({"stdout": "\n".join(lines), "stderr": "", "result": None})
+
+    if code.startswith('ls'):
+        arg = code[2:].strip()
+        cwd = ns.get('_cwd', str(_project.root) if _project else os.getcwd())
+        target = Path(arg) if arg else Path(cwd)
+        if not target.is_absolute():
+            target = Path(cwd) / target
+        try:
+            if not target.exists():
+                return api_response({"stdout": "", "stderr": f"Path not found: {target}", "result": None})
+            if target.is_file():
+                sz = target.stat().st_size
+                unit = 'B'
+                if sz > 1024*1024: sz, unit = sz/(1024*1024), 'MB'
+                elif sz > 1024: sz, unit = sz/1024, 'KB'
+                return api_response({"stdout": f"📄 {target.name}  ({sz:.1f} {unit})", "stderr": "", "result": None})
+            items = sorted(target.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+            lines = [f"📂 {target}\n"]
+            for item in items:
+                icon = "📁" if item.is_dir() else "📄"
+                lines.append(f"  {icon} {item.name}")
+            return api_response({"stdout": "\n".join(lines), "stderr": "", "result": None})
+        except Exception as e:
+            return api_response({"stdout": "", "stderr": str(e), "result": None})
+
+    if code.startswith('cd'):
+        arg = code[2:].strip()
+        cwd = ns.get('_cwd', str(_project.root) if _project else os.getcwd())
+        if not arg:
+            ns['_cwd'] = str(_project.root) if _project else os.getcwd()
+        elif arg == '..':
+            ns['_cwd'] = str(Path(cwd).parent)
+        else:
+            target = Path(arg) if Path(arg).is_absolute() else Path(cwd) / arg
+            if target.exists() and target.is_dir():
+                ns['_cwd'] = str(target.resolve())
+            else:
+                return api_response({"stdout": "", "stderr": f"Directory not found: {target}", "result": None})
+        return api_response({"stdout": f"📂 {ns['_cwd']}", "stderr": "", "result": None})
+
+    if code.startswith('results'):
+        parts = code.split()
+        if len(parts) < 4:
+            return api_response({"stdout": "", "stderr": "Usage: results <workspace_id> <pipeline_id> <step_id>", "result": None})
+        try:
+            rdir = _project.get_results_dir(parts[1], parts[2], parts[3])
+            items = list(rdir.iterdir()) if rdir.exists() else []
+            lines = [f"📂 {rdir}\n"]
+            for item in items:
+                icon = "📁" if item.is_dir() else "📄"
+                lines.append(f"  {icon} {item.name}")
+            ns['results_path'] = rdir
+            lines.append(f"\n→ results_path set to this directory")
+            return api_response({"stdout": "\n".join(lines), "stderr": "", "result": None})
+        except Exception as e:
+            return api_response({"stdout": "", "stderr": str(e), "result": None})
+
+    if code.startswith('load'):
+        parts = code.split()
+        if len(parts) < 4:
+            return api_response({"stdout": "", "stderr": "Usage: load <workspace_id> <pipeline_id> <step_id>", "result": None})
+        try:
+            import pickle
+            rdir = _project.get_results_dir(parts[1], parts[2], parts[3])
+            pkl_path = rdir / 'full_results.pkl'
+            json_path = rdir / 'analysis_results.json'
+            if pkl_path.exists():
+                with open(pkl_path, 'rb') as f:
+                    ns['data'] = pickle.load(f)
+                keys = list(ns['data'].keys()) if isinstance(ns['data'], dict) else 'non-dict'
+                return api_response({"stdout": f"✅ Loaded full_results.pkl → 'data'\n   Type: {type(ns['data']).__name__}\n   Keys: {keys}", "stderr": "", "result": None})
+            elif json_path.exists():
+                with open(json_path) as f:
+                    ns['data'] = json.load(f)
+                return api_response({"stdout": f"✅ Loaded analysis_results.json → 'data'\n   Type: dict\n   Keys: {list(ns['data'].keys())}", "stderr": "", "result": None})
+            else:
+                return api_response({"stdout": "", "stderr": f"No results file found in {rdir}", "result": None})
+        except Exception as e:
+            return api_response({"stdout": "", "stderr": str(e), "result": None})
 
     # Always update project reference for shared/git
     if stype in ('shared', 'git'):

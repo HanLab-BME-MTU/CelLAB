@@ -469,7 +469,7 @@ body{font-family:var(--font-ui);font-size:var(--fs-base);color:var(--text-primar
 .console-output::-webkit-scrollbar-track{background:transparent}
 .console-output::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
 .console-output::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.15)}
-.console-line{white-space:pre-wrap;word-break:break-all;margin-bottom:1px}
+.console-line{white-space:pre-wrap;word-break:break-all;margin-bottom:1px;user-select:text;cursor:text}
 .console-welcome{color:rgba(201,209,217,.2);font-size:12px;margin-bottom:2px}
 .console-prompt-echo{color:var(--brand-accent);font-weight:600}
 .console-code{color:#c9d1d9}

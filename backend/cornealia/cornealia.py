@@ -14,12 +14,24 @@ from multiprocessing import Pool, freeze_support
 import os
 import sys
 import time
+
+# Auto-configure paths when run as CLI (python cornealia.py)
+if __name__ == '__main__' or (not getattr(sys, 'frozen', False) and '__spec__' not in dir()):
+    _this_dir = os.path.dirname(os.path.abspath(__file__))
+    _backend_dir = os.path.dirname(_this_dir)
+    for _p in [_backend_dir, os.path.join(_backend_dir, 'shared_modules'), _this_dir]:
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
+
 from tqdm import tqdm
 from scipy.optimize import curve_fit
 
 
 from shared_modules.cellade.cellade import CellADE
-from .plotters.cornealia_plotter import cornealia_plotter
+try:
+    from .plotters.cornealia_plotter import cornealia_plotter
+except ImportError:
+    from plotters.cornealia_plotter import cornealia_plotter
 
 
 # ═══════════════════════════════════════════════════════════

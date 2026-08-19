@@ -1,71 +1,41 @@
-# CelLAB Platform — Overview
-Keywords: platform, project, workspace, pipeline, GUI, Flask, API, version control, console, task manager
+# CelLAB — Platform Overview
+Keywords: cellab, platform, workbench, workspace, pipeline, package, feature, about, what is
 
-## What It Is
-CelLAB (CELLular Analysis Workbench) is a unified platform for cell biology analysis, inspired by ANSYS Workbench, COMSOL Multiphysics, and VS Code. It provides a graphical interface over multiple analysis packages with parameter version control, a Python console, task management, and an AI assistant.
+## What Is CelLAB
+CelLAB (Cellular Analysis Workbench) is an open-source desktop platform for quantitative cell biology image analysis. It follows the workbench paradigm: specialized analysis pipelines share a common project system, interactive GUI, and reusable computational engines. No programming experience required — all analysis runs through a graphical interface with structured workflows.
 
-## Architecture
-- **Backend:** Python Flask server (`app.py`, ~2200 lines)
-- **Frontend:** HTML + CSS + JS (`workbench.html/css/js`, ~4500 lines total)
-- **Communication:** REST API with JSON responses
-- **Project format:** `.cellab` directory with manifest, workspaces, version history
+## Analysis Packages
+| Package | Purpose | Image Types |
+|---------|---------|-------------|
+| **Cornealia** | Corneal endothelial morphometry and collective order | Specular microscopy, phase-contrast |
+| **FASTIA** | Focal adhesion dynamics (detection, tracking, kinetics) | Timelapse fluorescence |
+| **IMMUNIA** | Immune cell migration and tumor-cell interactions | Timelapse brightfield/fluorescence |
+| **CellADE** | Training-free cell segmentation engine | Any cell images |
+| **CellFADE** | Focal adhesion detection engine | Fluorescence |
+| **AnnotADE** | Annotation and ground truth tools | Any |
+
+## Core Concepts
+
+### Projects
+A CelLAB project is a folder with a `.cellab` manifest file. It contains workspaces, each with pipelines. Projects can be saved, opened, archived as .cellab.zip, and version-controlled with built-in Git.
+
+### Workspaces
+Workspaces group related analyses. Each workspace contains one or more pipelines. Create multiple workspaces to organize experiments (e.g., "Donor Study", "Culture Conditions").
+
+### Pipelines
+A pipeline is a sequence of analysis steps. Each package defines its own pipeline type (e.g., cornealia, cornealia_batch, fastia, immunia). Steps have parameters, run buttons, and results.
+
+### Steps
+Each pipeline step has: parameters (left config panel), a run button, and results displayed in the graphics panel. Steps execute sequentially — later steps may depend on earlier ones.
 
 ## Key Features
-
-### Project System
-- `.cellab` format: manifest.json + workspaces/ + .cellab/internal/
-- Create, open, save, save-as, close, archive (.zip)
-- Portable across machines
-- See: platform/project_format.md
-
-### GUI Layout
-- Title bar → Menu bar → Toolbar → Workspace tabs → Subtab bar → Main viewport
-- Three-column module view: Tree | Settings | Graphics (flex 1:1:2)
-- Collapsible panels, resizable
-- See: platform/gui_architecture.md
-
-### Version Control (CelLAB Git)
-- Commit: snapshots all params.json files
-- Log, diff, tag, checkout (revert parameters)
-- GUI panel with timeline + commit box
-- Terminal commands via Git console tab
-- Parameters only — results are reproducible, not versioned
-
-### Python Console
-- Multi-tab: Shared (persistent namespace), Isolated (fresh), Git (commands)
-- Pre-loaded: np, pd, plt, Path, project
-- VS Code-style terminal panel, resizable
-
-### Task Manager
-- Tracks every run and plot task
-- Live log streaming during execution
-- Expandable rows with captured stdout
-- Stop and Retry actions
-
-### Keyboard Shortcuts
-- Ctrl+S save, Ctrl+` console, F5 run, Ctrl+Shift+H history
-- Full list via Ctrl+Shift+/ or Help menu
-
-## API Endpoints (summary)
-| Prefix | Purpose |
-|--------|---------|
-| /api/project/* | Create, open, save, close, archive |
-| /api/workspace/* | Create, list, delete, rename |
-| /api/pipeline/* | Create, delete, position, connect |
-| /api/step/*/params | Save/load parameters |
-| /api/step/*/run | Execute analysis step |
-| /api/step/*/plot | Generate plot on demand |
-| /api/step/*/export-plot | Export with custom DPI/format |
-| /api/version/* | Commit, log, diff, tag, checkout, tags |
-| /api/console/* | Create, exec, reset, namespace |
-| /api/tasks/log | Live log for running tasks |
-| /api/browse | File browser for frontend |
-| /api/status | Server health + system stats |
-
-## Running CelLAB
-```bash
-cd CelLAB
-python app.py                        # start server
-python app.py --open "C:\my_project" # open existing project
-```
-Then open http://127.0.0.1:5000 in Chrome/Edge.
+- Multi-workspace, multi-pipeline project system
+- Docked configuration panels with per-step parameters
+- Interactive image viewer with zoom, brightness, contrast
+- Real-time visualization and result overlays
+- Export to CSV, PNG, PDF with custom DPI
+- Built-in Python console with project access
+- Built-in Git version control
+- CellIntella AI assistant (local Llama 3.2 3B, fully private)
+- Task manager for monitoring long-running analyses
+- No GPU required — all computation runs on CPU

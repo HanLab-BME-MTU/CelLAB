@@ -158,7 +158,7 @@ class CellIntella:
             # Initialize in separate process
             self.local_ai = CellIntellaProcessWrapper(
                 n_threads=10,      # Use 4 threads (was 2)
-                n_ctx=2048,       # Keep context window
+                n_ctx=8192,       # Keep context window
                 verbose=self.verbose,
                 timeout=500
             )

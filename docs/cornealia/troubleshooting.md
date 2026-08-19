@@ -1,5 +1,5 @@
 # Cornealia — Troubleshooting
-Keywords: error, crash, fail, NaN, zero, reliable, segmentation, fix, debug
+Keywords: error, crash, fail, NaN, zero, reliable, segmentation, fix, debug, cultured, phase contrast, pixel size, force field, invert
 
 ## Common Errors
 
@@ -52,6 +52,31 @@ Keywords: error, crash, fail, NaN, zero, reliable, segmentation, fix, debug
 - Cause: Importing cornealia triggers GUI backend on servers
 - Fix: `import matplotlib; matplotlib.use('Agg')` BEFORE importing cornealia
 - CelLAB handles this automatically in app.py
+
+### Cultured cell images don't segment properly
+- Cause: Phase-contrast images have inverted contrast (dark cells on light background)
+- Fix: Set `invert_image=True` and `is_input_image_machine_output=False`
+- Example: `cornealia(pixel_size=0.34, invert_image=True, is_input_image_machine_output=False)`
+- Note: pixel_size varies by microscope — check your 20× or 10× calibration
+
+### K values in µm⁻² seem wrong but px⁻² looks fine
+- Cause: Wrong `pixel_size` — all µm conversions use K_um = K_px / pixel_size²
+- Fix: Verify pixel_size matches your microscope. Common values: 0.58 (CellChek D), 0.45 (Topcon SP-1P), 0.34 (Heidelberg)
+- Note: px-based K values and reliability flag are unaffected by pixel_size
+
+### K_ds = 0 or NaN (but K_morse_guided is valid)
+- Cause: Quality gate fit succeeded (reliable=True) but V''(r₀) on the fitted curve is near zero or negative
+- Check: `results['popt_qc']` — if ξ is very large, the oscillation is too weak for meaningful K_ds
+- This is rare; if it occurs, K_morse_guided is the fallback
+
+### Force field returns NaN or missing keys
+- Cause: Fewer than 4 interior cells — Delaunay triangulation requires ≥ 4 points
+- Fix: Reduce `exclusion_ratio` or use a larger image
+- Check: `results.get('mean_F', None)` — None means force field was skipped
+
+### Dark-on-light images produce no cells
+- Cause: CellADE expects light-on-dark (bright cell boundaries)
+- Fix: Set `invert_image=True` in the constructor
 
 ## Diagnostic Workflow
 1. Run single image with `verbose=True`

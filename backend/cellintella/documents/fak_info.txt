@@ -1,4 +1,0 @@
-  Focal Adhesion Kinase (FAK) is a 125 kDa non-receptor tyrosine kinase.
-     FAK is localized to focal adhesions and plays a critical role in 
-     integrin-mediated signaling. FAK phosphorylation at Tyr397 is essential
-     for cell migration and adhesion processes.

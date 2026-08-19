@@ -110,7 +110,7 @@ class CellIntellaProcessWrapper:
     def __init__(
         self,
         model_path: Optional[str] = None,
-        n_ctx: int = 2048,
+        n_ctx: int = 8192,
         n_threads: int = 2,
         verbose: bool = False,
         timeout: int = 60

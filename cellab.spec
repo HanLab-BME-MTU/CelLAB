@@ -15,14 +15,14 @@ import sys
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_all
 
 block_cipher = None
-base_dir = os.path.dirname(os.path.abspath(SPEC))
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(SPEC)))  # parent of packaging/
 
 # Nuclear option: collect everything from packages with deep submodules
 skimage_datas, skimage_binaries, skimage_imports = collect_all('skimage')
 sm_datas, sm_binaries, sm_imports = collect_all('statsmodels')
 
 a = Analysis(
-    ['cellab_launcher.py'],
+    [os.path.join(base_dir, 'packaging', 'cellab_launcher.py')],
     pathex=[base_dir],
     binaries=[
         *skimage_binaries,
@@ -32,17 +32,18 @@ a = Analysis(
         *skimage_datas,
         *sm_datas,
         # Frontend
-        ('frontend', 'frontend'),
+        (os.path.join(base_dir, 'frontend'), 'frontend'),
         # Backend modules (released only)
-        ('backend/cornealia', 'backend/cornealia'),
-        ('backend/shared_modules', 'backend/shared_modules'),
-        ('backend/cellintella', 'backend/cellintella'),
+        (os.path.join(base_dir, 'backend', 'cornealia'), os.path.join('backend', 'cornealia')),
+        (os.path.join(base_dir, 'backend', 'shared_modules'), os.path.join('backend', 'shared_modules')),
+        (os.path.join(base_dir, 'backend', 'cellintella', '*.py'), os.path.join('backend', 'cellintella')),
+        (os.path.join(base_dir, 'docs'), 'docs'),
         # Root files
-        ('app.py', '.'),
-        ('backend/project_manager.py', '.'),
-        ('backend/cellade_manager.py', '.'),
-        ('modules.json', '.'),
-        ('cellab.ico', '.'),
+        (os.path.join(base_dir, 'app.py'), '.'),
+        (os.path.join(base_dir, 'backend', 'project_manager.py'), '.'),
+        (os.path.join(base_dir, 'backend', 'cellade_manager.py'), '.'),
+        (os.path.join(base_dir, 'modules.lab.json'), '.'),
+        (os.path.join(base_dir, 'packaging', 'cellab.ico'), '.'),
     ],
     hiddenimports=[
         *skimage_imports,
@@ -92,6 +93,9 @@ a = Analysis(
         'requests',
         # File formats
         'tifffile',
+        # OCR
+        'easyocr',
+        'torch',
         # Standard lib that PyInstaller may miss
         'tkinter',
         'tkinter.filedialog',
@@ -108,10 +112,7 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # Heavy packages not needed for Lite
-        'easyocr',
-        'torch',
-        'torchvision',
+        # Heavy packages not needed for standard version
         'llama_cpp',
         'sentence_transformers',
         'chromadb',
@@ -136,7 +137,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='CelLAB',
+    name='CelLAB_Win64',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -144,7 +145,7 @@ exe = EXE(
     console=True,       # Debug: show console to see errors
     disable_windowed_traceback=False,
     argv_emulation=False,
-    icon='cellab.ico' if sys.platform == 'win32' else None,
+    icon=os.path.join(base_dir, 'packaging', 'cellab.ico') if sys.platform == 'win32' else None,
 )
 
 coll = COLLECT(
@@ -154,5 +155,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='CelLAB',
+    name='CelLAB_Win64',
 )

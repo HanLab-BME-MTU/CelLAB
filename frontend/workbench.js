@@ -195,7 +195,7 @@ function _renderCodeChatView(viewport, ws) {
                     <button class="codechat-btn" onclick="_addCodeChatTab('git')" title="New Git">+ Git</button>
                 </div>
             </div>
-            <div class="codechat-body" id="codeChatBody" onclick="document.getElementById('consoleInput')?.focus()" oncontextmenu="if(!event.target.closest('.console-input')){event.preventDefault();openWorkspaceRadialNav(event, true);}"></div>
+            <div class="codechat-body" id="codeChatBody" onclick="if(!window.getSelection().toString()) document.getElementById('consoleInput')?.focus()" oncontextmenu="if(!event.target.closest('.console-input')){event.preventDefault();openWorkspaceRadialNav(event, true);}"></div>
         </div>
     `;
     _renderCodeChatTabs();
@@ -1447,16 +1447,10 @@ function renderLeftPanel() {
         { id:'associa', icon: ICONS.associa(14), label:'Associa — Signal Coupling', asModule: true },
         { id:'cellade', icon: ICONS.cellade(14), label:'CellADE — Cell Segmentation', asModule: true },
         { id:'cellfade', icon: ICONS.cellfade(14), label:'CellFADE — FA Detection', asModule: true },
-        { id:'data-import', icon:'📥', label:'Data Import' },
-        { id:'detection', icon:'🔍', label:'Detection' },
-        { id:'tracking', icon:'📈', label:'Tracking' },
-        { id:'analysis', icon:'📊', label:'Analysis' },
     ].filter(i => isEnabled(i.id));
 
     const tools = [
         { id:'annotade', icon: ICONS.annotade(14), label:'AnnotADE — Annotation', asModule: true },
-        { id:'plot-manager', icon:'📈', label:'Plot Manager' },
-        { id:'file-explorer', icon:'📁', label:'File Explorer' },
     ].filter(i => isEnabled(i.id));
 
     panel.innerHTML = `
@@ -14059,7 +14053,7 @@ function toggleConsole() {
                     <button class="console-btn console-win-btn console-close-btn" onclick="toggleConsole()" title="Close">✕</button>
                 </div>
             </div>
-            <div class="console-body" id="consoleBody" onclick="document.getElementById('consoleInput')?.focus()"></div>
+            <div class="console-body" id="consoleBody" onclick="if(!window.getSelection().toString()) document.getElementById('consoleInput')?.focus()"></div>
         `;
         const statusBar = document.querySelector('.status-bar');
         if (statusBar) statusBar.parentNode.insertBefore(panel, statusBar);
@@ -14762,10 +14756,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load module visibility config
     try {
         const modRes = await api('modules');
-        if (modRes.success !== false) {
-            state._modulesConfig = modRes;
+        console.log('Modules config response:', modRes);
+        if (modRes.success && modRes.data) {
+            state._modulesConfig = modRes.data;
+            console.log('Modules config loaded:', state._modulesConfig);
+        } else {
+            console.warn('Modules config: no data', modRes);
         }
     } catch (e) {
+        console.error('Modules config load failed:', e);
         state._modulesConfig = {};
     }
 

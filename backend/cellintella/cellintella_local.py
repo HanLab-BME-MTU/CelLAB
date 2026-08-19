@@ -7,9 +7,11 @@ Local AI assistant powered by Llama 3.2 3B.
 This module:
 - Runs Llama 3.2 3B on CPU (no GPU required)
 - Uses llama-cpp-python for efficient inference
-- Integrates with ContextBuilder for documentation retrieval
 - Manages conversation history
 - Provides context-aware responses
+
+Context and documentation retrieval is handled upstream by app.py's
+hierarchical doc retriever. This module focuses purely on inference.
 
 The model runs entirely on CPU with quantized weights (Q4_K_M),
 making it lightweight and portable.
@@ -26,15 +28,6 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-
-# Import context builder
-try:
-    from .context_builder import ContextBuilder, detect_context_type
-    from .prompt_templates import build_prompt, get_few_shot_example
-    CONTEXT_AVAILABLE = True
-except ImportError:
-    CONTEXT_AVAILABLE = False
-    print("Warning: Context builder not available")
 
 # Import llama-cpp-python
 try:
@@ -80,7 +73,7 @@ class CellIntellaLocal:
     def __init__(
         self,
         model_path: Optional[str] = None,
-        n_ctx: int = 2048,     # Changed from 8192
+        n_ctx: int = 8192,     # Changed from 8192
         n_threads: int = 2,    # Changed from 4
         n_gpu_layers: int = 0,
         verbose: bool = False
@@ -98,7 +91,6 @@ class CellIntellaLocal:
         
         self.verbose = verbose
         self.llm = None
-        self.context_builder = None
         self.conversation_history = []
         
         # Check if llama-cpp-python is available
@@ -148,34 +140,6 @@ class CellIntellaLocal:
         
         except Exception as e:
             raise RuntimeError(f"Failed to load model: {e}")
-        
-        # Initialize context builder
-        if CONTEXT_AVAILABLE:
-            self.context_builder = ContextBuilder()
-            if self.verbose:
-                print("✅ Context builder initialized")
-        else:
-            if self.verbose:
-                print("⚠️  Context builder not available - responses will be less accurate")
-                
-        # Initialize RAG system
-        try:
-            from backend.cellintella.cellintella_rag import CellIntellaDocumentStore
-            # self.doc_store = CellIntellaDocumentStore(verbose=self.verbose)
-            
-            
-            docs_path = Path(__file__).parent / "documents"
-            self.doc_store = CellIntellaDocumentStore(docs_folder=str(docs_path), verbose=self.verbose)
-            
-            if self.verbose:
-                if self.doc_store.has_documents():
-                    print("✅ RAG system initialized with documents")
-                else:
-                    print("⚠️  RAG system initialized (no documents loaded)")
-        except Exception as e:
-            if self.verbose:
-                print(f"⚠️  RAG system not available: {e}")
-            self.doc_store = None
             
     def _apply_chat_template(self, prompt):
         """Apply Llama chat template to prompt"""
@@ -184,49 +148,20 @@ class CellIntellaLocal:
         
     def query(self, user_message, context_type=None, use_rag=True, **kwargs):
         """
-        Query the AI model
+        Query the AI model.
+        
+        Context and documentation retrieval is handled upstream by app.py.
+        The user_message arrives pre-enriched with system prompt, scope state,
+        and relevant documentation.
         
         Args:
-            user_message: User's question
-            context_type: Context type ('immunia', 'fastia', etc.)
-            use_rag: Whether to use document retrieval (default: True)
+            user_message: Pre-enriched prompt from app.py
+            context_type: Context type (unused, kept for API compatibility)
+            use_rag: Unused, kept for API compatibility
         """
         
-        # Get base context
-        system_context = self.context_builder.build_context(user_message, context_type)        
-        
-        # Retrieve relevant documents if RAG is enabled
-        doc_context = ""
-        if use_rag and self.doc_store and self.doc_store.has_documents():
-            doc_context = self.doc_store.retrieve(user_message, n_results=3)
-            
-            if self.verbose and doc_context:
-                print("📚 Retrieved relevant documents")
-        
-        # Build full prompt
-        if doc_context:
-            full_prompt = f"""{system_context}
-
-    {doc_context}
-
-    INSTRUCTIONS:
-    - Use the provided research documents to answer questions
-    - Always cite sources using [Source: filename]
-    - Quote relevant passages when helpful
-    - If answer is not in documents, use your general knowledge but mention this
-
-    Question: {user_message}
-
-    Answer (with citations if using documents):"""
-        else:
-            full_prompt = f"""{system_context}
-
-    Question: {user_message}
-
-    Answer:"""
-        
-        # Apply chat template
-        formatted_prompt = self._apply_chat_template(full_prompt)
+        # Apply chat template and generate
+        formatted_prompt = self._apply_chat_template(user_message)
         
         if self.verbose:
             print(f"Prompt length: {len(formatted_prompt)} chars")
@@ -311,65 +246,6 @@ Provide concise, technical, helpful answers."""
         if self.verbose:
             print(f"✅ Conversation exported to: {output_file}")
     
-    def get_parameter_help(
-        self,
-        parameter_name: str,
-        context_type: str = 'immunia'
-    ) -> str:
-        """
-        Get help for a specific parameter
-        
-        Args:
-            parameter_name: Name of parameter
-            context_type: 'immunia' or 'fastia'
-        
-        Returns:
-            Parameter information
-        """
-        
-        if not self.context_builder:
-            return "Context builder not available. Cannot retrieve parameter info."
-        
-        param_info = self.context_builder.get_parameter_info(
-            parameter_name,
-            context_type
-        )
-        
-        if param_info:
-            info_str = f"**Parameter: {param_info['name']}**\n\n"
-            
-            if param_info.get('description'):
-                info_str += f"Description: {param_info['description']}\n"
-            
-            if param_info.get('type'):
-                info_str += f"Type: {param_info['type']}\n"
-            
-            if param_info.get('default') is not None:
-                info_str += f"Default: {param_info['default']}\n"
-            
-            if param_info.get('function'):
-                info_str += f"Used in: {param_info['function']}\n"
-            
-            return info_str
-        else:
-            return f"Parameter '{parameter_name}' not found in {context_type} documentation."
-    
-    def list_parameters(self, context_type: str = 'immunia') -> List[str]:
-        """
-        List all available parameters
-        
-        Args:
-            context_type: 'immunia' or 'fastia'
-        
-        Returns:
-            List of parameter names
-        """
-        
-        if not self.context_builder:
-            return []
-        
-        return self.context_builder.list_available_parameters(context_type)
-    
     def get_model_info(self) -> Dict[str, Any]:
         """
         Get model information
@@ -384,7 +260,6 @@ Provide concise, technical, helpful answers."""
             'size_gb': 2.0,
             'context_window': self.llm.n_ctx() if self.llm else None,
             'model_path': str(MODEL_PATH) if MODEL_PATH.exists() else None,
-            'context_builder_available': self.context_builder is not None,
             'conversation_turns': len(self.conversation_history) // 2
         }
     

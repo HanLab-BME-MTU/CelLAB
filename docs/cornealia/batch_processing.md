@@ -1,5 +1,11 @@
 # Cornealia — Batch Processing
-Keywords: batch, collective_order_batch, parallel, workers, CSV, folder, multiprocessing, AS, BS, paired
+Keywords: batch, collective_order_batch, parallel, workers, CSV, folder, multiprocessing, AS, BS, paired, cli, command line, force field, mean_F
+
+## CLI Usage
+```bash
+python backend/cornealia/cornealia.py batch --folder "C:\cornea_images" --output C:\results --pixel-size 0.58 --workers 4
+```
+No PYTHONPATH needed — paths auto-configure. Options: `--invert` (dark-on-light images), `--no-machine` (raw images without CellChek overlay). Results saved as CSV + per-image JSON.
 
 ## Signature
 ```python
@@ -36,7 +42,7 @@ List of dicts — one per image. Each dict has the same keys as `collective_orde
 Set all parameters in the GUI:
 - Image folder path
 - pixel_size, fitting_method, fcm_method
-- is_input_image_machine_output
+- is_input_image_machine_output, invert_image
 - All other constructor parameters
 
 ### Step 2: Run Batch
@@ -59,10 +65,14 @@ Set all parameters in the GUI:
 ### Computed Metrics (from segmentation)
 | Column | Unit | Description |
 |--------|------|-------------|
-| K | px⁻² | Collective order parameter |
+| K | px⁻² | Collective order (backward-compat, = K_morse_guided) |
 | K_um | μm⁻² | K in physical units |
-| K_ds | px⁻² | K from damped sine |
+| K_ds | px⁻² | K from damped sine (**recommended**) |
 | K_ds_um | μm⁻² | K_ds in physical units |
+| K_quad_raw | px⁻² | Quadratic fit on raw V(r) |
+| K_morse_raw | px⁻² | Morse fit on raw V(r) |
+| K_quad_guided | px⁻² | Quadratic fit on QG-guided well |
+| K_morse_guided | px⁻² | Morse fit on QG-guided well |
 | r0_fit | px | Equilibrium spacing |
 | r_0_um | μm | r₀ in physical units |
 | CD_calc | cells/mm² | Cell density |
@@ -71,6 +81,23 @@ Set all parameters in the GUI:
 | HEX_calc | % | Hexagonality |
 | n_cells | count | Total detected cells |
 | reliable | bool | Passed quality gate |
+
+### RMSE Values (all evaluated on guided well)
+| Column | Description |
+|--------|-------------|
+| rmse_quad_raw | RMSE of quadratic raw fit |
+| rmse_morse_raw | RMSE of Morse raw fit |
+| rmse_quad_guided | RMSE of quadratic guided fit |
+| rmse_morse_guided | RMSE of Morse guided fit |
+| rmse_ds | RMSE of DS-derived V(r) |
+
+### Force Field Metrics
+| Column | Unit | Description |
+|--------|------|-------------|
+| mean_F | μm⁻¹ | Mean residual force across interior cells |
+| frac_compression | ratio | Fraction of Delaunay edges under compression (d < r₀) |
+| spatial_cv | ratio | Spatial coefficient of variation of |F_i| |
+| n_hot_spots | count | Number of high-stress concentrator cells |
 
 ### Machine Readings (from OCR, if available)
 | Column | Unit | Description |

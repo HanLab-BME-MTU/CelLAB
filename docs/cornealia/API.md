@@ -1,5 +1,5 @@
 # Cornealia — API Reference
-Keywords: cornealia, constructor, parameters, collective_order, batch, pixel_size, fitting_method, fcm_method
+Keywords: cornealia, constructor, parameters, collective_order, batch, pixel_size, fitting_method, fcm_method, invert_image, cellade_params, machine_type, residual_field, force field, pipeline
 
 ## Constructor
 
@@ -19,10 +19,28 @@ Creates a configured analyzer instance. No image is loaded — the same instance
 ### fitting_method
 - Type: str
 - Default: 'morse'
-- Options: 'morse', 'lj' (Lennard-Jones)
-- Description: Potential model used to fit V(r) and extract K
+- Options: 'morse'
+- Description: Potential model used to fit V(r) and extract K. Morse potential: D_e(1-exp(-a(r-r₀)))²
 - Affects: K, r0_fit, fitting curve shape
-- Recommendation: 'morse' for most cases; 'lj' for comparison
+
+### machine_type
+- Type: str
+- Default: 'cellchek_d'
+- Options: 'cellchek_d', 'none'
+- Description: Machine profile key defining crop coordinates for cell area and metrics area. Use 'none' for raw images without machine overlay.
+- Affects: Preprocessing crop regions
+
+### invert_image
+- Type: bool
+- Default: False
+- Description: Invert image intensity before segmentation. Use for dark-on-light images (e.g. some phase-contrast).
+- Affects: Segmentation input
+
+### cellade_params
+- Type: dict
+- Default: {} (empty — use CellADE defaults)
+- Description: Pass-through parameters to the CellADE segmentation engine. Keys override CellADE's own defaults.
+- Example: `{'sigma': 2.5, 'min_cell_area': 50}`
 
 ### is_input_image_machine_output
 - Type: bool
@@ -92,6 +110,10 @@ Creates a configured analyzer instance. No image is loaded — the same instance
 Signature: `collective_order(image_path) → dict`
 Full single-image analysis. See: cornealia/collective_order.md
 
+### collective_order_pipeline()
+Signature: `collective_order_pipeline(image_path, centroids=None, image_dims=None, reporter=None) → dict`
+Full pipeline used by the GUI. Wraps preprocessing + segmentation + classic metrics + collective_order + residual force field into one call. Returns a merged results dict with all outputs. If `centroids` and `image_dims` are provided, skips image loading and segmentation (useful for re-analysis).
+
 ### collective_order_batch()
 Signature: `collective_order_batch(folder_path, n_workers=1, extensions=('.jpg','.jpeg','.png','.tiff','.bmp')) → list[dict]`
 Parallel batch processing. See: cornealia/batch_processing.md
@@ -101,8 +123,9 @@ Signature: `plot(results, save=False, save_dir='cornealia_results', formats=('pn
 Create plotter object. See: cornealia/plotters.md
 
 ### Internal Methods (not typically called directly)
-- `_load_image(image_path)` — load and validate image
-- `cleaning_preprocessing(input_image)` — OCR + green dot detection + cell area extraction
+- `_load_image(image_path)` — load image via cv2, handle special characters in path
+- `cleaning_preprocessing(input_image)` — crop via machine profile, detect green dots (HSV), remove by inpainting, OCR extract metrics
 - `segmentation(cell_area)` — CellADE segmentation → objects, segmentor
-- `_compute_cell_metrics(objects, segmentor, method)` — CD, Ave, CV, HEX computation
+- `_compute_classic_metrics(centroids, areas, H, W, method, dot_centroids)` — CD, Ave, CV, HEX via segmentation or Voronoi method
+- `_compute_residual_field(co_results)` — Delaunay truss construction, per-cell force |F_i| = |Σ -V'(d) · û|, returns mean_F, frac_compression, spatial_cv, n_hot_spots
 - `_collective_order_safe(image_path)` — exception-safe wrapper for parallel use

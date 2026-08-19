@@ -1,5 +1,5 @@
 # Cornealia — Plotters Reference
-Keywords: plot, plotter, visualization, g(r), V(r), segmentation, publication, batch, boxplot, scatter, validation
+Keywords: plot, plotter, visualization, g(r), V(r), segmentation, publication, batch, boxplot, scatter, validation, force field, quality gate, five methods
 
 ## Single Image Plotter (cornealia_plotter)
 
@@ -51,6 +51,21 @@ plotter.comprehensive()  # or any specific method
 - Output: `pipeline_figure.png`
 - Shows: Full pipeline visualization from raw image to final results
 - Use when: Method papers, presentations
+
+#### quality_gate
+- Output: `quality_gate.png`
+- Shows: g(r)-1 with step response fit overlay, R² values, form check results (peak/crossing/trough), reliability verdict
+- Use when: Understanding why an image passed or failed the quality gate
+
+#### force_field
+- Output: `force_field.png`
+- Shows: Delaunay truss colored by compression (red, d < r₀) / tension (blue, d > r₀), per-cell |F_i| heatmap, mean|F| annotation
+- Use when: Visualizing mechanical stress distribution across the monolayer
+
+#### five_methods
+- Output: `five_methods.png`
+- Shows: All 5 K extraction methods on V(r) with their fitting regions, RMSE comparison bar chart
+- Use when: Comparing K methods or justifying K_ds selection
 
 #### all
 - Runs all above methods sequentially
@@ -113,7 +128,9 @@ plotter.distributions()
 ### Computed Metrics (COMPUTED_METRICS dict)
 The batch plotter uses dynamic grids that adapt to available columns:
 - K_um, K_ds_um, r_0_um — order parameters in physical units
+- K_quad_raw_um, K_morse_raw_um, K_quad_guided_um — all 5 K methods in µm⁻²
 - CD_calc, Ave_calc, CV_calc, HEX_calc — clinical metrics
 - K_Vmin_um, K_gpeak_um — alternative K formulations
+- mean_F, frac_compression, spatial_cv — force field metrics
 
 Methods skip missing columns gracefully — no crashes on incomplete data.
