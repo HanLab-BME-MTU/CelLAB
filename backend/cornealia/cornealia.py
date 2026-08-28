@@ -1324,12 +1324,20 @@ class cornealia :
         r_test = np.linspace(r_excl, r_excl + lam, 500)
         r0 = r_test[np.argmax(_gr(r_test))]
 
-        # Per-node residual force vector
+        # Per-node residual force vector and signed strain
         F_residual = np.zeros((n, 2))
+        strain_sum = np.zeros(n)
+        strain_count = np.zeros(n)
         for k, (i, j) in enumerate(edges):
             f_vec = F_scalar[k] * unit[k]
             F_residual[j] += f_vec
             F_residual[i] -= f_vec
+            # Signed strain: (d - r0) / r0 — positive = tension, negative = compression
+            s = (d_um[k] - r0) / r0
+            strain_sum[i] += s; strain_sum[j] += s
+            strain_count[i] += 1; strain_count[j] += 1
+        strain_count[strain_count == 0] = 1
+        signed_strain = strain_sum / strain_count
 
         F_mag = np.sqrt(np.sum(F_residual**2, axis=1))
         compressed = d_um < r0
@@ -1347,6 +1355,7 @@ class cornealia :
             'F_scalar':         F_scalar,
             'F_residual':       F_residual,
             'F_mag':            F_mag,
+            'signed_strain':    signed_strain,
             'compressed':       compressed,
             'hot_spots':        hot_spots,
             'threshold_90':     float(threshold_90),
@@ -1355,6 +1364,7 @@ class cornealia :
             # Scalar summaries
             'mean_F':           float(np.mean(F_mag)),
             'std_F':            float(np.std(F_mag)),
+            'mean_signed_strain': float(np.mean(signed_strain)),
             'spatial_cv':       float(np.std(F_mag) / np.mean(F_mag)) if np.mean(F_mag) > 1e-8 else 0.0,
             'frac_compression': float(compressed.sum() / len(edges)),
             'n_hot_spots':      int(hot_spots.sum()),
@@ -1397,6 +1407,7 @@ class cornealia :
                 co['frac_compression'] = rf['frac_compression']
                 co['spatial_cv'] = rf['spatial_cv']
                 co['n_hot_spots'] = rf['n_hot_spots']
+                co['mean_signed_strain'] = rf['mean_signed_strain']
                 reporter.done('force', {
                     'mean_F': round(rf['mean_F'], 4),
                     'frac_compression': round(rf['frac_compression'], 2),
@@ -1407,6 +1418,7 @@ class cornealia :
                 co['frac_compression'] = np.nan
                 co['spatial_cv'] = np.nan
                 co['n_hot_spots'] = 0
+                co['mean_signed_strain'] = np.nan
                 reporter.skip('force')
         except Exception as e:
             reporter.fail('force', e)
@@ -1461,7 +1473,17 @@ class cornealia :
 
     def collective_order_batch(self, folder_path, n_workers=1,
                            extensions=('.jpg', '.jpeg', '.png', '.tiff', '.bmp'),
-                           progress_cb=None):
+                           progress_cb=None, save_full=False):
+        """
+        Batch process all images in a folder.
+        
+        Parameters
+        ----------
+        save_full : bool
+            If True, keep full results including centroids, residual_field,
+            g(r) curves, and fit parameters. Warning: large memory footprint.
+            If False (default), strip heavy data and keep only scalars.
+        """
         valid_extensions = extensions
         p = Path(folder_path)
         image_paths = [img_path for img_path in p.rglob('*.*')
@@ -1492,16 +1514,17 @@ class cornealia :
                 if 'error' in r:
                     n_failed += 1
                     pbar.set_postfix_str(f"FAILED: {img_path.name}", refresh=False)
-                # Strip heavy data — keep only scalars and small dicts
-                for key in ('segmentation', 'cell_area', 'input_image',
-                            'dot_centroids', 'residual_field', '_reporter',
-                            'g_r_smooth', 'v_r',
-                            'r_valid', 'v_r_valid',
-                            'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
-                            'r_fit_ds', 'v_fit_ds',
-                            'popt_qc', 'coeffs_qr', 'coeffs_qg',
-                            'popt_mr', 'popt_mg', 'popt_ds'):
-                    r.pop(key, None)
+                if not save_full:
+                    # Strip heavy data — keep only scalars and small dicts
+                    for key in ('segmentation', 'cell_area', 'input_image',
+                                'dot_centroids', 'residual_field', '_reporter',
+                                'g_r_smooth', 'v_r',
+                                'r_valid', 'v_r_valid',
+                                'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
+                                'r_fit_ds', 'v_fit_ds',
+                                'popt_qc', 'coeffs_qr', 'coeffs_qg',
+                                'popt_mr', 'popt_mg', 'popt_ds'):
+                        r.pop(key, None)
                 results.append(r)
                 pbar.update(1)
                 if progress_cb:
@@ -1523,6 +1546,7 @@ class cornealia :
                 'SAVGOL_ORDER':             self.SAVGOL_ORDER,
                 'fitting_method':           self.fitting_method,
                 'verbose':                  False,
+                '_save_full':               save_full,
             }
 
             str_paths = [str(p) for p in image_paths]
@@ -1571,10 +1595,12 @@ class cornealia :
 # Both must be module-level (not methods) so Windows spawn can find them.
 
 _worker_instance = None
+_worker_save_full = False
 
 def _worker_init(config):
     """Called once when each worker process starts."""
-    global _worker_instance
+    global _worker_instance, _worker_save_full
+    _worker_save_full = config.pop('_save_full', False)
     _worker_instance = cornealia(**config)
     # Pre-warm the OCR reader so the first image isn't slow
     _worker_instance._get_ocr_reader()
@@ -1584,17 +1610,18 @@ def _worker_process_image(image_path):
     try:
         result = _worker_instance.mechanical_state(image_path)
 
-        # Remove heavy data that can't fit through the pipe
-        # Keep r_values and g_r (small arrays ~76 floats) for g(r) population NPZ
-        for key in ('segmentation', 'cell_area', 'input_image',
-                     'dot_centroids', 'residual_field', '_reporter',
-                     'g_r_smooth', 'v_r',
-                     'r_valid', 'v_r_valid',
-                     'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
-                     'r_fit_ds', 'v_fit_ds',
-                     'popt_qc', 'coeffs_qr', 'coeffs_qg',
-                     'popt_mr', 'popt_mg', 'popt_ds'):
-            result.pop(key, None)
+        if not _worker_save_full:
+            # Remove heavy data — keep only scalars and small arrays
+            # Keep r_values and g_r (small arrays ~76 floats) for g(r) population NPZ
+            for key in ('segmentation', 'cell_area', 'input_image',
+                         'dot_centroids', 'residual_field', '_reporter',
+                         'g_r_smooth', 'v_r',
+                         'r_valid', 'v_r_valid',
+                         'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
+                         'r_fit_ds', 'v_fit_ds',
+                         'popt_qc', 'coeffs_qr', 'coeffs_qg',
+                         'popt_mr', 'popt_mg', 'popt_ds'):
+                result.pop(key, None)
 
         return result
     except Exception as e:
