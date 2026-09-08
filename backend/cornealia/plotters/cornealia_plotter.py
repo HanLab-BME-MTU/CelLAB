@@ -1033,7 +1033,7 @@ class cornealia_plotter:
         # Rows 2-3: plots (bottom 50% of figure, with internal gap)
         gs_bot = fig.add_gridspec(2, 3,
                                   height_ratios=[1, 1],
-                                  left=0.08, right=0.97, top=0.50, bottom=0.08,
+                                  left=0.08, right=0.97, top=0.609, bottom=0.189,
                                   hspace=0.45, wspace=0.35)
 
         axes = np.empty((3, 3), dtype=object)
@@ -1105,7 +1105,7 @@ class cornealia_plotter:
         ax.axis('off')
         _panel_label(ax, labels[1])
 
-        # (c) Centroids + interior window (image background, no axes)
+        # (c) Centroids + interior window + g(r) annuli illustration
         ax = axes[0, 2]
         ax.imshow(img_a_stretched, cmap='gray')
         ax.scatter(x_coords[~interior], y_coords[~interior],
@@ -1116,6 +1116,70 @@ class cornealia_plotter:
                               fill=False, edgecolor=C_SMOOTH, linestyle='--',
                               linewidth=0.8, alpha=0.5)
         ax.add_patch(rect)
+
+        # --- g(r) annuli: show how pair correlation is computed ---
+        from matplotlib.patches import Annulus
+        r0_px = c.r0_fit  # equilibrium distance in pixels
+        dr = r0_px * 0.35  # annulus width
+        ring_radii = [r0_px, 3 * r0_px]  # wider separation between shells
+        ring_colors = ['#FF8C00', '#FF2200']  # bright orange, bright red
+        ring_alphas = [0.35, 0.30]
+
+        # Select 2 well-separated interior cells, away from center
+        int_idx = np.where(interior)[0]
+        int_x, int_y = x_coords[int_idx], y_coords[int_idx]
+
+        # Cell 1: offset from center toward upper-left quadrant
+        img_cx, img_cy = cell_W * 0.3, cell_H * 0.3
+        d_target1 = np.sqrt((int_x - img_cx)**2 + (int_y - img_cy)**2)
+        c1_loc = np.argmin(d_target1)
+        c1_idx = int_idx[c1_loc]
+
+        # Cell 2: offset toward lower-right, at least 6×r₀ from cell 1
+        img_cx2, img_cy2 = cell_W * 0.7, cell_H * 0.7
+        d_target2 = np.sqrt((int_x - img_cx2)**2 + (int_y - img_cy2)**2)
+        d_to_c1 = np.sqrt((int_x - int_x[c1_loc])**2 + (int_y - int_y[c1_loc])**2)
+        far = d_to_c1 > 6 * r0_px
+        if far.any():
+            c2_loc = np.where(far)[0][np.argmin(d_target2[far])]
+        else:
+            c2_loc = np.argmax(d_to_c1)
+        c2_idx = int_idx[c2_loc]
+
+        # Draw annuli and highlight cells for each reference cell
+        label_angles = [50, -130]
+        for ci, cidx in enumerate([c1_idx, c2_idx]):
+            cx_c, cy_c = x_coords[cidx], y_coords[cidx]
+
+            # Green center marker
+            ax.scatter(cx_c, cy_c, s=45, c='#009E73', edgecolor='white',
+                       linewidths=1.2, zorder=10)
+
+            for ri, (radius, col, alph) in enumerate(zip(ring_radii, ring_colors, ring_alphas)):
+                # Filled annulus with bright edge
+                ann = Annulus((cx_c, cy_c), radius + dr/2, dr,
+                              facecolor=col, alpha=alph,
+                              edgecolor=col, linewidth=1.5, zorder=6)
+                ax.add_patch(ann)
+
+                # Find and highlight cells in this shell
+                dists = np.sqrt((x_coords - cx_c)**2 + (y_coords - cy_c)**2)
+                in_ring = (dists >= radius - dr/2) & (dists <= radius + dr/2)
+                n_ring = int(in_ring.sum())
+                if n_ring > 0:
+                    ax.scatter(x_coords[in_ring], y_coords[in_ring],
+                               s=14, c=col, edgecolor='white',
+                               linewidths=0.4, zorder=8)
+
+                # Count label
+                ang = np.radians(label_angles[ci] + ri * 50)
+                lx = cx_c + (radius + dr * 1.2) * np.cos(ang)
+                ly = cy_c + (radius + dr * 1.2) * np.sin(ang)
+                ax.text(lx, ly, f'n={n_ring}', fontsize=6.5,
+                        fontweight='bold', color=col, ha='center', va='center',
+                        bbox=dict(boxstyle='round,pad=0.12', facecolor='white',
+                                  alpha=0.8, edgecolor='none'), zorder=9)
+
         ax.set_xlim(0, cell_W)
         ax.set_ylim(cell_H, 0)
         ax.axis('off')
@@ -1249,7 +1313,7 @@ class cornealia_plotter:
             ax.axvline(x=r_osc[zc_idx], color=C_GRAY, linestyle=':', linewidth=1, zorder=3)
             tick_z = '\u2713' if zc_ok else '\u2717'
             ax.annotate(f'Zero {tick_z}', xy=(r_osc[zc_idx], 0),
-                        xytext=(4, -10), textcoords='offset points',
+                        xytext=(4, -4), textcoords='offset points',
                         fontsize=6.5, fontweight='bold', color=C_DARK)
 
             # Annotate trough
@@ -1257,7 +1321,7 @@ class cornealia_plotter:
                     markersize=8, markeredgecolor='black', markeredgewidth=0.8, zorder=6)
             tick_t = '\u2713' if trough_ok else '\u2717'
             ax.annotate(f'Trough {tick_t}', xy=(r_osc[trough_idx], g_osc[trough_idx]),
-                        xytext=(5, -8), textcoords='offset points',
+                        xytext=(-8, -14), textcoords='offset points',
                         fontsize=6.5, fontweight='bold', color=C_RED)
 
             # --- Compute all four quality gate checks ---
