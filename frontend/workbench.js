@@ -5962,18 +5962,11 @@ const PLOT_FILENAME_MAP = {
     '07_publication_vr':        'publication_vr',
     'pipeline_figure':          'pipeline_figure',
     // Cornealia — batch plotter
-    '01_distributions':         'distributions',
     'fig2_as_vs_bs_boxplots':   'pub_boxplots',
     'fig3_K_deep_dive':         'pub_K_deep_dive',
     'fig4_validation':          'pub_validation',
     'fig4_collective_order':    'pub_collective_order',
     'fig5_mechanical_disequilibrium': 'pub_mechanical_disequilibrium',
-    'fig6_K_independence':      'pub_K_independence',
-    'fig_comprehensive_K_ds_um':'pub_comprehensive',
-    '05_K_ds_um_improvement':   'as_vs_bs_improvement',
-    '05_K_um_improvement':      'as_vs_bs_improvement',
-    '05_K_Vmin_um_improvement': 'as_vs_bs_improvement',
-    '05_r_0_um_improvement':    'as_vs_bs_improvement',
     // FASTIA — import
     'frame_montage':            'frame_montage',
     // FASTIA — detection
@@ -10625,15 +10618,11 @@ function getAvailablePlots(moduleType, stepId) {
     if (moduleType === 'cornealia_batch') {
         if (stepId === 'batch_results') return [
             { id: 'batch_table',                icon: '📊', label: 'Results Table' },
-            { id: 'distributions',              icon: '📈', label: 'Distributions' },
-            { id: 'as_vs_bs_improvement',       icon: '📉', label: 'AS vs BS — Improvement' },
-            { id: 'pub_boxplots',               icon: '📄', label: 'Publication — Boxplots' },
-            { id: 'pub_K_deep_dive',            icon: '📄', label: 'Publication — K Deep Dive' },
-            { id: 'pub_validation',             icon: '📄', label: 'Publication — Validation' },
-            { id: 'pub_K_independence',         icon: '📄', label: 'Publication — K Independence' },
-            { id: 'pub_comprehensive',          icon: '📄', label: 'Publication — Comprehensive' },
-            { id: 'pub_collective_order',       icon: '📄', label: 'Publication — Collective Order' },
-            { id: 'pub_mechanical_disequilibrium', icon: '📄', label: 'Publication — Mechanical Disequilibrium' },
+            { id: 'pub_boxplots',               icon: '📄', label: 'AS vs BS — Boxplots' },
+            { id: 'pub_K_deep_dive',            icon: '📄', label: 'K Deep Dive' },
+            { id: 'pub_validation',             icon: '📄', label: 'Validation' },
+            { id: 'pub_collective_order',       icon: '📄', label: 'Collective Order' },
+            { id: 'pub_mechanical_disequilibrium', icon: '📄', label: 'Mechanical Disequilibrium' },
         ];
         return [];
     }

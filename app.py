@@ -3800,13 +3800,9 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                 )
 
                 batch_plot_map = {
-                    'distributions':               ('distributions',               '01_distributions.png'),
-                    'as_vs_bs_improvement':         ('as_vs_bs_improvement_all',    None),
                     'pub_boxplots':                ('pub_boxplots',                'fig2_as_vs_bs_boxplots.png'),
                     'pub_K_deep_dive':             ('pub_K_deep_dive',             'fig3_K_deep_dive.png'),
                     'pub_validation':              ('pub_validation',              'fig4_validation.png'),
-                    'pub_K_independence':           ('pub_K_independence',          'fig6_K_independence.png'),
-                    'pub_comprehensive':           ('pub_comprehensive',           None),
                     'pub_collective_order':         ('pub_collective_order',        'fig4_collective_order.png'),
                     'pub_mechanical_disequilibrium':('pub_mechanical_disequilibrium','fig5_mechanical_disequilibrium.png'),
                 }
@@ -4601,13 +4597,11 @@ def step_export_plot(ws_id, pipeline_id, step_id):
                 plt.rcParams['savefig.dpi'] = dpi
 
                 batch_plot_map = {
-                    'distributions': 'distributions', 'histogram': 'histogram',
-                    'as_vs_bs_boxplots': 'as_vs_bs_boxplots', 'as_vs_bs_scatter': 'as_vs_bs_scatter',
-                    'as_vs_bs_histograms': 'as_vs_bs_histograms', 'validation_scatter': 'validation_scatter',
-                    'validation_bland_altman': 'validation_bland_altman', 'deep_dive': 'deep_dive',
-                    'pub_boxplots': 'pub_boxplots', 'pub_K_deep_dive': 'pub_K_deep_dive',
-                    'pub_validation': 'pub_validation', 'pub_K_independence': 'pub_K_independence',
-                    'pub_comprehensive': 'pub_comprehensive',
+                    'pub_boxplots': 'pub_boxplots',
+                    'pub_K_deep_dive': 'pub_K_deep_dive',
+                    'pub_validation': 'pub_validation',
+                    'pub_collective_order': 'pub_collective_order',
+                    'pub_mechanical_disequilibrium': 'pub_mechanical_disequilibrium',
                 }
                 method_name = batch_plot_map.get(plot_type)
                 if method_name:

@@ -30,7 +30,10 @@ from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from pathlib import Path
 from scipy import stats
+from scipy.stats import ttest_rel, spearmanr, pearsonr
 from scipy.spatial import Voronoi
+from numpy.polynomial.polynomial import polyfit
+from matplotlib.lines import Line2D
 from collections import defaultdict
 import re
 import os
@@ -324,200 +327,6 @@ class cornealia_batch_plotter:
             return None, None, len(valid)
         t, p = stats.ttest_rel(valid[col_as], valid[col_bs])
         return t, p, len(valid)
-
-    # ==================================================================
-    # CATEGORY 1 — DISTRIBUTIONS
-    # ==================================================================
-
-    def distributions(self, save=None):
-        """2×3 grid of histograms for all computed metrics."""
-        save = save if save is not None else self.save
-
-        avail = {k: v for k, v in COMPUTED_METRICS.items() if v[0] in self.df.columns}
-        n = len(avail)
-        ncols = 3
-        nrows = max(1, (n + ncols - 1) // ncols)
-        fig, axes = plt.subplots(nrows, ncols, figsize=(15, nrows * 4.5))
-        if nrows * ncols > 1:
-            axes = axes.flatten()
-        else:
-            axes = [axes]
-        for j in range(n, len(axes)):
-            axes[j].set_visible(False)
-
-        for i, (key, (col, label, unit)) in enumerate(avail.items()):
-            ax = axes[i]
-            data = self.df[col].dropna()
-            ax.hist(data, bins=30, color=COLORS['neutral'], edgecolor='black',
-                    linewidth=0.8, alpha=0.85)
-            mean_val = data.mean()
-            ax.axvline(mean_val, color=COLORS['AS'], linestyle='--', linewidth=2,
-                       label=f'Mean = {mean_val:.2f}')
-            ax.set_xlabel(f'{label} ({unit})', fontsize=12, fontweight='bold')
-            ax.set_ylabel('Count', fontsize=12, fontweight='bold')
-            ax.set_title(f'{label}', fontsize=13, fontweight='bold')
-            ax.legend(fontsize=9, loc='upper right')
-            ax.tick_params(axis='both', labelsize=10)
-            sns.despine(ax=ax)
-
-        plt.suptitle(f'Distribution of Computed Metrics (n = {len(self.df)})',
-                     fontsize=16, fontweight='bold')
-        plt.tight_layout()
-        if save:
-            self._save_fig(fig, '01_distributions')
-        plt.show()
-
-    def as_vs_bs_improvement(self, metric='K_um', save=None):
-        """
-        2×2 panel analysing per-patient improvement for a single metric:
-          - histogram of % change
-          - histogram of absolute change
-          - scatter colored by improvement
-          - summary stats box
-
-        Parameters
-        ----------
-        metric : str
-            Key from COMPUTED_METRICS (default 'K_um')
-        save : bool or None
-        """
-        save = save if save is not None else self.save
-
-        if len(self.paired) == 0:
-            print("No paired AS/BS data available.")
-            return
-
-        col, label, unit = COMPUTED_METRICS[metric]
-        col_as = f'{col}_AS'
-        col_bs = f'{col}_BS'
-
-        if col_as not in self.paired.columns:
-            print(f"Column {col_as} not found in paired data.")
-            return
-
-        paired = self.paired.copy()
-        paired['_diff'] = paired[col_as] - paired[col_bs]
-
-        # Filter valid pairs (BS > small threshold to avoid division by zero)
-        threshold = paired[col_bs].quantile(0.01) if paired[col_bs].quantile(0.01) > 0 else 1e-6
-        valid = paired[paired[col_bs] > threshold].copy()
-        valid['_pct_change'] = (valid[col_as] - valid[col_bs]) / valid[col_bs] * 100
-
-        # --- Stats ---
-        improved = valid['_diff'] > 0
-        n_improved = improved.sum()
-        n_total = len(valid)
-        median_pct = valid['_pct_change'].median()
-        mean_diff = valid['_diff'].mean()
-        sd_diff = valid['_diff'].std()
-
-        t_stat, p_ttest = stats.ttest_rel(valid[col_as], valid[col_bs])
-        w_stat, p_wilcox = stats.wilcoxon(valid['_diff'])
-
-        plain_label, plain_unit = PLAIN_LABELS[metric]
-        print(f"\n{plain_label} Improvement Analysis ({plain_unit})")
-        print(f"  Valid pairs: {n_total}")
-        print(f"  Improved (AS > BS): {n_improved}/{n_total} ({n_improved/n_total*100:.1f}%)")
-        print(f"  Median delta%: {median_pct:+.1f}%")
-        print(f"  Mean delta: {mean_diff:+.4f} +/- {sd_diff:.4f} {plain_unit}")
-        print(f"  Paired t-test: t = {t_stat:.3f}, p = {p_ttest:.2e}")
-        print(f"  Wilcoxon: p = {p_wilcox:.2e}")
-
-        # --- Figure: 2×2 ---
-        fig, axes = plt.subplots(2, 2, figsize=(13, 10))
-
-        # 1. Histogram of % change
-        ax = axes[0, 0]
-        pct_clipped = valid['_pct_change'].clip(-200, 500)
-        ax.hist(pct_clipped, bins=50, color=COLORS['BS'], edgecolor='black',
-                linewidth=0.5, alpha=0.8)
-        ax.axvline(0, color='red', linestyle='--', linewidth=2, label='No change')
-        ax.axvline(median_pct, color=COLORS['AS'], linestyle='-', linewidth=2,
-                   label=f'Median = {median_pct:+.1f}%')
-        ax.set_xlabel(f'{label} change (%)', fontsize=13, fontweight='bold')
-        ax.set_ylabel('Count', fontsize=13, fontweight='bold')
-        ax.set_title(f'Distribution of {label} Change (AS vs BS)',
-                     fontsize=14, fontweight='bold')
-        ax.legend(fontsize=10)
-        ax.tick_params(axis='both', labelsize=11)
-        sns.despine(ax=ax)
-
-        # 2. Histogram of absolute difference
-        ax = axes[0, 1]
-        ax.hist(valid['_diff'], bins=50, color=COLORS['computed'], edgecolor='black',
-                linewidth=0.5, alpha=0.8)
-        ax.axvline(0, color='red', linestyle='--', linewidth=2, label='No change')
-        ax.axvline(mean_diff, color=COLORS['AS'], linestyle='-', linewidth=2,
-                   label=f'Mean = {mean_diff:+.4f}')
-        ax.set_xlabel(r'$\Delta$' + f'{label} = AS - BS ({unit})', fontsize=13, fontweight='bold')
-        ax.set_ylabel('Count', fontsize=13, fontweight='bold')
-        ax.set_title(f'Distribution of Absolute {label} Change',
-                     fontsize=14, fontweight='bold')
-        ax.legend(fontsize=10)
-        ax.tick_params(axis='both', labelsize=11)
-        sns.despine(ax=ax)
-
-        # 3. Scatter colored by improvement
-        ax = axes[1, 0]
-        ax.scatter(valid.loc[~improved, col_bs], valid.loc[~improved, col_as],
-                   c=COLORS['BS'], s=20, alpha=0.4,
-                   label=f'Decreased ({(~improved).sum()})')
-        ax.scatter(valid.loc[improved, col_bs], valid.loc[improved, col_as],
-                   c=COLORS['AS'], s=20, alpha=0.4,
-                   label=f'Improved ({improved.sum()})')
-        all_vals = pd.concat([valid[col_bs], valid[col_as]])
-        lims = [0, all_vals.max() * 1.05]
-        ax.plot(lims, lims, '--', color=COLORS['identity'], linewidth=1.5)
-        ax.set_xlabel(f'BS — {label} ({unit})', fontsize=13, fontweight='bold')
-        ax.set_ylabel(f'AS — {label} ({unit})', fontsize=13, fontweight='bold')
-        ax.set_title(f'Paired Scatter (colored by improvement)',
-                     fontsize=14, fontweight='bold')
-        ax.legend(fontsize=10, loc='upper left')
-        ax.set_xlim(lims)
-        ax.set_ylim(lims)
-        ax.tick_params(axis='both', labelsize=11)
-        sns.despine(ax=ax)
-
-        # 4. Summary text box
-        ax = axes[1, 1]
-        ax.axis('off')
-        plain_label, plain_unit = PLAIN_LABELS[metric]
-        summary = (
-            f"{'='*44}\n"
-            f"   {plain_label.upper()} IMPROVEMENT ANALYSIS\n"
-            f"{'='*44}\n\n"
-            f"  Valid pairs:        {n_total}\n"
-            f"  Improved (AS > BS): {n_improved} ({n_improved/n_total*100:.1f}%)\n"
-            f"  Decreased:          {n_total - n_improved} ({(n_total-n_improved)/n_total*100:.1f}%)\n\n"
-            f"  Median delta%:      {median_pct:+.1f}%\n"
-            f"  Mean delta:         {mean_diff:+.4f} {plain_unit}\n"
-            f"  SD delta:           {sd_diff:.4f} {plain_unit}\n\n"
-            f"  Paired t-test:      p = {p_ttest:.2e}\n"
-            f"  Wilcoxon:           p = {p_wilcox:.2e}\n"
-            f"{'='*44}"
-        )
-        ax.text(0.05, 0.5, summary, transform=ax.transAxes, fontsize=12,
-                verticalalignment='center', fontfamily='monospace', fontweight='bold',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='#FFFACD',
-                          edgecolor='black', linewidth=1.5, alpha=0.95))
-
-        plt.suptitle(f'AS vs BS: {label} Improvement Analysis',
-                     fontsize=16, fontweight='bold')
-        plt.tight_layout()
-        if save:
-            self._save_fig(fig, f'05_{metric}_improvement')
-        plt.show()
-
-    def as_vs_bs_improvement_all(self, save=None):
-        """Run improvement analysis for all computed metrics."""
-        save = save if save is not None else self.save
-        for key, (col, _, _) in COMPUTED_METRICS.items():
-            if col in self.df.columns:
-                self.as_vs_bs_improvement(metric=key, save=save)
-
-    # ==================================================================
-    # CATEGORY 5 — COMPREHENSIVE SINGLE-METRIC DEEP DIVE
-    # ==================================================================
 
     def _pub_style(self):
         """Apply publication style: 190mm width, 10pt bold, 600 DPI."""
@@ -917,457 +726,112 @@ class cornealia_batch_plotter:
         plt.show()
 
     # ==================================================================
-    # FIG 6: K INDEPENDENCE FROM CLASSICAL METRICS (2×2)
+    # COLLECTIVE ORDER — STATISTICAL HELPERS
     # ==================================================================
 
-    def pub_K_independence(self, save=None):
-        """Publication-ready 2×2 showing K captures orthogonal information.
+    @staticmethod
+    def _pitman_variance_test(x1, x2):
+        """Pitman (1939) test for equality of variances in paired samples."""
+        m = np.isfinite(x1) & np.isfinite(x2)
+        x1, x2 = np.asarray(x1)[m], np.asarray(x2)[m]
+        n = len(x1)
+        if n < 4:
+            return dict(n=n, s1=np.nan, s2=np.nan, r=np.nan, v=np.nan, T=np.nan, p=np.nan)
+        s1, s2 = x1.std(ddof=1), x2.std(ddof=1)
+        r = np.corrcoef(x1, x2)[0, 1]
+        T = np.sqrt(n - 2) * ((s1 / s2) - (s2 / s1)) / (2 * np.sqrt(1 - r ** 2))
+        pval = 2 * stats.t.sf(abs(T), df=n - 2)
+        return dict(n=n, s1=s1, s2=s2, r=r, v=s2 / s1, T=T, p=pval)
 
-        (a) ΔK% vs ΔCD% — K improves even when CD drops
-        (b) ΔK% vs ΔHEX% — K improves even when HEX drops
-        (c) Baseline BS K vs ΔK% — does starting K predict improvement?
-        (d) K vs CD scatter (all data) — weak correlation = independent info
-        """
-        self._pub_style()
-        save = save if save is not None else self.save
-
-        col_K = 'K_um'
-        col_K_as, col_K_bs = f'{col_K}_AS', f'{col_K}_BS'
-
-        # Prepare paired % changes
-        paired = self.paired.copy()
-        metrics_for_change = {
-            'K_um':     ('$\\Delta K$',  '%'),
-            'CD_calc':  ('$\\Delta$CD',  '%'),
-            'HEX_calc': ('$\\Delta$HEX', '%'),
-        }
-
-        for m in metrics_for_change:
-            col_as = f'{m}_AS'
-            col_bs = f'{m}_BS'
-            if col_as in paired.columns and col_bs in paired.columns:
-                threshold = max(paired[col_bs].quantile(0.01), 1e-6)
-                paired[f'{m}_pct'] = np.where(
-                    paired[col_bs] > threshold,
-                    (paired[col_as] - paired[col_bs]) / paired[col_bs] * 100,
-                    np.nan
-                )
-
-        valid = paired.dropna(subset=['K_um_pct', 'CD_calc_pct', 'HEX_calc_pct'])
-
-        fig_w = 190 / 25.4
-        fig_h = fig_w * 0.85
-        fig, axes = plt.subplots(2, 2, figsize=(fig_w, fig_h))
-        labels_panel = ('(a)', '(b)', '(c)', '(d)')
-
-        # ---- (a) ΔK% vs ΔCD% ----
-        ax = axes[0, 0]
-        # Clip for display
-        x = valid['CD_calc_pct'].clip(-50, 50)
-        y = valid['K_um_pct'].clip(-200, 500)
-        colors = np.where(y > 0, COLORS['AS'], COLORS['BS'])
-        ax.scatter(x, y, c=colors, s=6, alpha=0.4, edgecolor='none')
-        ax.axhline(0, color='black', linestyle=':', linewidth=0.8)
-        ax.axvline(0, color='black', linestyle=':', linewidth=0.8)
-
-        # Quadrant labels
-        ax.text(0.97, 0.97, 'K↑ CD↑', transform=ax.transAxes, fontsize=8,
-                ha='right', va='top', fontweight='bold', color='#444444')
-        ax.text(0.03, 0.97, 'K↑ CD↓', transform=ax.transAxes, fontsize=8,
-                ha='left', va='top', fontweight='bold', color='#444444')
-        ax.text(0.97, 0.03, 'K↓ CD↑', transform=ax.transAxes, fontsize=8,
-                ha='right', va='bottom', fontweight='bold', color='#444444')
-        ax.text(0.03, 0.03, 'K↓ CD↓', transform=ax.transAxes, fontsize=8,
-                ha='left', va='bottom', fontweight='bold', color='#444444')
-
-        ax.set_xlabel('$\\Delta$CD (%)', fontweight='bold')
-        ax.set_ylabel('$\\Delta K$ (%)', fontweight='bold')
-        ax.set_title('$\\Delta K$ vs $\\Delta$CD', fontweight='bold', fontsize=10, pad=4)
-        ax.tick_params(axis='both', labelsize=8)
-        sns.despine(ax=ax)
-        self._pub_panel_label(ax, labels_panel[0])
-
-        # ---- (b) ΔK% vs ΔHEX% ----
-        ax = axes[0, 1]
-        x = valid['HEX_calc_pct'].clip(-80, 80)
-        y = valid['K_um_pct'].clip(-200, 500)
-        colors = np.where(y > 0, COLORS['AS'], COLORS['BS'])
-        ax.scatter(x, y, c=colors, s=6, alpha=0.4, edgecolor='none')
-        ax.axhline(0, color='black', linestyle=':', linewidth=0.8)
-        ax.axvline(0, color='black', linestyle=':', linewidth=0.8)
-
-        # Quadrant labels
-        ax.text(0.97, 0.97, 'K↑ HEX↑', transform=ax.transAxes, fontsize=8,
-                ha='right', va='top', fontweight='bold', color='#444444')
-        ax.text(0.03, 0.97, 'K↑ HEX↓', transform=ax.transAxes, fontsize=8,
-                ha='left', va='top', fontweight='bold', color='#444444')
-        ax.text(0.97, 0.03, 'K↓ HEX↑', transform=ax.transAxes, fontsize=8,
-                ha='right', va='bottom', fontweight='bold', color='#444444')
-        ax.text(0.03, 0.03, 'K↓ HEX↓', transform=ax.transAxes, fontsize=8,
-                ha='left', va='bottom', fontweight='bold', color='#444444')
-
-        ax.set_xlabel('$\\Delta$HEX (%)', fontweight='bold')
-        ax.set_ylabel('$\\Delta K$ (%)', fontweight='bold')
-        ax.set_title('$\\Delta K$ vs $\\Delta$HEX', fontweight='bold', fontsize=10, pad=4)
-        ax.tick_params(axis='both', labelsize=8)
-        sns.despine(ax=ax)
-        self._pub_panel_label(ax, labels_panel[1])
-
-        # ---- (c) Baseline K vs ΔK% — hexbin + LOWESS ----
-        ax = axes[1, 0]
-        bs_k = valid[col_K_bs]
-        dk_pct = valid['K_um_pct'].clip(-200, 500)
-
-        # Hexbin density background
-        hb = ax.hexbin(bs_k, dk_pct, gridsize=30, cmap='YlOrRd', mincnt=1)
-        cb = plt.colorbar(hb, ax=ax, shrink=0.8, pad=0.02)
-        cb.set_label('Count', fontsize=7, fontweight='bold')
-        cb.ax.tick_params(labelsize=6)
-        ax.axhline(0, color='black', linestyle='--', linewidth=1)
-
-        # LOWESS smooth curve
-        from statsmodels.nonparametric.smoothers_lowess import lowess
-        smooth = lowess(dk_pct.values, bs_k.values, frac=0.3, it=3)
-        ax.plot(smooth[:, 0], smooth[:, 1], '-', color='black', linewidth=2,
-                label='LOWESS')
-        ax.legend(fontsize=6, loc='upper right')
-
-        ax.set_xlabel('Baseline $K$ (BS, $\\mu m^{-2}$)', fontweight='bold')
-        ax.set_ylabel('$\\Delta K$ (%)', fontweight='bold')
-        ax.set_title('Baseline $K$ vs Improvement', fontweight='bold', fontsize=10, pad=4)
-        ax.tick_params(axis='both', labelsize=8)
-        self._pub_panel_label(ax, labels_panel[2])
-
-        # ---- (d) K vs CD — hexbin density (all data) ----
-        ax = axes[1, 1]
-        merged = self.df[['K_um', 'CD_calc', 'group']].dropna()
-
-        hb = ax.hexbin(merged['CD_calc'], merged['K_um'], gridsize=30,
-                        cmap='YlOrRd', mincnt=1)
-        cb = plt.colorbar(hb, ax=ax, shrink=0.8, pad=0.02)
-        cb.set_label('Count', fontsize=7, fontweight='bold')
-        cb.ax.tick_params(labelsize=6)
-
-        ax.text(0.05, 0.95, f'n = {len(merged)}',
-                transform=ax.transAxes, fontsize=7, fontweight='bold',
-                va='top', ha='left',
-                bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
-                          edgecolor='black', alpha=0.9))
-
-        ax.set_xlabel('CD (cells/mm$^2$)', fontweight='bold')
-        ax.set_ylabel('$K$ ($\\mu m^{-2}$)', fontweight='bold')
-        ax.set_title('$K$ vs CD (all images)', fontweight='bold', fontsize=10, pad=4)
-        ax.tick_params(axis='both', labelsize=8)
-        self._pub_panel_label(ax, labels_panel[3])
-
-        plt.tight_layout(pad=0.8, h_pad=1.5, w_pad=0.8)
-        if save:
-            self._pub_save(fig, 'fig6_K_independence')
-        plt.show()
-
-    # ==================================================================
-    # COMPREHENSIVE FIGURE: K + METRICS + INDEPENDENCE (4×3)
-    # ==================================================================
-
-    def pub_comprehensive(self, gr_data=None, save=None, k_metric='K_ds_um'):
-        """Publication-ready Figure 3: K analysis with quadrant and conditional analysis.
-
-        Layout:
-          Top row:
-            Col 1: (a) g(r) + Dg(r) + g''(r)
-            Col 2: (b) Paired K scatter + improvement bars | (c) Correlation matrix
-            Col 3: (d) K vs CD + boxplots | (e) Forest plot
-          Bottom row:
-            (f) DK vs DCD + pie | (g) DK vs DHEX + pie | (h) Homeostatic setpoint
-
-        Parameters
-        ----------
-        gr_data : dict, optional
-            {'r': array, 'bs_curves': array, 'as_curves': array, 'pixel_size': float}
-            If None, auto-loaded from NPZ if available.
-        k_metric : str
-            Which K column to use: 'K_ds_um', 'K_um', etc.
-        """
-        if gr_data is None:
-            gr_data = self.gr_data
-        import matplotlib.gridspec as gridspec
-        from scipy.stats import ttest_rel, spearmanr, pearsonr
-        from scipy.ndimage import uniform_filter1d
-        from numpy import gradient as np_gradient
-        from numpy.polynomial.polynomial import polyfit
-        from matplotlib.patches import Rectangle, ConnectionPatch
-
-        try:
-            from statsmodels.nonparametric.smoothers_lowess import lowess
-        except ImportError:
-            lowess = None
-
-        self._pub_style()
-        save = save if save is not None else self.save
-
-        col_K = k_metric
-        paired = self.paired.copy()
-        plot_data = self.df[self.df['group'].isin(['AS', 'BS'])]
-        n_pairs = len(paired)
-        c_bs, c_as = COLORS['BS'], COLORS['AS']
-
-        # --- Paired deltas ---
-        dk = paired[f'{col_K}_AS'].values - paired[f'{col_K}_BS'].values
-        dcd = paired['CD_calc_AS'].values - paired['CD_calc_BS'].values
-        dhex = paired['HEX_calc_AS'].values - paired['HEX_calc_BS'].values
-        dcv = paired['CV_calc_AS'].values - paired['CV_calc_BS'].values
-        dave = paired['Ave_calc_AS'].values - paired['Ave_calc_BS'].values
-        dr0 = paired['r_0_um_AS'].values - paired['r_0_um_BS'].values
-
-        dk_pct = dk / paired[f'{col_K}_BS'].values * 100
-        dcd_pct = dcd / paired['CD_calc_BS'].values * 100
-        dhex_pct = dhex / paired['HEX_calc_BS'].values * 100
-
-        # --- Helpers ---
-        def _clip(x, y, pct=2):
-            xlo, xhi = np.percentile(x, [pct, 100-pct])
-            ylo, yhi = np.percentile(y, [pct, 100-pct])
-            m = (x >= xlo) & (x <= xhi) & (y >= ylo) & (y <= yhi)
-            return x[m], y[m], m
-
-        def _quad_scatter(ax, x_pct, y_pct, x_label, y_label, highlight_pair):
-            ax.scatter(x_pct, y_pct, s=3, c='#999', alpha=0.25, edgecolors='none')
-            q_tl = (y_pct > 0) & (x_pct < 0)
-            q_tr = (y_pct > 0) & (x_pct > 0)
-            q_bl = (y_pct < 0) & (x_pct < 0)
-            q_br = (y_pct < 0) & (x_pct > 0)
-            h1, h2 = highlight_pair
-            qmap = {'tl': q_tl, 'tr': q_tr, 'bl': q_bl, 'br': q_br}
-            ax.scatter(x_pct[qmap[h1]], y_pct[qmap[h1]], s=4, c='#E65100', alpha=0.4, edgecolors='none')
-            ax.scatter(x_pct[qmap[h2]], y_pct[qmap[h2]], s=4, c='#1565C0', alpha=0.4, edgecolors='none')
-            ax.axhline(0, color='black', linewidth=0.5, linestyle=':')
-            ax.axvline(0, color='black', linewidth=0.5, linestyle=':')
-            x_s = x_label.replace('D', '').replace('d', '')
-            quad_info = [('tl', q_tl, 'I', 0.03, 0.97, 'left', 'top'),
-                         ('tr', q_tr, 'II', 0.97, 0.97, 'right', 'top'),
-                         ('bl', q_bl, 'III', 0.03, 0.03, 'left', 'bottom'),
-                         ('br', q_br, 'IV', 0.97, 0.03, 'right', 'bottom')]
-            dir_map = {'tl': ('K+ ', '-'), 'tr': ('K+ ', '+'), 'bl': ('K- ', '-'), 'br': ('K- ', '+')}
-            quad_colors = {}
-            for key, q, num, px, py, ha, va in quad_info:
-                col = '#E65100' if key == h1 else ('#1565C0' if key == h2 else '#888')
-                quad_colors[key] = col
-                kd, xd = dir_map[key]
-                ax.text(px, py, f'{num}. {kd}{x_s}{xd}\n{q.sum()}', transform=ax.transAxes,
-                        fontsize=4.5, ha=ha, va=va, color=col, fontweight='bold')
-            rho, pval = spearmanr(x_pct, y_pct)
-            ax.text(0.5, 0.03, f'rho={rho:.2f} (p={pval:.0e})', transform=ax.transAxes,
-                    fontsize=5, ha='center', va='bottom', fontweight='bold')
-            ax.set_xlabel(f'{x_label} (%)', fontsize=7)
-            ax.set_ylabel(f'{y_label} (%)', fontsize=7)
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            # Pie inset
-            pie_order = ['tl', 'tr', 'br', 'bl']
-            counts = [qmap[k].sum() for k in pie_order]
-            pie_cols = [quad_colors[k] for k in pie_order]
-            pie_nums = ['I', 'II', 'IV', 'III']
-            ax_pie = ax.inset_axes([0.60, 0.60, 0.38, 0.38])
-            wedges, _ = ax_pie.pie(counts, colors=pie_cols, startangle=90,
-                                    wedgeprops=dict(linewidth=0.5, edgecolor='white', alpha=0.8))
-            ax_pie.set_aspect('equal')
-            total = sum(counts)
-            for wedge, cnt, num in zip(wedges, counts, pie_nums):
-                angle = (wedge.theta2 + wedge.theta1) / 2
-                pct = 100 * cnt / total
-                xp = 0.55 * np.cos(np.radians(angle))
-                yp = 0.55 * np.sin(np.radians(angle))
-                if pct > 8:
-                    ax_pie.text(xp, yp, f'{num}\n{pct:.0f}%', ha='center', va='center',
-                                fontsize=3.5, fontweight='bold', color='white')
-
-        # =====================================================================
-        # FIGURE
-        # =====================================================================
-        fig_w = 190 / 25.4
-        fig_h = 220 / 25.4
-        fig = plt.figure(figsize=(fig_w, fig_h))
-        gs_main = gridspec.GridSpec(2, 3, figure=fig,
-                                    height_ratios=[1.2, 0.55],
-                                    hspace=0.15, wspace=0.35,
-                                    left=0.07, right=0.97, top=0.97, bottom=0.04)
-
-        # ===== (a) g(r) — 3 sub-rows =====
-        gs_a = gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=gs_main[0, 0],
-                                                 hspace=0.25, height_ratios=[0.7, 0.5, 0.5])
-        if gr_data is not None:
-            pixel_size = gr_data.get('pixel_size', 0.58)
-            r = gr_data['r'] * pixel_size
-            bs_curves = gr_data['bs_curves']
-            as_curves = gr_data['as_curves']
-            bs_mean = np.mean(bs_curves, axis=0)
-            as_mean = np.mean(as_curves, axis=0)
-            bs_std = np.std(bs_curves, axis=0)
-            as_std = np.std(as_curves, axis=0)
-
-            r_min_z, r_max_z = 10, 30
-            mask_peak = (r >= r_min_z) & (r <= r_max_z)
-            r_z = r[mask_peak]
-
-            # a1: full g(r)
-            ax_a1 = fig.add_subplot(gs_a[0])
-            ax_a1.fill_between(r, bs_mean - bs_std, bs_mean + bs_std, color=c_bs, alpha=0.12)
-            ax_a1.fill_between(r, as_mean - as_std, as_mean + as_std, color=c_as, alpha=0.12)
-            ax_a1.plot(r, bs_mean, color=c_bs, linewidth=1.5, label=f'BS (n={len(bs_curves)})')
-            ax_a1.plot(r, as_mean, color=c_as, linewidth=1.5, label=f'AS (n={len(as_curves)})')
-            ax_a1.axhline(1.0, color='gray', linewidth=0.5, linestyle='--')
-            ax_a1.set_ylabel('g(r)', fontsize=7)
-            ax_a1.set_xlabel('r (um)', fontsize=6)
-            ax_a1.set_title('(a) Population g(r)', fontsize=8)
-            ax_a1.legend(fontsize=5, loc='upper right')
-            ax_a1.spines['top'].set_visible(False)
-            ax_a1.spines['right'].set_visible(False)
-
-            y_lo_box = min(bs_mean[mask_peak].min(), as_mean[mask_peak].min()) - 0.05
-            y_hi_box = max(bs_mean[mask_peak].max(), as_mean[mask_peak].max()) + 0.05
-            rect = Rectangle((r_min_z, y_lo_box), r_max_z - r_min_z, y_hi_box - y_lo_box,
-                              linewidth=1, edgecolor='#999', facecolor='#f0f0f0', alpha=0.15, linestyle='--')
-            ax_a1.add_patch(rect)
-
-            # a2: Dg(r)
-            ax_a2 = fig.add_subplot(gs_a[1])
-            delta_smooth = uniform_filter1d(as_mean - bs_mean, size=5)
-            n_boot = 1000
-            boot_d = np.zeros((n_boot, len(r)))
-            for b in range(n_boot):
-                bs_s = bs_curves[np.random.choice(len(bs_curves), len(bs_curves), replace=True)]
-                as_s = as_curves[np.random.choice(len(as_curves), len(as_curves), replace=True)]
-                boot_d[b] = uniform_filter1d(np.mean(as_s, 0) - np.mean(bs_s, 0), size=5)
-            ci_lo_a = np.percentile(boot_d, 2.5, axis=0)
-            ci_hi_a = np.percentile(boot_d, 97.5, axis=0)
-            ax_a2.fill_between(r_z, ci_lo_a[mask_peak], ci_hi_a[mask_peak], color='#ddd', alpha=0.5)
-            ax_a2.plot(r_z, delta_smooth[mask_peak], color='#333', linewidth=1.2)
-            ax_a2.axhline(0, color='black', linewidth=0.4, linestyle='--')
-            sig_pos = ci_lo_a[mask_peak] > 0
-            sig_neg = ci_hi_a[mask_peak] < 0
-            if sig_pos.any():
-                ax_a2.fill_between(r_z, ci_lo_a[mask_peak], ci_hi_a[mask_peak], where=sig_pos, color=c_as, alpha=0.4)
-            if sig_neg.any():
-                ax_a2.fill_between(r_z, ci_lo_a[mask_peak], ci_hi_a[mask_peak], where=sig_neg, color=c_bs, alpha=0.4)
-            ax_a2.set_ylabel('Dg(r)', fontsize=6)
-            ax_a2.set_xlim(r_min_z, r_max_z)
-            ax_a2.set_xticklabels([])
-            ax_a2.spines['top'].set_visible(False)
-            ax_a2.spines['right'].set_visible(False)
-            ax_a2.tick_params(axis='both', labelsize=5)
-            ax_a2.text(0.02, 0.95, 'AS - BS', transform=ax_a2.transAxes, fontsize=5,
-                       va='top', fontstyle='italic', color='#555')
-            con = ConnectionPatch(xyA=(r_min_z, y_lo_box), coordsA=ax_a1.transData,
-                                  xyB=(r_min_z, ax_a2.get_ylim()[1]), coordsB=ax_a2.transData,
-                                  arrowstyle='->', color='#999', linewidth=0.8, linestyle='--')
-            fig.add_artist(con)
-
-            # a3: g''(r)
-            ax_a3 = fig.add_subplot(gs_a[2])
-            bs_sm = uniform_filter1d(bs_mean, size=7)
-            as_sm = uniform_filter1d(as_mean, size=7)
-            dr = np.mean(np.diff(r)) if len(r) > 1 else 1
-            bs_d2 = np_gradient(np_gradient(bs_sm, dr), dr)
-            as_d2 = np_gradient(np_gradient(as_sm, dr), dr)
-            mask_curv = (r >= 16) & (r <= 21)
-            r_curv = r[mask_curv]
-            ax_a3.plot(r_curv, bs_d2[mask_curv], color=c_bs, linewidth=1.2, label='BS')
-            ax_a3.plot(r_curv, as_d2[mask_curv], color=c_as, linewidth=1.2, label='AS')
-            ax_a3.axhline(0, color='black', linewidth=0.4, linestyle='--')
-            peak_idx = np.argmax(bs_sm[mask_peak]) + np.where(mask_peak)[0][0]
-            ax_a3.axvline(r[peak_idx], color='#999', linewidth=0.4, linestyle=':')
-            ax_a3.set_xlim(16, 21)
-            ax_a3.set_xlabel('r (um)', fontsize=7)
-            ax_a3.set_ylabel("g''(r)", fontsize=6)
-            ax_a3.legend(fontsize=4, loc='lower right')
-            ax_a3.spines['top'].set_visible(False)
-            ax_a3.spines['right'].set_visible(False)
-            ax_a3.tick_params(axis='both', labelsize=5)
-            ax_a3.text(0.02, 0.95, 'curvature', transform=ax_a3.transAxes, fontsize=5,
-                       va='top', fontstyle='italic', color='#555')
-
-        # ===== Column 2: (b) Paired K + bars, (c) Corr matrix =====
-        gs_bc = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs_main[0, 1], hspace=0.12)
-
-        # (b) Paired K scatter with bottom improvement bars
-        gs_b_outer = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs_bc[0],
-                                                       height_ratios=[4, 1], hspace=0.03)
-        ax_b = fig.add_subplot(gs_b_outer[0])
-        bs_k = paired[f'{col_K}_BS'].values
-        as_k = paired[f'{col_K}_AS'].values
-        bs_kc, as_kc, mask_kc = _clip(bs_k, as_k, pct=2)
-        dcd_p = paired['CD_calc_AS'].values - paired['CD_calc_BS'].values
-        dcd_cl = dcd_p[mask_kc]
-        cd_dn, cd_up_m = dcd_cl < 0, dcd_cl >= 0
-        ax_b.scatter(bs_kc[cd_up_m], as_kc[cd_up_m], s=4, c=c_bs, alpha=0.25,
-                     edgecolors='none', label=f'CD+ ({cd_up_m.sum()})')
-        ax_b.scatter(bs_kc[cd_dn], as_kc[cd_dn], s=4, c=c_as, alpha=0.25,
-                     edgecolors='none', label=f'CD- ({cd_dn.sum()})')
-        lim_k = max(bs_kc.max(), as_kc.max()) * 1.05
-        ax_b.plot([0, lim_k], [0, lim_k], 'k--', linewidth=0.5, alpha=0.4)
-        ax_b.set_ylabel('AS -- K (um$^{-2}$)', fontsize=7)
-        ax_b.set_title('(b) Paired K scatter', fontsize=8)
-        ax_b.legend(fontsize=4, loc='upper left')
-        ax_b.set_box_aspect(1)
-        ax_b.set_xticklabels([])
-        ax_b.spines['top'].set_visible(False)
-        ax_b.spines['right'].set_visible(False)
-        above = as_kc > bs_kc
-        ax_b.text(0.95, 0.05, f'K+ : {above.sum()} ({100*above.mean():.0f}%)',
-                  transform=ax_b.transAxes, fontsize=5, ha='right', va='bottom',
-                  color=c_as, fontweight='bold')
-
-        # Bottom bars: % improved by baseline K
-        ax_b_bot = fig.add_subplot(gs_b_outer[1], sharex=ax_b)
-        n_bins = 15
-        bin_edges = np.linspace(bs_kc.min(), bs_kc.max(), n_bins + 1)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        bin_w = bin_edges[1] - bin_edges[0]
-        dk_vals = as_kc - bs_kc
-        frac_up = []
+    @staticmethod
+    def _marginal_phase(base, change, edges, min_n=3):
+        """Bin change by baseline, return bin midpoints and medians."""
+        n_bins = len(edges) - 1
+        mids, meds = [], []
         for i in range(n_bins):
-            mb = (bs_kc >= bin_edges[i]) & (bs_kc < bin_edges[i+1])
-            frac_up.append(100 * (dk_vals[mb] > 0).sum() / mb.sum() if mb.sum() > 0 else 50)
-        bar_cols = ['#E65100' if f > 55 else ('#1565C0' if f < 45 else '#aaa') for f in frac_up]
-        ax_b_bot.bar(bin_centers, frac_up, width=bin_w * 0.85,
-                     color=bar_cols, alpha=0.7, edgecolor='white', linewidth=0.3)
-        ax_b_bot.axhline(50, color='black', linewidth=0.6, linestyle='--', alpha=0.5)
-        ax_b_bot.set_xlabel('BS -- K (um$^{-2}$)', fontsize=7)
-        ax_b_bot.set_ylabel('% improved', fontsize=5)
-        ax_b_bot.set_xlim(0, lim_k)
-        ax_b_bot.set_ylim(0, 85)
-        ax_b_bot.set_yticks([0, 25, 50, 75])
-        ax_b_bot.set_yticklabels(['0', '25', '50', '75'], fontsize=4)
-        ax_b_bot.spines['top'].set_visible(False)
-        ax_b_bot.spines['right'].set_visible(False)
-        ax_b_bot.tick_params(axis='both', labelsize=5)
+            m = (base >= edges[i]) & (base < edges[i + 1]) if i < n_bins - 1 \
+                else (base >= edges[i]) & (base <= edges[i + 1])
+            mids.append((edges[i] + edges[i + 1]) / 2)
+            meds.append(np.median(change[m]) if m.sum() >= min_n else np.nan)
+        return np.array(mids), np.array(meds)
 
-        # (c) Correlation matrix
-        ax_c = fig.add_subplot(gs_bc[1])
-        deltas = pd.DataFrame({'DK': dk, 'DCD': dcd, 'DHEX': dhex, 'DCV': dcv, 'DAve': dave, 'Dr0': dr0})
-        corr = deltas.corr(method='spearman')
-        im = ax_c.imshow(corr.values, cmap='RdBu_r', vmin=-1, vmax=1, aspect='equal')
-        lc = corr.columns.tolist()
-        ax_c.set_xticks(range(len(lc)))
-        ax_c.set_xticklabels(lc, fontsize=5, rotation=45, ha='right')
-        ax_c.set_yticks(range(len(lc)))
-        ax_c.set_yticklabels(lc, fontsize=5)
-        ax_c.set_title('(c) Correlation matrix', fontsize=8)
-        for ii in range(len(lc)):
-            for jj in range(len(lc)):
-                v = corr.iloc[ii, jj]
-                ax_c.text(jj, ii, f'{v:.2f}', ha='center', va='center', fontsize=4.5,
-                          color='white' if abs(v) > 0.5 else 'black', fontweight='bold')
-        plt.colorbar(im, ax=ax_c, shrink=0.6, label='Spearman rho', pad=0.02)
+    @staticmethod
+    def _interp_safe(mids, meds):
+        """Safe 1D interpolation ignoring NaN bins."""
+        from scipy.interpolate import interp1d
+        ok = np.isfinite(meds)
+        if ok.sum() < 2:
+            return lambda x: np.full_like(np.atleast_1d(x), np.nan, dtype=float)
+        return interp1d(mids[ok], meds[ok], kind='linear', bounds_error=False,
+                        fill_value=(meds[ok][0], meds[ok][-1]))
 
-        # ===== Column 3: (d) K vs CD + boxplots, (e) Forest =====
-        gs_de = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs_main[0, 2],
-                                                  hspace=0.18, height_ratios=[1, 1.2])
+    @staticmethod
+    def _density_mask(X_g, Y_g, x_bs, y_bs, min_neighbors=3, radius_frac=0.15):
+        """Mask grid points with too few nearby donors."""
+        rx = radius_frac * (x_bs.max() - x_bs.min())
+        ry = radius_frac * (y_bs.max() - y_bs.min())
+        mask = np.ones(X_g.shape, dtype=bool)
+        for i in range(X_g.shape[0]):
+            for j in range(X_g.shape[1]):
+                dist = ((x_bs - X_g[i, j]) / rx) ** 2 + ((y_bs - Y_g[i, j]) / ry) ** 2
+                if np.sum(dist < 1) < min_neighbors:
+                    mask[i, j] = False
+        return mask
 
-        # (d) K vs CD scatter + bottom boxplots
-        gs_d_outer = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs_de[0],
-                                                       height_ratios=[4, 1], hspace=0.03)
-        ax_d = fig.add_subplot(gs_d_outer[0])
+    def _compute_phase_field(self, x_bs, y_bs, dx, dy,
+                             n_bins=None, n_grid=None, n_shuf=500, seed=123):
+        """Compute null-subtracted phase field from paired baseline/change data."""
+        n = len(x_bs)
+        if n_bins is None:
+            n_bins = max(4, min(10, n // 4))
+        if n_grid is None:
+            n_grid = max(8, min(15, n // 3))
+        x_sd, y_sd = x_bs.std(), y_bs.std()
+        dx_z, dy_z = dx / x_sd, dy / y_sd
+        x_edges = np.percentile(x_bs, np.linspace(0, 100, n_bins + 1))
+        y_edges = np.percentile(y_bs, np.linspace(0, 100, n_bins + 1))
+        x_mids, dy_med = self._marginal_phase(x_bs, dy_z, x_edges)
+        y_mids, dx_med = self._marginal_phase(y_bs, dx_z, y_edges)
+        np.random.seed(seed)
+        n = len(x_bs)
+        dy_null = np.zeros((n_shuf, len(x_mids)))
+        dx_null = np.zeros((n_shuf, len(y_mids)))
+        for s in range(n_shuf):
+            _, dy_null[s] = self._marginal_phase(
+                x_bs[np.random.permutation(n)], dy_z, x_edges)
+            _, dx_null[s] = self._marginal_phase(
+                y_bs[np.random.permutation(n)], dx_z, y_edges)
+        dy_ex = dy_med - np.nanmean(dy_null, 0)
+        dx_ex = dx_med - np.nanmean(dx_null, 0)
+        f_dy = self._interp_safe(x_mids, dy_ex)
+        f_dx = self._interp_safe(y_mids, dx_ex)
+        x_grid = np.linspace(x_mids[0], x_mids[-1], n_grid)
+        y_grid = np.linspace(y_mids[0], y_mids[-1], n_grid)
+        X_g, Y_g = np.meshgrid(x_grid, y_grid)
+        return dict(x_bs=x_bs, y_bs=y_bs, x_sd=x_sd, y_sd=y_sd,
+                    x_mids=x_mids, y_mids=y_mids,
+                    dy_ex=dy_ex, dx_ex=dx_ex,
+                    X_g=X_g, K_g=Y_g,
+                    U=f_dx(Y_g), V=f_dy(X_g),
+                    f_dy=f_dy, f_dx=f_dx)
+
+    # ==================================================================
+    # COLLECTIVE ORDER — PANEL PLOTTING HELPERS
+    # ==================================================================
+
+    def _fig4_panel_label(self, ax, label):
+        """Place a bold panel label (a, b, c, ...) at the top-left of axes."""
+        ax.text(-0.06, 1.05, label, transform=ax.transAxes,
+                fontweight='bold', fontsize=10, va='bottom', ha='left')
+
+    def _fig4_panel_a(self, fig, subplot_spec, paired, col_K):
+        """Panel a: K_ds vs CD scatter with boxplots below."""
+        gs_inner = gridspec.GridSpecFromSubplotSpec(
+            2, 1, subplot_spec=subplot_spec, height_ratios=[4, 1], hspace=0.03)
+        ax = fig.add_subplot(gs_inner[0])
+        ax_bot = fig.add_subplot(gs_inner[1], sharex=ax)
+        C_BS, C_AS = '#4A90D9', '#E8833A'
+
         bs_cd = paired['CD_calc_BS'].values
         bs_kv = paired[f'{col_K}_BS'].values
         as_cd = paired['CD_calc_AS'].values
@@ -1376,257 +840,26 @@ class cornealia_batch_plotter:
         all_kv = np.concatenate([bs_kv, as_kv])
         cd_lo, cd_hi = np.percentile(all_cd, [2, 98])
         kv_lo, kv_hi = np.percentile(all_kv, [2, 98])
-        m_all = (all_cd >= cd_lo) & (all_cd <= cd_hi) & (all_kv >= kv_lo) & (all_kv <= kv_hi)
-        m_bs = (bs_cd >= cd_lo) & (bs_cd <= cd_hi) & (bs_kv >= kv_lo) & (bs_kv <= kv_hi)
-        m_as = (as_cd >= cd_lo) & (as_cd <= cd_hi) & (as_kv >= kv_lo) & (as_kv <= kv_hi)
-        ax_d.scatter(bs_cd[m_bs], bs_kv[m_bs], s=3, c=c_bs, alpha=0.15, edgecolors='none', label='BS')
-        ax_d.scatter(as_cd[m_as], as_kv[m_as], s=3, c=c_as, alpha=0.15, edgecolors='none', label='AS')
-        coeffs = polyfit(all_cd[m_all], all_kv[m_all], 1)
-        x_fit = np.linspace(cd_lo, cd_hi, 100)
-        ax_d.plot(x_fit, coeffs[0] + coeffs[1] * x_fit, 'k--', linewidth=0.8, alpha=0.5)
-        r_val, _ = pearsonr(all_cd[m_all], all_kv[m_all])
-        ax_d.text(0.95, 0.05, f'R$^2$={r_val**2:.2f}', transform=ax_d.transAxes,
-                  fontsize=6, ha='right', va='bottom', fontweight='bold', color='#555')
-        ax_d.set_ylabel('K_ds (um$^{-2}$)', fontsize=7)
-        ax_d.set_title('(d) K vs CD', fontsize=8)
-        ax_d.set_xticklabels([])
-        ax_d.legend(fontsize=5, loc='upper left', markerscale=3)
-        ax_d.spines['top'].set_visible(False)
-        ax_d.spines['right'].set_visible(False)
-
-        ax_d_bot = fig.add_subplot(gs_d_outer[1], sharex=ax_d)
-        n_bins_d = 10
-        bed = np.linspace(cd_lo, cd_hi, n_bins_d + 1)
-        bcd = (bed[:-1] + bed[1:]) / 2
-        bw = bed[1] - bed[0]
-        cd_c, kv_c = all_cd[m_all], all_kv[m_all]
-        box_data, box_pos = [], []
-        for i in range(n_bins_d):
-            mb = (cd_c >= bed[i]) & (cd_c < bed[i+1])
-            if mb.sum() > 3:
-                box_data.append(kv_c[mb])
-                box_pos.append(bcd[i])
-        if box_data:
-            bp = ax_d_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6,
-                                   patch_artist=True, showfliers=False,
-                                   medianprops=dict(color='#E65100', linewidth=1),
-                                   whiskerprops=dict(color='#888', linewidth=0.6),
-                                   capprops=dict(color='#888', linewidth=0.6))
-            for patch in bp['boxes']:
-                patch.set_facecolor('#FFE0B2')
-                patch.set_edgecolor('#888')
-                patch.set_linewidth(0.5)
-                patch.set_alpha(0.8)
-        ax_d_bot.set_xlabel('CD (x1000 cells/mm$^2$)', fontsize=6)
-        ax_d_bot.set_ylabel('K range', fontsize=5)
-        ax_d_bot.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:.1f}'))
-        ax_d_bot.spines['top'].set_visible(False)
-        ax_d_bot.spines['right'].set_visible(False)
-        ax_d_bot.tick_params(axis='both', labelsize=4)
-        ax_d_bot.text(0.03, 0.92, 'Same CD, different K', transform=ax_d_bot.transAxes,
-                      fontsize=4, va='top', fontstyle='italic', color='#555')
-
-        # (e) Forest plot
-        ax_e = fig.add_subplot(gs_de[1])
-        metrics_forest = [
-            (col_K, '$K_{ds}$'), ('CD_calc', 'CD'), ('HEX_calc', 'HEX'),
-            ('Ave_calc', 'Ave'), ('CV_calc', 'CV'), ('r_0_um', '$r_0$'),
-        ]
-        y_pos = np.array([3.2, 2.5, 2.0, 1.5, 1.0, 0.5])
-        ax_e.axhspan(0.1, 2.8, color='#f0f0f0', alpha=0.5, zorder=0)
-        ax_e.text(0.02, 0.62, 'Classical metrics', transform=ax_e.transAxes,
-                  fontsize=5, color='#999', fontstyle='italic', va='top', ha='left')
-        k_ds_pct_val = None
-        for idx, (col, label) in enumerate(metrics_forest):
-            bs_v = paired[f'{col}_BS'].values
-            as_v = paired[f'{col}_AS'].values
-            pct_ch = (as_v - bs_v) / bs_v * 100
-            mean_p = np.mean(pct_ch)
-            se = np.std(pct_ch) / np.sqrt(len(pct_ch))
-            ci_l, ci_h = mean_p - 1.96 * se, mean_p + 1.96 * se
-            _, p_t = ttest_rel(as_v, bs_v)
-            sig = '***' if p_t < 0.001 else '**' if p_t < 0.01 else '*' if p_t < 0.05 else 'n.s.'
-            y = y_pos[idx]
-            clr = '#E65100' if mean_p > 0 else '#1565C0'
-            ax_e.plot([ci_l, ci_h], [y, y], color=clr, linewidth=2 if idx == 0 else 1.5, solid_capstyle='round')
-            ax_e.plot(mean_p, y, 'o', color=clr, markersize=6 if idx == 0 else 5,
-                      markeredgecolor='white', markeredgewidth=0.5)
-            ax_e.text(ci_h + 0.3, y, f'{mean_p:+.1f}% {sig}', va='center', fontsize=6,
-                      fontweight='bold', color=clr)
-            if idx == 0:
-                k_ds_pct_val = abs(mean_p)
-            elif k_ds_pct_val and abs(mean_p) > 0.01:
-                ratio = k_ds_pct_val / abs(mean_p)
-                if ratio > 1.5:
-                    ax_e.text(mean_p, y - 0.3, f'{ratio:.1f}x', va='top', ha='center',
-                              fontsize=4.5, color='#888', fontstyle='italic')
-        ax_e.axvline(0, color='black', linewidth=0.8, linestyle='-')
-        ax_e.set_yticks(y_pos)
-        ax_e.set_yticklabels([m[1] for m in metrics_forest], fontsize=7, fontweight='bold')
-        ax_e.set_ylim(0.0, 3.6)
-        ax_e.set_xlabel('Change AS vs BS (%)', fontsize=7)
-        ax_e.set_title('(e) Paired % change (95% CI)', fontsize=7, pad=-10)
-        ax_e.spines['top'].set_visible(False)
-        ax_e.spines['right'].set_visible(False)
-        ax_e.spines['left'].set_visible(False)
-        ax_e.tick_params(axis='y', length=0)
-
-        # ===== Bottom row =====
-        # (f) DK vs DCD
-        ax_f = fig.add_subplot(gs_main[1, 0])
-        dcd_c, dk_c, _ = _clip(dcd_pct, dk_pct, pct=2)
-        _quad_scatter(ax_f, dcd_c, dk_c, 'DCD', 'DK', ('tl', 'br'))
-        ax_f.set_title('(f) DK vs DCD', fontsize=8)
-        ax_f.set_box_aspect(1)
-
-        # (g) DK vs DHEX
-        ax_g = fig.add_subplot(gs_main[1, 1])
-        dhex_c, dk_e, _ = _clip(dhex_pct, dk_pct, pct=2)
-        _quad_scatter(ax_g, dhex_c, dk_e, 'DHEX', 'DK', ('tr', 'bl'))
-        ax_g.set_title('(g) DK vs DHEX', fontsize=8)
-        ax_g.set_box_aspect(1)
-
-        # (h) Homeostatic setpoint
-        ax_h = fig.add_subplot(gs_main[1, 2])
-        bs_kv_h = paired[f'{col_K}_BS'].values
-        dk_pct_h = dk_pct.clip(-200, 500)
-        hb2 = ax_h.hexbin(bs_kv_h, dk_pct_h, gridsize=20, cmap='YlOrRd', mincnt=1)
-        if lowess is not None:
-            si = np.argsort(bs_kv_h)
-            lw_fit = lowess(dk_pct_h[si], bs_kv_h[si], frac=0.3)
-            ax_h.plot(lw_fit[:, 0], lw_fit[:, 1], '-', color='#E65100', linewidth=2.5, label='LOWESS', zorder=3)
-            crossings = np.where(np.diff(np.sign(lw_fit[:, 1])))[0]
-            if len(crossings) > 0:
-                sp = lw_fit[crossings[0], 0]
-                ax_h.axvline(sp, color='#0072B2', linewidth=2.0, linestyle='--',
-                             alpha=0.8, zorder=2, label=f'K* ≈ {sp:.3f}')
-                ax_h.text(sp, ax_h.get_ylim()[1] * 0.85, f'K* = {sp:.3f}',
-                          fontsize=7, fontweight='bold', color='#0072B2',
-                          ha='left', va='top',
-                          bbox=dict(boxstyle='round,pad=0.2', facecolor='white',
-                                    alpha=0.8, edgecolor='none'))
-        ax_h.axhline(0, color='black', linewidth=0.5, linestyle='--')
-        ax_h.set_xlabel('Baseline K$_{ds}$ (µm$^{-2}$)', fontsize=8)
-        ax_h.set_ylabel('$\\Delta$K (%)', fontsize=8)
-        ax_h.set_title('(h) Homeostatic setpoint', fontsize=8)
-        ax_h.legend(fontsize=5, loc='upper right', framealpha=0.8)
-        plt.colorbar(hb2, ax=ax_h, shrink=0.7, label='Count')
-        ax_h.spines['top'].set_visible(False)
-        ax_h.spines['right'].set_visible(False)
-        ax_h.set_box_aspect(1)
-
-        if save:
-            self._pub_save(fig, f'fig_comprehensive_{k_metric}')
-        plt.show()
-
-    # ==================================================================
-    # COLLECTIVE ORDER FIGURE (Fig 4)
-    # Row 1: (a) K vs CD, (b) DK vs DCD, (c) DK vs DHEX
-    # Row 2: (d) g(r) stack, (e) Paired scatter, (f) Forest plot
-    # Row 3: (g) Homeostatic setpoint, (h) Convergence arrows
-    # ==================================================================
-
-    def pub_collective_order(self, gr_data=None, save=None):
-        """
-        Publication Figure 4 — Collective order analysis.
-
-        Parameters
-        ----------
-        gr_data : dict, optional
-            {'r': array, 'bs_curves': 2D array, 'as_curves': 2D array, 'pixel_size': float}
-            If None, auto-loaded from NPZ if available.
-        """
-        if gr_data is None:
-            gr_data = self.gr_data
-        save = save if save is not None else self.save
-        self._pub_style()
-
-        from scipy.stats import ttest_rel, spearmanr, pearsonr
-        from numpy.polynomial.polynomial import polyfit
-        from matplotlib.lines import Line2D
-
-        paired = self.paired
-        col_K = 'K_ds_um'
-        C_BS, C_AS = '#4A90D9', '#E8833A'
-        C_B1, C_B2 = '#882255', '#009E73'
-        C_C1, C_C2 = '#332288', '#DDCC77'
-        C_E1, C_E2 = '#CC3311', '#117733'
-
-        fig_w = 190 / 25.4
-        fig_h = 250 / 25.4
-        fig = plt.figure(figsize=(fig_w, fig_h))
-
-        gs_row1 = fig.add_gridspec(1, 3, left=0.09, right=0.97, top=0.97, bottom=0.82, wspace=0.35)
-        gs_row2 = fig.add_gridspec(1, 3, left=0.09, right=0.97, top=0.74, bottom=0.40, wspace=0.35)
-        gs_row3 = fig.add_gridspec(1, 2, width_ratios=[1.2, 1.2],
-                                    left=0.09, right=0.97, top=0.32, bottom=0.03, wspace=0.12)
-
-        def _clip_pct(x, y, pct=2):
-            xlo, xhi = np.percentile(x, [pct, 100-pct])
-            ylo, yhi = np.percentile(y, [pct, 100-pct])
-            m = (x >= xlo) & (x <= xhi) & (y >= ylo) & (y <= yhi)
-            return x[m], y[m], m
-
-        def _quad_scatter(ax, x_pct, y_pct, x_label, y_label, highlight_pair, label, colors=None):
-            c1, c2 = colors if colors else ('#882255', '#009E73')
-            ax.scatter(x_pct, y_pct, s=3, c='#999', alpha=0.20, edgecolors='none')
-            q_tl = (y_pct > 0) & (x_pct < 0)
-            q_tr = (y_pct > 0) & (x_pct > 0)
-            q_bl = (y_pct < 0) & (x_pct < 0)
-            q_br = (y_pct < 0) & (x_pct > 0)
-            h1, h2 = highlight_pair
-            qmap = {'tl': q_tl, 'tr': q_tr, 'bl': q_bl, 'br': q_br}
-            ax.scatter(x_pct[qmap[h1]], y_pct[qmap[h1]], s=4, c=c1, alpha=0.35, edgecolors='none')
-            ax.scatter(x_pct[qmap[h2]], y_pct[qmap[h2]], s=4, c=c2, alpha=0.35, edgecolors='none')
-            ax.axhline(0, color='black', linewidth=0.5, linestyle=':')
-            ax.axvline(0, color='black', linewidth=0.5, linestyle=':')
-            x_s = x_label.replace('\u0394', '')
-            total = len(x_pct)
-            dir_map = {'tl': ('K+', '-'), 'tr': ('K+', '+'), 'bl': ('K-', '-'), 'br': ('K-', '+')}
-            for key, q, num, px, py, ha, va in [
-                ('tl', q_tl, 'I',  0.03, 0.97, 'left',  'top'),
-                ('tr', q_tr, 'II', 0.97, 0.97, 'right', 'top'),
-                ('bl', q_bl, 'III',0.03, 0.03, 'left',  'bottom'),
-                ('br', q_br, 'IV', 0.97, 0.03, 'right', 'bottom'),
-            ]:
-                kd, xd = dir_map[key]
-                pct = 100 * q.sum() / total
-                ax.text(px, py, f'{num}. {kd} {x_s}{xd}\n{q.sum()} ({pct:.0f}%)',
-                        transform=ax.transAxes, fontsize=7, ha=ha, va=va, color='black', fontweight='bold')
-            rho, pval = spearmanr(x_pct, y_pct)
-            ax.text(0.65, 1.05, f'\u03c1={rho:.2f} (p={pval:.0e})', fontsize=7, ha='center', va='bottom',
-                    fontweight='bold', color='#333', transform=ax.transAxes,
-                    bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.7, edgecolor='none'), clip_on=False)
-            ax.set_xlabel(f'{x_label} (%)')
-            ax.set_ylabel(f'{y_label} (%)')
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            self._pub_panel_label(ax, label)
-
-        # ── Panel a: K vs CD ──
-        gs_a = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs_row1[0, 0], height_ratios=[4, 1], hspace=0.03)
-        ax_a = fig.add_subplot(gs_a[0])
-        ax_a_bot = fig.add_subplot(gs_a[1], sharex=ax_a)
-        bs_cd, bs_kv = paired['CD_calc_BS'].values, paired[f'{col_K}_BS'].values
-        as_cd, as_kv = paired['CD_calc_AS'].values, paired[f'{col_K}_AS'].values
-        all_cd, all_kv = np.concatenate([bs_cd, as_cd]), np.concatenate([bs_kv, as_kv])
-        cd_lo, cd_hi = np.percentile(all_cd, [2, 98])
-        kv_lo, kv_hi = np.percentile(all_kv, [2, 98])
         m_bs = (bs_cd >= cd_lo) & (bs_cd <= cd_hi) & (bs_kv >= kv_lo) & (bs_kv <= kv_hi)
         m_as = (as_cd >= cd_lo) & (as_cd <= cd_hi) & (as_kv >= kv_lo) & (as_kv <= kv_hi)
         m_all = (all_cd >= cd_lo) & (all_cd <= cd_hi) & (all_kv >= kv_lo) & (all_kv <= kv_hi)
-        ax_a.scatter(bs_cd[m_bs], bs_kv[m_bs], s=3, c=C_BS, alpha=0.15, edgecolors='none', label='BS')
-        ax_a.scatter(as_cd[m_as], as_kv[m_as], s=3, c=C_AS, alpha=0.15, edgecolors='none', label='AS')
+
+        ax.scatter(bs_cd[m_bs], bs_kv[m_bs], s=3, c=C_BS, alpha=0.15, edgecolors='none', label='BS')
+        ax.scatter(as_cd[m_as], as_kv[m_as], s=3, c=C_AS, alpha=0.15, edgecolors='none', label='AS')
         coeffs = polyfit(all_cd[m_all], all_kv[m_all], 1)
         x_fit = np.linspace(cd_lo, cd_hi, 100)
-        ax_a.plot(x_fit, coeffs[0] + coeffs[1] * x_fit, 'k--', linewidth=0.8, alpha=0.5)
+        ax.plot(x_fit, coeffs[0] + coeffs[1] * x_fit, 'k--', linewidth=0.8, alpha=0.5)
         r_val, _ = pearsonr(all_cd[m_all], all_kv[m_all])
-        ax_a.text(0.95, 0.05, f'R$^2$={r_val**2:.2f}', transform=ax_a.transAxes, fontsize=8, ha='right', va='bottom', fontweight='bold', color='#555')
-        ax_a.set_ylabel('K$_{ds}$ (\u00b5m$^{-2}$)')
-        ax_a.set_xticklabels([])
-        ax_a.legend(fontsize=7, loc='upper left', markerscale=3)
-        ax_a.spines['top'].set_visible(False); ax_a.spines['right'].set_visible(False)
-        self._pub_panel_label(ax_a, 'a')
+        ax.text(0.95, 0.05, f'R$^2$={r_val**2:.2f}', transform=ax.transAxes,
+                fontsize=8, ha='right', va='bottom', fontweight='bold', color='#555')
+        ax.set_ylabel('K$_{ds}$ (\u00b5m$^{-2}$)')
+        ax.set_xticklabels([])
+        ax.legend(fontsize=7, loc='upper left', markerscale=3)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        self._fig4_panel_label(ax, 'a')
+
+        # Boxplots below
         cd_c, kv_c = all_cd[m_all], all_kv[m_all]
         n_bins = 10
         bed = np.linspace(cd_lo, cd_hi, n_bins + 1)
@@ -1634,871 +867,600 @@ class cornealia_batch_plotter:
         bw = bed[1] - bed[0]
         box_data, box_pos = [], []
         for i in range(n_bins):
-            mb = (cd_c >= bed[i]) & (cd_c < bed[i+1])
+            mb = (cd_c >= bed[i]) & (cd_c < bed[i + 1])
             if mb.sum() > 3:
-                box_data.append(kv_c[mb]); box_pos.append(bcd[i])
+                box_data.append(kv_c[mb])
+                box_pos.append(bcd[i])
         if box_data:
-            bp = ax_a_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6, patch_artist=True, showfliers=False,
-                                  medianprops=dict(color='#E65100', linewidth=1), whiskerprops=dict(color='#888', linewidth=0.6),
-                                  capprops=dict(color='#888', linewidth=0.6))
+            bp = ax_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6,
+                                patch_artist=True, showfliers=False,
+                                medianprops=dict(color='#E65100', linewidth=1),
+                                whiskerprops=dict(color='#888', linewidth=0.6),
+                                capprops=dict(color='#888', linewidth=0.6))
             for patch in bp['boxes']:
-                patch.set_facecolor('#FFE0B2'); patch.set_edgecolor('#888'); patch.set_linewidth(0.5); patch.set_alpha(0.8)
-        ax_a_bot.set_xlabel('CD (cells/mm$^2$)')
-        ax_a_bot.set_ylabel('K range', fontsize=7)
-        ax_a_bot.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:.1f}k'))
-        ax_a_bot.tick_params(axis='x', rotation=45)
-        plt.setp(ax_a_bot.get_xticklabels(), ha='right')
-        ax_a_bot.spines['top'].set_visible(False); ax_a_bot.spines['right'].set_visible(False)
-        ax_a_bot.tick_params(axis='both', labelsize=7)
+                patch.set_facecolor('#FFE0B2')
+                patch.set_edgecolor('#888')
+                patch.set_linewidth(0.5)
+                patch.set_alpha(0.8)
+        ax_bot.set_xlabel('CD (cells/mm$^2$)')
+        ax_bot.set_ylabel('K range', fontsize=7)
+        ax_bot.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:.1f}k'))
+        ax_bot.tick_params(axis='x', rotation=45)
+        plt.setp(ax_bot.get_xticklabels(), ha='right')
+        ax_bot.spines['top'].set_visible(False)
+        ax_bot.spines['right'].set_visible(False)
+        ax_bot.tick_params(axis='both', labelsize=9)
+        for _idx, _lbl in enumerate(ax_bot.xaxis.get_ticklabels()):
+            if _idx % 2 != 0:
+                _lbl.set_visible(False)
 
-        # ── Panel b: DK vs DCD ──
-        ax_b = fig.add_subplot(gs_row1[0, 1])
-        dk = paired[f'{col_K}_AS'].values - paired[f'{col_K}_BS'].values
-        dcd = paired['CD_calc_AS'].values - paired['CD_calc_BS'].values
-        dk_pct = dk / paired[f'{col_K}_BS'].values * 100
-        dcd_pct = dcd / paired['CD_calc_BS'].values * 100
-        dcd_c, dk_c, _ = _clip_pct(dcd_pct, dk_pct, pct=2)
-        _quad_scatter(ax_b, dcd_c, dk_c, '\u0394CD', '\u0394K', ('tl', 'br'), 'b', colors=(C_B1, C_B2))
-        ax_b.set_box_aspect(1)
+    def _fig4_panel_b(self, fig, subplot_spec, paired, col_K):
+        """Panel b: K_ds vs HEX scatter with boxplots below."""
+        gs_inner = gridspec.GridSpecFromSubplotSpec(
+            2, 1, subplot_spec=subplot_spec, height_ratios=[4, 1], hspace=0.03)
+        ax = fig.add_subplot(gs_inner[0])
+        ax_bot = fig.add_subplot(gs_inner[1], sharex=ax)
+        C_BS, C_AS = '#4A90D9', '#E8833A'
 
-        # ── Panel c: DK vs DHEX ──
-        ax_c = fig.add_subplot(gs_row1[0, 2])
-        dhex = paired['HEX_calc_AS'].values - paired['HEX_calc_BS'].values
-        dhex_pct = dhex / paired['HEX_calc_BS'].values * 100
-        dhex_c, dk_c2, _ = _clip_pct(dhex_pct, dk_pct, pct=2)
-        _quad_scatter(ax_c, dhex_c, dk_c2, '\u0394HEX', '\u0394K', ('tr', 'bl'), 'c', colors=(C_C1, C_C2))
-        ax_c.set_box_aspect(1)
+        bs_hex = paired['HEX_calc_BS'].values
+        bs_kv = paired[f'{col_K}_BS'].values
+        as_hex = paired['HEX_calc_AS'].values
+        as_kv = paired[f'{col_K}_AS'].values
+        all_hex = np.concatenate([bs_hex, as_hex])
+        all_kv = np.concatenate([bs_kv, as_kv])
+        h_lo, h_hi = np.percentile(all_hex, [2, 98])
+        kv_lo, kv_hi = np.percentile(all_kv, [2, 98])
+        m_bs = (bs_hex >= h_lo) & (bs_hex <= h_hi) & (bs_kv >= kv_lo) & (bs_kv <= kv_hi)
+        m_as = (as_hex >= h_lo) & (as_hex <= h_hi) & (as_kv >= kv_lo) & (as_kv <= kv_hi)
+        m_all = (all_hex >= h_lo) & (all_hex <= h_hi) & (all_kv >= kv_lo) & (all_kv <= kv_hi)
 
-        # ── Panel d: g(r) with zoomed inset ──
-        ax_d = fig.add_subplot(gs_row2[0, 0])
-        if gr_data is not None:
-            from matplotlib.patches import Rectangle
-            from scipy.ndimage import uniform_filter1d
-            pixel_size = gr_data.get('pixel_size', 0.58)
-            r = gr_data['r'] * pixel_size
-            bs_curves, as_curves = gr_data['bs_curves'], gr_data['as_curves']
-            bs_mean, as_mean = np.mean(bs_curves, axis=0), np.mean(as_curves, axis=0)
-            bs_iqr_lo, bs_iqr_hi = np.percentile(bs_curves, 25, axis=0), np.percentile(bs_curves, 75, axis=0)
-            as_iqr_lo, as_iqr_hi = np.percentile(as_curves, 25, axis=0), np.percentile(as_curves, 75, axis=0)
-            r_start = 8
-            r_mask = r >= r_start
-            ax_d.fill_between(r[r_mask], bs_iqr_lo[r_mask], bs_iqr_hi[r_mask], color=C_BS, alpha=0.10)
-            ax_d.fill_between(r[r_mask], as_iqr_lo[r_mask], as_iqr_hi[r_mask], color=C_AS, alpha=0.10)
-            ax_d.plot(r[r_mask], bs_mean[r_mask], color=C_BS, linewidth=1.5, label=f'BS (n={len(bs_curves)})')
-            ax_d.plot(r[r_mask], as_mean[r_mask], color=C_AS, linewidth=1.5, label=f'AS (n={len(as_curves)})')
-            ax_d.set_xlim(r_start, r.max())
-            ax_d.set_xlabel('r (\u00b5m)'); ax_d.set_ylabel('g(r)')
-            ax_d.set_box_aspect(1); ax_d.legend(fontsize=7, loc='upper right')
-            ax_d.spines['top'].set_visible(False); ax_d.spines['right'].set_visible(False)
-            r_z1, r_z2 = 16, 21
-            mask_zoom = (r >= r_z1) & (r <= r_z2)
-            y_lo = min(bs_mean[mask_zoom].min(), as_mean[mask_zoom].min()) - 0.05
-            y_hi = max(bs_mean[mask_zoom].max(), as_mean[mask_zoom].max()) + 0.05
-            rect = Rectangle((r_z1, y_lo), r_z2 - r_z1, y_hi - y_lo, linewidth=0.8, edgecolor='#888',
-                              facecolor='#f5f5f5', alpha=0.2, linestyle='--', zorder=0)
-            ax_d.add_patch(rect)
-            ax_inset = ax_d.inset_axes([0.22, 0.12, 0.62, 0.38])
-            ax_inset.set_facecolor('#F5F5F0')
-            bs_sm = uniform_filter1d(bs_mean, size=7)
-            as_sm = uniform_filter1d(as_mean, size=7)
-            dr = np.mean(np.diff(r))
-            bs_d2 = np.gradient(np.gradient(bs_sm, dr), dr)
-            as_d2 = np.gradient(np.gradient(as_sm, dr), dr)
-            ax_inset.plot(r[mask_zoom], bs_d2[mask_zoom], color=C_BS, linewidth=1.5)
-            ax_inset.plot(r[mask_zoom], as_d2[mask_zoom], color=C_AS, linewidth=1.5)
-            ax_inset.axhline(0, color='black', linewidth=0.4, linestyle='--')
-            bs_pi = np.argmin(bs_d2[mask_zoom]); as_pi = np.argmin(as_d2[mask_zoom])
-            mi = (bs_pi + as_pi) // 2
-            r_curv = r[mask_zoom]
-            ax_inset.annotate('', xy=(r_curv[mi], as_d2[mask_zoom][mi]), xytext=(r_curv[mi], bs_d2[mask_zoom][mi]),
-                              arrowprops=dict(arrowstyle='<->', color='#E65100', lw=1.2))
-            ax_inset.text(r_curv[mi] + 1.0, (as_d2[mask_zoom][mi] + bs_d2[mask_zoom][mi]) / 2,
-                          '\u0394K', fontsize=7, color='#E65100', fontweight='bold', va='center')
-            ax_inset.set_xlim(r_z1, r_z2); ax_inset.set_ylim(None, -0.05)
-            ax_inset.text(0.0, 1.05, "Curvature g''(r)", fontsize=6, fontweight='bold', color='#555',
-                          transform=ax_inset.transAxes, ha='left', va='bottom')
-            ax_inset.tick_params(axis='both', labelsize=6)
-            ax_inset.spines['top'].set_visible(False); ax_inset.spines['right'].set_visible(False)
-            for sp in ax_inset.spines.values(): sp.set_linewidth(0.8); sp.set_edgecolor('#999')
-        else:
-            ax_d.text(0.5, 0.5, 'g(r) data not provided', transform=ax_d.transAxes, ha='center', va='center', fontsize=9, color='#999')
-            ax_d.spines['top'].set_visible(False); ax_d.spines['right'].set_visible(False)
-        self._pub_panel_label(ax_d, 'd')
+        ax.scatter(bs_hex[m_bs], bs_kv[m_bs], s=3, c=C_BS, alpha=0.15, edgecolors='none', label='BS')
+        ax.scatter(as_hex[m_as], as_kv[m_as], s=3, c=C_AS, alpha=0.15, edgecolors='none', label='AS')
+        coeffs = polyfit(all_hex[m_all], all_kv[m_all], 1)
+        x_fit = np.linspace(h_lo, h_hi, 100)
+        ax.plot(x_fit, coeffs[0] + coeffs[1] * x_fit, 'k--', linewidth=0.8, alpha=0.5)
+        r_val, _ = pearsonr(all_hex[m_all], all_kv[m_all])
+        ax.text(0.95, 0.05, f'R$^2$={r_val**2:.2f}', transform=ax.transAxes,
+                fontsize=8, ha='right', va='bottom', fontweight='bold', color='#555')
+        ax.set_ylabel('K$_{ds}$ (\u00b5m$^{-2}$)')
+        ax.set_xticklabels([])
+        ax.legend(fontsize=7, loc='upper left', markerscale=3)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        self._fig4_panel_label(ax, 'b')
 
-        # ── Panel e: Paired K scatter + improvement bars ──
-        gs_e = gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=gs_row2[0, 1], height_ratios=[2.5, 1, 1], hspace=0.03)
-        ax_e = fig.add_subplot(gs_e[0])
-        ax_e_pct = fig.add_subplot(gs_e[1], sharex=ax_e)
-        ax_e_cnt = fig.add_subplot(gs_e[2], sharex=ax_e)
-        bs_k, as_k = paired[f'{col_K}_BS'].values, paired[f'{col_K}_AS'].values
-        bs_kc, as_kc, mask_kc = _clip_pct(bs_k, as_k, pct=2)
-        dcd_p = paired['CD_calc_AS'].values - paired['CD_calc_BS'].values
-        dcd_cl = dcd_p[mask_kc]
-        cd_up = dcd_cl >= 0; cd_dn = dcd_cl < 0
-        ax_e.scatter(bs_kc[cd_up], as_kc[cd_up], s=4, c=C_E2, alpha=0.20, edgecolors='none', label=f'CD+ ({cd_up.sum()})')
-        ax_e.scatter(bs_kc[cd_dn], as_kc[cd_dn], s=4, c=C_E1, alpha=0.20, edgecolors='none', label=f'CD\u2212 ({cd_dn.sum()})')
-        lim_k = max(bs_kc.max(), as_kc.max()) * 1.05
-        ax_e.plot([0, lim_k], [0, lim_k], 'k--', linewidth=0.5, alpha=0.4)
-        ax_e.set_ylabel('AS K$_{ds}$ (\u00b5m$^{-2}$)')
-        ax_e.legend(fontsize=7, loc='upper left'); ax_e.set_xticklabels([])
-        ax_e.spines['top'].set_visible(False); ax_e.spines['right'].set_visible(False)
-        above = as_kc > bs_kc
-        ax_e.text(0.95, 0.05, f'K+ : {above.sum()} ({100*above.mean():.0f}%)', transform=ax_e.transAxes,
-                  fontsize=8, ha='right', va='bottom', color=C_E1, fontweight='bold')
-        self._pub_panel_label(ax_e, 'e')
-        n_bins_e = 15
-        bin_edges_e = np.linspace(bs_kc.min(), bs_kc.max(), n_bins_e + 1)
-        bin_centers_e = (bin_edges_e[:-1] + bin_edges_e[1:]) / 2
-        bin_w_e = bin_edges_e[1] - bin_edges_e[0]
-        dk_vals = as_kc - bs_kc
-        frac_up, count_up, count_down = [], [], []
-        for i in range(n_bins_e):
-            mb = (bs_kc >= bin_edges_e[i]) & (bs_kc < bin_edges_e[i+1])
-            n_tot = mb.sum(); n_up = (dk_vals[mb] > 0).sum() if n_tot > 0 else 0
-            frac_up.append(100 * n_up / n_tot if n_tot > 0 else 50)
-            count_up.append(n_up); count_down.append(n_tot - n_up)
-        bar_cols = [C_E1 if f > 55 else (C_E2 if f < 45 else '#aaa') for f in frac_up]
-        ax_e_pct.bar(bin_centers_e, frac_up, width=bin_w_e * 0.85, color=bar_cols, alpha=0.7, edgecolor='white', linewidth=0.3)
-        ax_e_pct.axhline(50, color='black', linewidth=0.6, linestyle='--', alpha=0.5)
-        ax_e_pct.set_ylabel('% impr.', fontsize=7); ax_e_pct.set_xlim(0, lim_k); ax_e_pct.set_ylim(0, 85)
-        ax_e_pct.set_yticks([0, 50]); ax_e_pct.set_yticklabels(['0', '50'], fontsize=7); ax_e_pct.set_xticklabels([])
-        ax_e_pct.spines['top'].set_visible(False); ax_e_pct.spines['right'].set_visible(False)
-        ax_e_pct.tick_params(axis='both', labelsize=7)
-        half_w = bin_w_e * 0.40
-        ax_e_cnt.bar(np.array(bin_centers_e) - half_w/2, count_up, width=half_w, color=C_E1, alpha=0.7, edgecolor='white', linewidth=0.3, label='Improved')
-        ax_e_cnt.bar(np.array(bin_centers_e) + half_w/2, count_down, width=half_w, color=C_E2, alpha=0.7, edgecolor='white', linewidth=0.3, label='Decreased')
-        ax_e_cnt.set_xlabel('BS K$_{ds}$ (\u00b5m$^{-2}$)'); ax_e_cnt.set_ylabel('Count', fontsize=7)
-        ax_e_cnt.set_xlim(0, lim_k); ax_e_cnt.legend(fontsize=6, loc='upper right', frameon=False)
-        ax_e_cnt.spines['top'].set_visible(False); ax_e_cnt.spines['right'].set_visible(False)
-        ax_e_cnt.tick_params(axis='both', labelsize=7)
+        # Boxplots below
+        hex_c, kv_c = all_hex[m_all], all_kv[m_all]
+        n_bins = 10
+        bed = np.linspace(h_lo, h_hi, n_bins + 1)
+        bmid = (bed[:-1] + bed[1:]) / 2
+        bw = bed[1] - bed[0]
+        box_data, box_pos = [], []
+        for i in range(n_bins):
+            mb = (hex_c >= bed[i]) & (hex_c < bed[i + 1])
+            if mb.sum() > 3:
+                box_data.append(kv_c[mb])
+                box_pos.append(bmid[i])
+        if box_data:
+            bp = ax_bot.boxplot(box_data, positions=box_pos, widths=bw * 0.6,
+                                patch_artist=True, showfliers=False,
+                                medianprops=dict(color='#E65100', linewidth=1),
+                                whiskerprops=dict(color='#888', linewidth=0.6),
+                                capprops=dict(color='#888', linewidth=0.6))
+            for patch in bp['boxes']:
+                patch.set_facecolor('#FFE0B2')
+                patch.set_edgecolor('#888')
+                patch.set_linewidth(0.5)
+                patch.set_alpha(0.8)
+        ax_bot.set_xlabel('HEX (%)')
+        ax_bot.set_ylabel('K range', fontsize=7)
+        ax_bot.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.1f}'))
+        ax_bot.tick_params(axis='x', rotation=45)
+        plt.setp(ax_bot.get_xticklabels(), ha='right')
+        ax_bot.spines['top'].set_visible(False)
+        ax_bot.spines['right'].set_visible(False)
+        ax_bot.tick_params(axis='both', labelsize=9)
+        for _idx, _lbl in enumerate(ax_bot.xaxis.get_ticklabels()):
+            if _idx % 2 != 0:
+                _lbl.set_visible(False)
 
-        # ── Panel f: Forest plot ──
-        ax_f = fig.add_subplot(gs_row2[0, 2])
-        metrics_forest = [(col_K, 'K$_{ds}$'), ('CD_calc', 'CD'), ('HEX_calc', 'HEX'), ('Ave_calc', 'Ave'), ('CV_calc', 'CV')]
-        for r0_col in ['r_0_um', 'r0_um', 'r0']:
-            if f'{r0_col}_BS' in paired.columns:
-                metrics_forest.append((r0_col, 'r$_0$')); break
-        n_met = len(metrics_forest)
-        y_pos = np.linspace(n_met * 0.5, 0.5, n_met)
-        ax_f.axhspan(y_pos[0] - 0.25, y_pos[0] + 0.3, color='#FFF3E0', alpha=0.8, zorder=0)
-        if n_met > 1:
-            ax_f.axhspan(y_pos[-1] - 0.3, y_pos[1] + 0.3, color='#f5f5f5', alpha=0.5, zorder=0)
-        k_ds_pct_val = None; valid_labels = []; valid_ypos = []
+    def _fig4_quad_scatter(self, ax, x_pct, y_pct, x_label, y_label,
+                           highlight_pair, label, colors=None):
+        """Four-quadrant scatter with highlighted quadrants and counts."""
+        c1, c2 = colors if colors else ('#882255', '#009E73')
+        ax.scatter(x_pct, y_pct, s=3, c='#999', alpha=0.20, edgecolors='none')
+        q_tl = (y_pct > 0) & (x_pct < 0)
+        q_tr = (y_pct > 0) & (x_pct > 0)
+        q_bl = (y_pct < 0) & (x_pct < 0)
+        q_br = (y_pct < 0) & (x_pct > 0)
+        h1, h2 = highlight_pair
+        qmap = {'tl': q_tl, 'tr': q_tr, 'bl': q_bl, 'br': q_br}
+        ax.scatter(x_pct[qmap[h1]], y_pct[qmap[h1]], s=4, c=c1, alpha=0.35, edgecolors='none')
+        ax.scatter(x_pct[qmap[h2]], y_pct[qmap[h2]], s=4, c=c2, alpha=0.35, edgecolors='none')
+        ax.axhline(0, color='black', linewidth=0.5, linestyle=':')
+        ax.axvline(0, color='black', linewidth=0.5, linestyle=':')
+        x_s = x_label.replace('\u0394', '')
+        total = len(x_pct)
+        dir_map = {'tl': ('K+', '-'), 'tr': ('K+', '+'), 'bl': ('K-', '-'), 'br': ('K-', '+')}
+        for key, q, num, px, py, ha, va in [
+            ('tl', q_tl, 'I', 0.03, 0.97, 'left', 'top'),
+            ('tr', q_tr, 'II', 0.97, 0.97, 'right', 'top'),
+            ('bl', q_bl, 'III', 0.03, 0.03, 'left', 'bottom'),
+            ('br', q_br, 'IV', 0.97, 0.03, 'right', 'bottom'),
+        ]:
+            kd, xd = dir_map[key]
+            pct = 100 * q.sum() / total
+            ax.text(px, py, f'{num}. {kd} {x_s}{xd}\n{q.sum()} ({pct:.0f}%)',
+                    transform=ax.transAxes, fontsize=7, ha=ha, va=va,
+                    color='black', fontweight='bold')
+        rho, pval = spearmanr(x_pct, y_pct)
+        ax.text(0.65, 1.05, f'\u03c1={rho:.2f} (p={pval:.0e})',
+                fontsize=7, ha='center', va='bottom', fontweight='bold', color='#333',
+                transform=ax.transAxes,
+                bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.7,
+                          edgecolor='none'), clip_on=False)
+        ax.set_xlabel(f'{x_label} (%)')
+        ax.set_ylabel(f'{y_label} (%)')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        self._fig4_panel_label(ax, label)
+
+    def _fig4_panel_gr(self, ax, gr_data):
+        """Panel e: Population g(r) curves with curvature inset."""
+        C_BS, C_AS = '#4A90D9', '#E8833A'
+        r = gr_data['r']
+        px = gr_data['pixel_size']
+        r_um = r * px
+        bs_mean = np.mean(gr_data['bs_curves'], axis=0)
+        as_mean = np.mean(gr_data['as_curves'], axis=0)
+        bs_lo = np.percentile(gr_data['bs_curves'], 25, axis=0)
+        bs_hi = np.percentile(gr_data['bs_curves'], 75, axis=0)
+        as_lo = np.percentile(gr_data['as_curves'], 25, axis=0)
+        as_hi = np.percentile(gr_data['as_curves'], 75, axis=0)
+
+        mask = r_um <= 45
+        ax.fill_between(r_um[mask], bs_lo[mask], bs_hi[mask], color=C_BS, alpha=0.15)
+        ax.fill_between(r_um[mask], as_lo[mask], as_hi[mask], color=C_AS, alpha=0.15)
+        ax.plot(r_um[mask], bs_mean[mask], '-', color=C_BS, lw=1.8, label='BS')
+        ax.plot(r_um[mask], as_mean[mask], '-', color=C_AS, lw=1.8, label='AS')
+        ax.axhline(1, color='gray', ls='--', lw=0.6, alpha=0.5)
+        ax.set_xlabel('r (\u00b5m)')
+        ax.set_ylabel('g(r)')
+        ax.legend(fontsize=7, loc='upper right')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        self._fig4_panel_label(ax, 'e')
+
+    def _fig4_panel_paired_K(self, fig, subplot_spec, paired, col_K):
+        """Panel f: Paired BS/AS K scatter."""
+        C_E1, C_E2 = '#CC3311', '#117733'
+
+        ax = fig.add_subplot(subplot_spec)
+
+        bs_kv = paired[f'{col_K}_BS'].values
+        as_kv = paired[f'{col_K}_AS'].values
+        improved = as_kv > bs_kv
+        n_imp = improved.sum()
+
+        ax.scatter(bs_kv[~improved], as_kv[~improved], s=3, c=C_E1, alpha=0.3,
+                   edgecolors='none', label=f'Decreased ({(~improved).sum()})')
+        ax.scatter(bs_kv[improved], as_kv[improved], s=3, c=C_E2, alpha=0.3,
+                   edgecolors='none', label=f'Improved ({n_imp})')
+        lims = [0, max(bs_kv.max(), as_kv.max()) * 1.05]
+        ax.plot(lims, lims, '--', color='#999', linewidth=1)
+        ax.set_xlim(lims)
+        ax.set_ylim(lims)
+        ax.set_xlabel('BS K$_{ds}$ (\u00b5m$^{-2}$)')
+        ax.set_ylabel('AS K$_{ds}$ (\u00b5m$^{-2}$)')
+        ax.legend(fontsize=6, loc='upper left', markerscale=2)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        self._fig4_panel_label(ax, 'f')
+
+    def _fig4_forest(self, ax, paired, col_K):
+        """Panel g: Forest plot of paired % change across metrics."""
+        metrics_forest = [
+            (col_K, '$K_{ds}$'), ('CD_calc', 'CD'), ('HEX_calc', 'HEX'),
+            ('Ave_calc', 'Ave'), ('CV_calc', 'CV'), ('r_0_um', '$r_0$'),
+        ]
+        # Add mean_F if available
+        if 'mean_F_BS' in paired.columns:
+            metrics_forest.append(('mean_F', 'mean|F|'))
+
+        y_pos = np.arange(len(metrics_forest))[::-1] * 0.5 + 0.5
+
+        ax.axhspan(0.1, y_pos[0] - 0.15, color='#f0f0f0', alpha=0.5, zorder=0)
         for idx, (col, label) in enumerate(metrics_forest):
             bs_col, as_col = f'{col}_BS', f'{col}_AS'
-            if bs_col not in paired.columns or as_col not in paired.columns: continue
-            bs_v, as_v = paired[bs_col].values, paired[as_col].values
-            pct_ch = (as_v - bs_v) / bs_v * 100
-            mean_p = np.nanmean(pct_ch)
-            se = np.nanstd(pct_ch) / np.sqrt(np.sum(np.isfinite(pct_ch)))
+            if bs_col not in paired.columns or as_col not in paired.columns:
+                continue
+            bs_v = paired[bs_col].values
+            as_v = paired[as_col].values
+            valid = np.isfinite(bs_v) & np.isfinite(as_v) & (np.abs(bs_v) > 1e-9)
+            pct_ch = (as_v[valid] - bs_v[valid]) / bs_v[valid] * 100
+            mean_p = np.mean(pct_ch)
+            se = np.std(pct_ch) / np.sqrt(len(pct_ch))
             ci_l, ci_h = mean_p - 1.96 * se, mean_p + 1.96 * se
-            fin = np.isfinite(pct_ch)
-            _, p_t = ttest_rel(as_v[fin], bs_v[fin])
+            _, p_t = ttest_rel(as_v[valid], bs_v[valid])
             sig = '***' if p_t < 0.001 else '**' if p_t < 0.01 else '*' if p_t < 0.05 else 'n.s.'
-            y = y_pos[idx]; clr = '#E65100' if mean_p > 0 else '#1565C0'
-            is_kds = (idx == 0); valid_labels.append(label); valid_ypos.append(y)
-            ax_f.plot([ci_l, ci_h], [y, y], color=clr, linewidth=3 if is_kds else 1.5, solid_capstyle='round')
-            ax_f.plot(mean_p, y, 'D' if is_kds else 'o', color=clr, markersize=8 if is_kds else 5,
-                      markeredgecolor='white', markeredgewidth=0.8)
-            if is_kds:
-                ax_f.text(mean_p, y + 0.15, f'{mean_p:+.1f}% {sig}', va='bottom', ha='center', fontsize=9, fontweight='bold', color=clr)
+            y = y_pos[idx]
+            clr = '#E65100' if mean_p > 0 else '#1565C0'
+            ax.plot([ci_l, ci_h], [y, y], color=clr,
+                    linewidth=2 if idx == 0 else 1.5, solid_capstyle='round')
+            ax.plot(mean_p, y, 'o', color=clr, markersize=6 if idx == 0 else 5,
+                    markeredgecolor='white', markeredgewidth=0.5)
+            ax.text(ci_h + 0.3, y, f'{mean_p:+.1f}% {sig}', va='center', fontsize=6,
+                    fontweight='bold', color=clr)
+
+        ax.axvline(0, color='black', linewidth=0.8, linestyle='-')
+        ax.set_yticks(y_pos[:len(metrics_forest)])
+        ax.set_yticklabels([m[1] for m in metrics_forest], fontsize=7, fontweight='bold')
+        ax.set_xlabel('Change AS vs BS (%)', fontsize=7)
+        ax.text(0.85, 1.14, 'Wilcoxon signed-rank (% change)',
+                transform=ax.transAxes, fontsize=7, ha='right', va='bottom', color='#555')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.tick_params(axis='y', length=0)
+        self._fig4_panel_label(ax, 'g')
+
+    def _fig4_boxplot_binned(self, ax, paired, col_K, bin_col_bs, change_col_bs,
+                             change_col_as, x_label, y_label, panel_label,
+                             n_bins=None):
+        """Panels h/i: ΔY boxplots binned by baseline X."""
+        from scipy.stats import wilcoxon as _wil
+
+        p = paired.dropna(subset=[f'{col_K}_BS', f'{col_K}_AS',
+                                  'CD_calc_BS', 'CD_calc_AS']).copy()
+        for col in [f'{col_K}_BS', f'{col_K}_AS']:
+            p1, p99 = np.percentile(p[col], [1, 99])
+            p = p[(p[col] >= p1) & (p[col] <= p99)]
+
+        if change_col_bs not in p.columns or change_col_as not in p.columns:
+            ax.text(0.5, 0.5, 'Data not available', transform=ax.transAxes,
+                    ha='center', fontsize=9, color='#999')
+            return
+
+        # Adaptive bin count: aim for ~5+ samples per bin, min 3 bins
+        if n_bins is None:
+            n_bins = max(3, min(8, len(p) // 5))
+
+        edges = np.percentile(p[bin_col_bs], np.linspace(0, 100, n_bins + 1))
+        data_list, labels, annotations = [], [], []
+
+        for i in range(n_bins):
+            mask = (p[bin_col_bs] >= edges[i])
+            if i < n_bins - 1:
+                mask &= (p[bin_col_bs] < edges[i + 1])
             else:
-                ax_f.text(ci_h + 0.3, y, f'{mean_p:+.1f}% {sig}', va='center', fontsize=8, fontweight='bold', color=clr)
-            if idx == 0: k_ds_pct_val = abs(mean_p)
-            elif k_ds_pct_val and abs(mean_p) > 0.01:
-                ratio = k_ds_pct_val / abs(mean_p)
-                if ratio > 1.5:
-                    ax_f.text(ci_h + 0.3, y - 0.22, f'{ratio:.1f}\u00d7', va='top', ha='left', fontsize=8, color='#555', fontweight='bold')
-        ax_f.axvline(0, color='black', linewidth=0.8, linestyle='-')
-        ax_f.set_yticks(valid_ypos); ax_f.set_yticklabels(valid_labels, fontsize=9, fontweight='bold')
-        ax_f.set_ylim(min(valid_ypos) - 0.4, max(valid_ypos) + 0.4)
-        ax_f.set_xlabel('Change AS vs BS (%)', fontsize=8); ax_f.set_ylabel('')
-        ax_f.spines['top'].set_visible(False); ax_f.spines['right'].set_visible(False)
-        ax_f.spines['left'].set_visible(False); ax_f.tick_params(axis='y', length=0)
-        self._pub_panel_label(ax_f, 'f')
+                mask &= (p[bin_col_bs] <= edges[i + 1])
+            sub = p[mask]
+            if len(sub) < 3:
+                continue
+            dy = sub[change_col_as].values - sub[change_col_bs].values
+            data_list.append(dy)
+            labels.append(f'{edges[i]:.3f}-{edges[i+1]:.3f}')
+            try:
+                _, p_wil = _wil(dy)
+            except ValueError:
+                p_wil = 1.0
+            annotations.append(p_wil)
 
-        # ── Panel g: Homeostatic setpoint ──
-        ax_g = fig.add_subplot(gs_row3[0, 0])
-        dk_g = paired[f'{col_K}_AS'].values - paired[f'{col_K}_BS'].values
-        dk_pct_g = np.clip(dk_g / paired[f'{col_K}_BS'].values * 100, -200, 500)
-        bs_kv_g = paired[f'{col_K}_BS'].values
-        hb = ax_g.hexbin(bs_kv_g, dk_pct_g, gridsize=20, cmap='Greys', mincnt=1, zorder=1)
-        plt.colorbar(hb, ax=ax_g, shrink=0.6, label='Count', pad=0.02)
-        K_star = None
+        if not data_list:
+            return
+
+        C_MAIN = '#663399'
+        x = np.arange(len(data_list))
+        bp = ax.boxplot(data_list, positions=x, widths=0.5, patch_artist=True,
+                        showfliers=False,
+                        medianprops=dict(color='#E65100', linewidth=1.2),
+                        whiskerprops=dict(color='#555', linewidth=0.8),
+                        capprops=dict(color='#555', linewidth=0.8))
+        for patch in bp['boxes']:
+            patch.set_facecolor(C_MAIN)
+            patch.set_alpha(0.6)
+            patch.set_edgecolor('#333')
+            patch.set_linewidth(0.8)
+
+        ax.axhline(0, color='black', ls=':', lw=0.8)
+        medians = [np.median(d) for d in data_list]
+        ax.plot(x, medians, 'o-', color='#E65100', markersize=4, linewidth=1.5, zorder=5, label='Median')
+
+        y_max = max(d.max() for d in data_list)
+        for i, p_w in enumerate(annotations):
+            sig = '*' if p_w < 0.05 else 'ns'
+            ax.text(i, y_max + abs(y_max) * 0.03, sig,
+                    ha='center', va='bottom', fontsize=7, fontweight='bold')
+
+        for i, d in enumerate(data_list):
+            ax.text(i, y_max + abs(y_max) * 0.08, f'n={len(d)}', ha='center',
+                    va='bottom', fontsize=9, color='#555', fontweight='bold', rotation=35)
+
+        ax.set_xticks(x)
+        display_labels = [lab if i % 2 == 0 else '' for i, lab in enumerate(labels)]
+        ax.set_xticklabels(display_labels, fontsize=9, rotation=30, ha='right')
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.legend(fontsize=8, loc='upper left',
+                  title='* p<0.05 Wilcoxon', title_fontsize=7,
+                  framealpha=0.9, edgecolor='none')
+        self._fig4_panel_label(ax, panel_label)
+
+    def _fig4_phase_panel(self, ax, R, xn, yn, x_label, y_label, x_fmt, label):
+        """Draw a phase portrait panel (j or k)."""
+        from scipy.optimize import brentq
+        C_BS, C_AS = '#4A90D9', '#E8833A'
+
+        ax.scatter(R['x_bs'], R['y_bs'], s=1, c='#bbb', alpha=0.15,
+                   edgecolors='none', zorder=1, rasterized=True)
+        U, V = R['U'].copy(), R['V'].copy()
+        dmask = self._density_mask(R['X_g'], R['K_g'], R['x_bs'], R['y_bs'])
+        U[~dmask] = np.nan
+        V[~dmask] = np.nan
+        mag = np.sqrt(np.nan_to_num(U) ** 2 + np.nan_to_num(V) ** 2)
+        ax.quiver(R['X_g'], R['K_g'], U * R['x_sd'], V * R['y_sd'], mag,
+                  cmap='RdPu', alpha=0.9, angles='xy', scale_units='xy', scale=1,
+                  width=0.004, headwidth=4, headlength=5, zorder=3)
+
+        x_null = y_null = None
         try:
-            from statsmodels.nonparametric.smoothers_lowess import lowess
-            si = np.argsort(bs_kv_g)
-            lw_fit = lowess(dk_pct_g[si], bs_kv_g[si], frac=0.3)
-            ax_g.plot(lw_fit[:, 0], lw_fit[:, 1], '-', color='#E65100', linewidth=3.5, label='LOWESS', zorder=3)
-            crossings = np.where(np.diff(np.sign(lw_fit[:, 1])))[0]
-            if len(crossings) > 0:
-                K_star = lw_fit[crossings[0], 0]
-                ax_g.axvline(K_star, color='#0072B2', linewidth=2.5, linestyle='--', alpha=0.8, zorder=2, label=f'K* \u2248 {K_star:.3f}')
-                ax_g.text(K_star, ax_g.get_ylim()[1] * 0.85, f'K* = {K_star:.3f}', fontsize=7, fontweight='bold', color='#0072B2',
-                          ha='left', va='top', bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8, edgecolor='none'))
-        except ImportError:
+            x_null = brentq(R['f_dy'], R['x_mids'][0], R['x_mids'][-1])
+            ax.axvline(x_null, color=C_AS, ls='--', lw=1.0, alpha=0.7,
+                       label=f'\u0394{yn}=0 ({xn}={x_null:.0f})')
+        except ValueError:
             pass
-        ax_g.axhline(0, color='black', linewidth=0.5, linestyle='--', zorder=1)
-        ax_g.set_xlabel('Baseline K$_{ds}$ (\u00b5m$^{-2}$)'); ax_g.set_ylabel('\u0394K$_{ds}$ (%)')
-        ax_g.legend(fontsize=7, loc='upper right', framealpha=0.8)
-        ax_g.spines['top'].set_visible(False); ax_g.spines['right'].set_visible(False)
-        self._pub_panel_label(ax_g, 'g')
+        try:
+            y_null = brentq(R['f_dx'], R['y_mids'][0], R['y_mids'][-1])
+            ax.axhline(y_null, color=C_BS, ls='--', lw=1.0, alpha=0.7,
+                       label=f'\u0394{xn}=0 ({yn}={y_null:.4f})')
+        except ValueError:
+            pass
+        if x_null is not None and y_null is not None:
+            fp_mask = self._density_mask(
+                np.array([[x_null]]), np.array([[y_null]]), R['x_bs'], R['y_bs'])
+            alpha = 1.0 if fp_mask[0, 0] else 0.3
+            ax.plot(x_null, y_null, '*', color='#E65100', markersize=12,
+                    markeredgecolor='white', markeredgewidth=0.8, zorder=10,
+                    alpha=alpha, label='fixed pt')
 
-        # ── Panel h: Convergence arrows ──
-        gs_h = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs_row3[0, 1], width_ratios=[1, 3], wspace=0.02)
-        ax_h_hist = fig.add_subplot(gs_h[0])
-        ax_h = fig.add_subplot(gs_h[1], sharey=ax_h_hist)
-        if K_star is not None:
-            as_kv_h = paired[f'{col_K}_AS'].values
-            n_bins_h = 25
-            p2, p98 = np.percentile(bs_kv_g, [2, 98])
-            bin_edges_h = np.linspace(p2, p98, n_bins_h + 1)
-            bin_counts_h = []
-            for i in range(n_bins_h):
-                mask = (bs_kv_g >= bin_edges_h[i]) & (bs_kv_g < bin_edges_h[i+1])
-                count = mask.sum(); bin_counts_h.append(count)
-                if count < 3: continue
-                mean_bs = np.mean(bs_kv_g[mask]); mean_as = np.mean(as_kv_h[mask])
-                toward = (mean_bs < K_star and mean_as > mean_bs) or (mean_bs > K_star and mean_as < mean_bs)
-                color = C_AS if toward else '#bbb'
-                alpha = 0.8 if toward else 0.4
-                ax_h.annotate('', xy=(mean_as, i), xytext=(mean_bs, i),
-                              arrowprops=dict(arrowstyle='->', color=color, lw=1.8 if toward else 1.0, alpha=alpha))
-                ax_h.plot(mean_bs, i, 'o', color=C_BS, markersize=4, markeredgecolor='white', markeredgewidth=0.3, zorder=4)
-                ax_h.plot(mean_as, i, 'o', color=color, markersize=4, markeredgecolor='white', markeredgewidth=0.3, zorder=4)
-            ax_h.axvline(K_star, color='#0072B2', linewidth=2.5, linestyle='--', alpha=0.7, zorder=1)
-            ax_h.text(K_star + 0.002, n_bins_h + 0.5, f'K* = {K_star:.3f}', fontsize=8, fontweight='bold', color='#0072B2', ha='left', va='bottom')
-            kstar_bin = (K_star - p2) / (p98 - p2) * n_bins_h
-            ax_h.axhline(kstar_bin, color='#0072B2', linewidth=1.0, linestyle=':', alpha=0.5)
-            ax_h_hist.axhline(kstar_bin, color='#0072B2', linewidth=1.0, linestyle=':', alpha=0.5)
-            ax_h.set_xlabel('K$_{ds}$ (\u00b5m$^{-2}$)')
-            ax_h.set_ylim(-1, n_bins_h + 1); ax_h.set_yticks([])
-            ax_h.spines['top'].set_visible(False); ax_h.spines['right'].set_visible(False); ax_h.spines['left'].set_visible(False)
-            legend_h = [
-                Line2D([0], [0], marker='o', color='w', markerfacecolor=C_BS, markersize=4, markeredgecolor='white', label='BS', linewidth=0),
-                Line2D([0], [0], marker='o', color='w', markerfacecolor=C_AS, markersize=4, markeredgecolor='white', label='AS', linewidth=0),
-                Line2D([0], [0], marker='>', color=C_AS, markersize=5, label='Toward K*', linewidth=0),
-                Line2D([0], [0], marker='>', color='#bbb', markersize=5, label='Away from K*', linewidth=0),
-            ]
-            ax_h.legend(handles=legend_h, fontsize=7, loc='lower right', framealpha=0.8)
-            y_positions = np.arange(n_bins_h)
-            bar_colors = [C_BS if c >= 3 else '#ddd' for c in bin_counts_h]
-            ax_h_hist.barh(y_positions, bin_counts_h, height=0.8, color=bar_colors, alpha=0.5, edgecolor='white', linewidth=0.3)
-            ax_h_hist.set_xlim(max(bin_counts_h) * 1.1, 0)
-            ax_h_hist.set_xlabel('n', fontsize=8); ax_h_hist.set_yticks([])
-            ax_h_hist.spines['top'].set_visible(False); ax_h_hist.spines['right'].set_visible(False); ax_h_hist.spines['left'].set_visible(False)
-            ax_h_hist.tick_params(axis='x', labelsize=7)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        _arrow_key = Line2D([0], [0], color='#9B4A96', lw=1.4,
+                            marker='>', markersize=3, label='binned median shift')
+        _h, _l = ax.get_legend_handles_labels()
+        ax.legend([_arrow_key] + _h, ['binned median shift'] + _l,
+                  fontsize=9, loc='lower left', bbox_to_anchor=(0.0, 1.02),
+                  framealpha=0.9, edgecolor='none', ncol=2)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(x_fmt))
+        self._fig4_panel_label(ax, label)
+
+        if x_null is not None and y_null is not None:
+            xb, yb = R['x_bs'], R['y_bs']
+            for _xl, _yl, _tx, _ty in [
+                ('lo', 'hi', 0.25, 0.97), ('hi', 'hi', 0.75, 0.97),
+                ('lo', 'lo', 0.25, 0.42), ('hi', 'lo', 0.75, 0.42),
+            ]:
+                _qm = ((xb < x_null) if _xl == 'lo' else (xb >= x_null)) & \
+                      ((yb < y_null) if _yl == 'lo' else (yb >= y_null))
+                ax.text(_tx, _ty, f'n={int(_qm.sum())}', transform=ax.transAxes,
+                        fontsize=10, ha='center', va='top', color='#555', fontweight='bold')
+
+    # ==================================================================
+    # COLLECTIVE ORDER FIGURE (Fig 4)
+    # ==================================================================
+
+    def pub_collective_order(self, gr_data=None, save=None):
+        """
+        Publication Figure 4 — Collective order analysis.
+
+        4-row layout:
+          Row 1 (a-d): K orthogonality — K vs CD, K vs HEX, ΔK vs ΔCD, ΔK vs ΔHEX
+          Row 2 (e-g): K increases — g(r), paired scatter, forest plot
+          Row 3 (h-i): Cross-variable — ΔK boxplots by CD, ΔCD boxplots by K
+          Row 4 (j-k): Phase portraits — CD-K, r₀-K
+
+        Parameters
+        ----------
+        gr_data : dict, optional
+            {'r', 'bs_curves', 'as_curves', 'pixel_size'}.
+            If None, uses self.gr_data (auto-loaded from NPZ).
+        """
+        if gr_data is None:
+            gr_data = self.gr_data
+        save = save if save is not None else self.save
+        self._pub_style()
+
+        paired = self.paired.copy()
+        col_K = 'K_ds_um'
+
+        # Paired deltas
+        dk = paired[f'{col_K}_AS'].values - paired[f'{col_K}_BS'].values
+        dcd = paired['CD_calc_AS'].values - paired['CD_calc_BS'].values
+        dhex = paired['HEX_calc_AS'].values - paired['HEX_calc_BS'].values
+        dk_pct = dk / paired[f'{col_K}_BS'].values * 100
+        dcd_pct = dcd / paired['CD_calc_BS'].values * 100
+        dhex_pct = dhex / paired['HEX_calc_BS'].values * 100
+
+        def _clip_pct(x, y, pct=2):
+            xlo, xhi = np.percentile(x, [pct, 100 - pct])
+            ylo, yhi = np.percentile(y, [pct, 100 - pct])
+            m = (x >= xlo) & (x <= xhi) & (y >= ylo) & (y <= yhi)
+            return x[m], y[m], m
+
+        # ── Figure layout: 190mm × 340mm, 4 rows ──
+        fig_w = 190 / 25.4
+        fig_h = 340 / 25.4
+        fig = plt.figure(figsize=(fig_w, fig_h))
+
+        gs_row1 = fig.add_gridspec(1, 4,
+                                    left=0.09, right=0.97, top=0.97, bottom=0.859,
+                                    wspace=0.45)
+        gs_row2 = fig.add_gridspec(1, 3,
+                                    left=0.20, right=0.86, top=0.795, bottom=0.693,
+                                    wspace=0.35)
+        gs_row3 = fig.add_gridspec(1, 2,
+                                    left=0.13, right=0.93, top=0.677, bottom=0.478,
+                                    wspace=0.05)
+        gs_row4 = fig.add_gridspec(1, 2,
+                                    left=0.13, right=0.93, top=0.453, bottom=0.254,
+                                    wspace=0.05)
+
+        # ── Row 1: K orthogonality ──
+        self._fig4_panel_a(fig, gs_row1[0, 0], paired, col_K)
+        self._fig4_panel_b(fig, gs_row1[0, 1], paired, col_K)
+
+        ax_c = fig.add_subplot(gs_row1[0, 2])
+        dcd_c, dk_c, _ = _clip_pct(dcd_pct, dk_pct, pct=2)
+        self._fig4_quad_scatter(ax_c, dcd_c, dk_c, '\u0394CD', '\u0394K',
+                                ('tl', 'br'), 'c', colors=('#882255', '#009E73'))
+
+        ax_d = fig.add_subplot(gs_row1[0, 3])
+        dhex_c, dk_d, _ = _clip_pct(dhex_pct, dk_pct, pct=2)
+        self._fig4_quad_scatter(ax_d, dhex_c, dk_d, '\u0394HEX', '\u0394K',
+                                ('tr', 'bl'), 'd', colors=('#332288', '#DDCC77'))
+
+        # ── Row 2: K increases after stripping ──
+        if gr_data is not None:
+            ax_e = fig.add_subplot(gs_row2[0, 0])
+            self._fig4_panel_gr(ax_e, gr_data)
+            _pe = ax_e.get_position()
+            ax_e.set_position([_pe.x0 - 0.067, _pe.y0, _pe.width, _pe.height])
         else:
-            ax_h.text(0.5, 0.5, 'K* not found', transform=ax_h.transAxes, ha='center', va='center', fontsize=10, color='#ccc')
-        self._pub_panel_label(ax_h, 'h')
+            ax_e = fig.add_subplot(gs_row2[0, 0])
+            ax_e.text(0.5, 0.5, 'g(r) data\nnot available', transform=ax_e.transAxes,
+                      ha='center', va='center', fontsize=9, color='#999')
+            self._fig4_panel_label(ax_e, 'e')
 
-        plt.tight_layout()
+        self._fig4_panel_paired_K(fig, gs_row2[0, 1], paired, col_K)
+
+        ax_g = fig.add_subplot(gs_row2[0, 2])
+        self._fig4_forest(ax_g, paired, col_K)
+
+        # ── Row 3: Cross-variable boxplots (h, i) ──
+        ax_h = fig.add_subplot(gs_row3[0, 0])
+        self._fig4_boxplot_binned(ax_h, paired, col_K,
+                                  'CD_calc_BS', 'CD_calc_BS', 'CD_calc_AS',
+                                  'BS CD (cells/mm\u00b2)', '\u0394K$_{ds}$ (\u00b5m$^{-2}$)',
+                                  'h')
+        # Wait — this bins CD, measures ΔK. Fix the change columns:
+        # Actually the binned boxplot needs bin_col, then measures change_as - change_bs
+        # For panel h: bin on CD_calc_BS, measure K_AS - K_BS
+        # Let me fix the call — the helper subtracts change_col_as - change_col_bs
+        ax_h.clear()
+        self._fig4_boxplot_binned(ax_h, paired, col_K,
+                                  'CD_calc_BS', f'{col_K}_BS', f'{col_K}_AS',
+                                  'BS CD (cells/mm\u00b2)',
+                                  '\u0394K$_{ds}$ (\u00b5m$^{-2}$)', 'h')
+        ax_h.set_box_aspect(0.9)
+        _p = ax_h.get_position()
+        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
+        ax_h.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
+        # Move legend outside
+        _leg_h = ax_h.get_legend()
+        if _leg_h:
+            _leg_h.set_bbox_to_anchor((-0.70, 1.02), transform=ax_h.transAxes)
+            _leg_h._loc = 3
+
+        ax_i = fig.add_subplot(gs_row3[0, 1])
+        self._fig4_boxplot_binned(ax_i, paired, col_K,
+                                  f'{col_K}_BS', 'CD_calc_BS', 'CD_calc_AS',
+                                  'BS K$_{ds}$ (\u00b5m$^{-2}$)',
+                                  '\u0394CD (cells/mm\u00b2)', 'i')
+        ax_i.set_box_aspect(0.9)
+        _p = ax_i.get_position()
+        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
+        ax_i.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
+
+        # ── Row 4: Phase portraits (j, k) ──
+        # Prepare phase field data
+        p_phase = paired.dropna(subset=[f'{col_K}_BS', f'{col_K}_AS',
+                                        'CD_calc_BS', 'CD_calc_AS']).copy()
+        for col in [f'{col_K}_BS', f'{col_K}_AS']:
+            p1, p99 = np.percentile(p_phase[col], [1, 99])
+            p_phase = p_phase[(p_phase[col] >= p1) & (p_phase[col] <= p99)]
+
+        cd_bs = p_phase['CD_calc_BS'].values
+        k_bs = p_phase[f'{col_K}_BS'].values
+        dcd_ph = p_phase['CD_calc_AS'].values - cd_bs
+        dk_ph = p_phase[f'{col_K}_AS'].values - k_bs
+        mask_ph = np.isfinite(cd_bs) & np.isfinite(k_bs) & np.isfinite(dcd_ph) & np.isfinite(dk_ph)
+        R_cdk = self._compute_phase_field(cd_bs[mask_ph], k_bs[mask_ph],
+                                          dcd_ph[mask_ph], dk_ph[mask_ph], seed=123)
+
+        ax_j = fig.add_subplot(gs_row4[0, 0])
+        self._fig4_phase_panel(ax_j, R_cdk, 'CD', 'K',
+                               'Cell Density (cells/mm\u00b2)',
+                               'K$_{ds}$ (\u00b5m$^{-2}$)',
+                               lambda x, _: f'{x/1000:.1f}k', 'j')
+        ax_j.set_box_aspect(0.9)
+        _p = ax_j.get_position()
+        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
+        ax_j.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
+        _leg_j = ax_j.get_legend()
+        if _leg_j:
+            _leg_j.set_bbox_to_anchor((-0.30, 1.02), transform=ax_j.transAxes)
+
+        # r₀-K phase portrait (if r₀ available)
+        r0_col = 'r_0_um'
+        ax_k = fig.add_subplot(gs_row4[0, 1])
+        if f'{r0_col}_BS' in p_phase.columns and f'{r0_col}_AS' in p_phase.columns:
+            r0_bs = p_phase[f'{r0_col}_BS'].values
+            k_bs2 = p_phase[f'{col_K}_BS'].values
+            dr0 = p_phase[f'{r0_col}_AS'].values - r0_bs
+            dk2 = p_phase[f'{col_K}_AS'].values - k_bs2
+            mask_r0 = np.isfinite(r0_bs) & np.isfinite(k_bs2) & np.isfinite(dr0) & np.isfinite(dk2)
+            R_r0k = self._compute_phase_field(r0_bs[mask_r0], k_bs2[mask_r0],
+                                              dr0[mask_r0], dk2[mask_r0], seed=456)
+            self._fig4_phase_panel(ax_k, R_r0k, '$r_0$', 'K',
+                                   'r$_0$ (\u00b5m)',
+                                   'K$_{ds}$ (\u00b5m$^{-2}$)',
+                                   lambda x, _: f'{x:.0f}', 'k')
+        else:
+            ax_k.text(0.5, 0.5, 'r\u2080 data\nnot available',
+                      transform=ax_k.transAxes, ha='center', va='center',
+                      fontsize=9, color='#999')
+            self._fig4_panel_label(ax_k, 'k')
+        ax_k.set_box_aspect(0.9)
+        _p = ax_k.get_position()
+        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
+        ax_k.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
+
         if save:
             self._pub_save(fig, 'fig4_collective_order')
         plt.show()
 
-    # ==================================================================
-    # REPRESENTATIVE DONORS: Voronoi + g(r) (merged Fig 3+4)
-    # ==================================================================
-
-    @staticmethod
-    def _compute_voronoi(results):
-        """Compute Voronoi polygons, NN distances, and coordination numbers."""
-        try:
-            from shapely.geometry import Polygon as ShapelyPolygon, box as shapely_box
-        except ImportError:
-            raise ImportError("shapely is required for pub_representative: pip install shapely")
-
-        centroids = np.array([o.centroid for o in results['objects']])
-        y_c, x_c = centroids[:, 0], centroids[:, 1]
-        points = np.column_stack([x_c, y_c])
-        H, W = results['segmentor'].H, results['segmentor'].W
-
-        margin_pts = []
-        for p in points:
-            if p[0] < W * 0.15: margin_pts.append([-p[0], p[1]])
-            if p[0] > W * 0.85: margin_pts.append([2 * W - p[0], p[1]])
-            if p[1] < H * 0.15: margin_pts.append([p[0], -p[1]])
-            if p[1] > H * 0.85: margin_pts.append([p[0], 2 * H - p[1]])
-        all_pts = np.vstack([points, np.array(margin_pts)]) if margin_pts else points
-        n_real = len(points)
-        vor = Voronoi(all_pts)
-
-        neighbors = defaultdict(set)
-        for (i, j) in vor.ridge_points:
-            if i < n_real: neighbors[i].add(j)
-            if j < n_real: neighbors[j].add(i)
-
-        nn_dist = np.full(n_real, np.nan)
-        n_neighbors = np.zeros(n_real, dtype=int)
-        for i in range(n_real):
-            nbrs = list(neighbors[i])
-            n_neighbors[i] = len(nbrs)
-            if nbrs:
-                dists = np.sqrt((all_pts[nbrs, 0] - points[i, 0]) ** 2 +
-                                (all_pts[nbrs, 1] - points[i, 1]) ** 2)
-                nn_dist[i] = np.min(dists)
-
-        bounding = shapely_box(0, 0, W, H)
-        polygons = []
-        for i in range(n_real):
-            region_idx = vor.point_region[i]
-            region = vor.regions[region_idx]
-            if -1 in region or len(region) == 0:
-                polygons.append(None); continue
-            try:
-                poly = ShapelyPolygon(vor.vertices[region]).intersection(bounding)
-                polygons.append(poly if not poly.is_empty and poly.area > 1 else None)
-            except:
-                polygons.append(None)
-
-        return {
-            'points': points, 'nn_dist': nn_dist, 'n_neighbors': n_neighbors,
-            'polygons': polygons, 'H': H, 'W': W, 'n_real': n_real,
-        }
-
-    @staticmethod
-    def _draw_nn_panel(ax, met, cmap, norm):
-        H, W = met['H'], met['W']
-        ax.set_xlim(0, W); ax.set_ylim(H, 0)
-        ax.set_facecolor('#222222')
-        for i, poly in enumerate(met['polygons']):
-            if poly is None: continue
-            geoms = [poly] if poly.geom_type == 'Polygon' else list(poly.geoms)
-            for g in geoms:
-                coords = np.array(g.exterior.coords)
-                fc = cmap(norm(met['nn_dist'][i])) if not np.isnan(met['nn_dist'][i]) else '#333'
-                ax.add_patch(plt.Polygon(coords, closed=True, facecolor=fc,
-                                         edgecolor='black', linewidth=0.15, alpha=0.85))
-        ax.axis('off')
-
-    @staticmethod
-    def _draw_coord_panel(ax, met):
-        H, W = met['H'], met['W']
-        ax.set_xlim(0, W); ax.set_ylim(H, 0)
-        ax.set_facecolor('#222222')
-        coord_colors = {3: '#999', 4: '#999', 5: '#E74C3C', 6: '#27AE60',
-                        7: '#2980B9', 8: '#999', 9: '#999'}
-        for i, poly in enumerate(met['polygons']):
-            if poly is None: continue
-            color = coord_colors.get(met['n_neighbors'][i], '#999')
-            geoms = [poly] if poly.geom_type == 'Polygon' else list(poly.geoms)
-            for g in geoms:
-                coords = np.array(g.exterior.coords)
-                ax.add_patch(plt.Polygon(coords, closed=True, facecolor=color,
-                                         edgecolor='black', linewidth=0.15, alpha=0.8))
-        ax.axis('off')
-
-    def pub_representative(self, image_folder, pixel_size=0.58, save=None):
-        """Publication-ready 4×5: NN(BS,AS) + Coord(BS,AS) + g(r) for 4 representative donors.
-
-        Auto-selects: large increase, modest increase, near-zero, decrease.
-        Requires running Cornealia on 8 individual images.
-
-        Parameters
-        ----------
-        image_folder : str
-            Path to the original CellChek-D images.
-        pixel_size : float
-            μm/pixel calibration.
-        """
-        from cornealia.cornealia import cornealia as Cornealia
-
-        self._pub_style()
-        save = save if save is not None else self.save
-
-        processor = Cornealia(is_input_image_machine_output=False,
-                              pixel_size=pixel_size, verbose=False)
-
-        # --- Select donors: 95th, 65th, 45th, 10th percentile of ΔK% ---
-        paired = self.paired.copy()
-        col_as, col_bs = 'K_ds_um_AS', 'K_ds_um_BS'
-        paired = paired[(paired[col_bs] > 0.005) & (paired[col_as] > 0.005)].copy()
-        paired['pct_change'] = (paired[col_as] - paired[col_bs]) / paired[col_bs] * 100
-        paired_sorted = paired.sort_values('pct_change').reset_index(drop=True)
-        nr = len(paired_sorted)
-
-        targets = [
-            ('Large increase', 0.95),
-            ('Modest increase', 0.65),
-            ('Near zero', 0.45),
-            ('Decrease', 0.10),
-        ]
-        donors = []
-        for label, q in targets:
-            row = paired_sorted.iloc[int(nr * q)]
-            donors.append({'label': label, 'row': row})
-
-        print("\nSelected representative donors:")
-        for d in donors:
-            r = d['row']
-            print(f"  {d['label']:18s}  {r['patient_id']:15s}  "
-                  f"K: {r[col_bs]:.4f} → {r[col_as]:.4f}  ({r['pct_change']:+.1f}%)")
-
-        # --- Process images ---
-        all_nn = []
-        donor_data = []
-
-        for d in donors:
-            r = d['row']
-            pid = r['patient_id']
-            bs_name = r['Image_Name_BS']
-            as_name = r['Image_Name_AS']
-
-            bs_path = self._find_image(image_folder, bs_name)
-            as_path = self._find_image(image_folder, as_name)
-            if bs_path is None or as_path is None:
-                print(f"  WARNING: images not found for {pid}"); continue
-
-            print(f"  Processing {pid}...")
-            res_bs = processor.collective_order(bs_path)
-            res_as = processor.collective_order(as_path)
-            met_bs = self._compute_voronoi(res_bs)
-            met_as = self._compute_voronoi(res_as)
-
-            all_nn.extend(met_bs['nn_dist'][~np.isnan(met_bs['nn_dist'])])
-            all_nn.extend(met_as['nn_dist'][~np.isnan(met_as['nn_dist'])])
-
-            donor_data.append({
-                'pid': pid, 'label': d['label'], 'pct': r['pct_change'],
-                'K_bs': res_bs.get('K_ds', res_bs['K']),
-                'K_as': res_as.get('K_ds', res_as['K']),
-                'res_bs': res_bs, 'res_as': res_as,
-                'met_bs': met_bs, 'met_as': met_as,
-            })
-
-        all_nn = np.array(all_nn)
-        cmap_nn = plt.cm.viridis
-        norm_nn = Normalize(vmin=np.percentile(all_nn, 5), vmax=np.percentile(all_nn, 95))
-
-        n = len(donor_data)
-
-        # --- Layout: [NN pair | Coord pair | g(r)] ---
-        fig_w = 190 / 25.4
-        img_aspect = 514 / 684
-        panel_w = fig_w / 5.5
-        row_h = panel_w * img_aspect
-        fig_h = row_h * n + 0.4
-
-        fig = plt.figure(figsize=(fig_w, fig_h))
-        outer = gridspec.GridSpec(1, 3, figure=fig,
-                                  width_ratios=[2, 2, 1.4], wspace=0.18,
-                                  left=0.12, right=0.98, top=0.94, bottom=0.08)
-        gs_nn  = gridspec.GridSpecFromSubplotSpec(n, 2, subplot_spec=outer[0, 0],
-                                                   wspace=0.01, hspace=0.12)
-        gs_hex = gridspec.GridSpecFromSubplotSpec(n, 2, subplot_spec=outer[0, 1],
-                                                   wspace=0.01, hspace=0.12)
-        gs_gr  = gridspec.GridSpecFromSubplotSpec(n, 1, subplot_spec=outer[0, 2],
-                                                   hspace=0.12)
-
-        fig.text(0.30, 0.96, 'Nearest-Neighbor Distance', ha='center',
-                 fontsize=8, fontweight='bold')
-        fig.text(0.64, 0.96, 'Coordination Number', ha='center',
-                 fontsize=8, fontweight='bold')
-        fig.text(0.90, 0.96, '$g(r)$', ha='center',
-                 fontsize=8, fontweight='bold')
-
-        for i, dd in enumerate(donor_data):
-            hex_bs = (dd['met_bs']['n_neighbors'] == 6).sum() / dd['met_bs']['n_real'] * 100
-            hex_as = (dd['met_as']['n_neighbors'] == 6).sum() / dd['met_as']['n_real'] * 100
-            K_bs_um = dd['K_bs'] / (pixel_size ** 2)
-            K_as_um = dd['K_as'] / (pixel_size ** 2)
-            pct = dd['pct']
-
-            # NN BS
-            ax = fig.add_subplot(gs_nn[i, 0])
-            self._draw_nn_panel(ax, dd['met_bs'], cmap_nn, norm_nn)
-            ax.set_title('BS' if i == 0 else '', fontsize=6, fontweight='bold', pad=1)
-            ax.text(-0.08, 0.5, f"{dd['label']}\n$\\Delta K$={pct:+.0f}%",
-                    transform=ax.transAxes, fontsize=5.5, fontweight='bold',
-                    va='center', ha='right', rotation=90)
-
-            # NN AS
-            ax = fig.add_subplot(gs_nn[i, 1])
-            self._draw_nn_panel(ax, dd['met_as'], cmap_nn, norm_nn)
-            ax.set_title('AS' if i == 0 else '', fontsize=6, fontweight='bold', pad=1)
-
-            # Coord BS
-            ax = fig.add_subplot(gs_hex[i, 0])
-            self._draw_coord_panel(ax, dd['met_bs'])
-            ax.set_title(f'BS HEX={hex_bs:.0f}%' if i == 0 else f'HEX={hex_bs:.0f}%',
-                          fontsize=5.5, fontweight='bold', pad=1)
-
-            # Coord AS
-            ax = fig.add_subplot(gs_hex[i, 1])
-            self._draw_coord_panel(ax, dd['met_as'])
-            ax.set_title(f'AS HEX={hex_as:.0f}%' if i == 0 else f'HEX={hex_as:.0f}%',
-                          fontsize=5.5, fontweight='bold', pad=1)
-
-            # g(r)
-            ax = fig.add_subplot(gs_gr[i, 0])
-            zoom = 80
-            r_bs = dd['res_bs']['r_values']
-            r_as = dd['res_as']['r_values']
-            mask_bs, mask_as = r_bs <= zoom, r_as <= zoom
-
-
-            ax.plot(r_bs[mask_bs] * pixel_size, dd['res_bs']['g_r'][mask_bs],
-                    '.', color=COLORS['BS'], markersize=3, alpha=0.4, label='BS')
-            ax.plot(r_as[mask_as] * pixel_size, dd['res_as']['g_r'][mask_as],
-                    '.', color=COLORS['AS'], markersize=3, alpha=0.4, label='AS')
-
-            # Overlay damped sine fits as smooth curves
-            for res, clr in [(dd['res_bs'], COLORS['BS']), (dd['res_as'], COLORS['AS'])]:
-                A = res.get('A_damped', np.nan)
-                xi = res.get('xi_damped', np.nan)
-                lam = res.get('lambda_damped', np.nan)
-                r0_ds = res.get('r0_fit', 30.0)
-                if not np.isnan(A) and not np.isnan(xi) and not np.isnan(lam):
-                    r_excl = res.get('r_excl_damped', 15.0)
-                    phi = res.get('phi_damped', 0.0)
-                    r_dense = np.linspace(res['r_values'][0], zoom, 300)
-                    H = 1.0 / (1.0 + np.exp(-(r_dense - r_excl) / 0.3))
-                    t = np.maximum(r_dense - r_excl, 0.0)
-                    osc = -A * np.exp(-t / xi) * np.sin(2 * np.pi * t / lam + phi)
-                    g_fit = 1.0 + H * osc + (1.0 - H) * (-1.0)
-                    ax.plot(r_dense * pixel_size, g_fit, '-', color=clr, lw=1.5, alpha=0.9)
-
-            ax.axhline(1, color='gray', ls='--', lw=0.8, alpha=0.5)
-
-            ax.text(0.97, 0.95,
-                    f"$K_{{ds,BS}}$={K_bs_um:.3f}\n$K_{{ds,AS}}$={K_as_um:.3f}\n$\\Delta$={pct:+.0f}%",
-                    transform=ax.transAxes, fontsize=5, fontweight='bold',
-                    va='top', ha='right',
-                    bbox=dict(facecolor='white', edgecolor='black',
-                              alpha=0.9, pad=1.5, boxstyle='round,pad=0.2'))
-
-            ax.set_xlim(0, zoom * pixel_size)
-            y_max = max(dd['res_bs']['g_r'][mask_bs].max(),
-                        dd['res_as']['g_r'][mask_as].max())
-            ax.set_ylim(0, y_max * 1.15)
-            ax.set_ylabel('', fontsize=7, fontweight='bold')
-            if i == n - 1:
-                ax.set_xlabel('$r$ ($\\mu$m)', fontsize=7, fontweight='bold')
-            else:
-                ax.set_xticklabels([])
-            ax.tick_params(axis='both', labelsize=6)
-            if i == 0:
-                ax.legend(fontsize=5.5, loc='upper left', framealpha=0.9)
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-
-        # NN colorbar — aligned under NN columns
-        cb_ax = fig.add_axes([0.12, 0.02, 0.28, 0.012])
-        sm = ScalarMappable(cmap=cmap_nn, norm=norm_nn)
-        sm.set_array([])
-        cb = plt.colorbar(sm, cax=cb_ax, orientation='horizontal')
-        cb.set_label('NN Distance (px)', fontsize=6, fontweight='bold')
-        cb.ax.tick_params(labelsize=5)
-
-        # Coordination legend — bottom left, next to colorbar
-        legend_patches = [
-            mpatches.Patch(color='#27AE60', label='6 (hex)'),
-            mpatches.Patch(color='#E74C3C', label='5'),
-            mpatches.Patch(color='#2980B9', label='7'),
-            mpatches.Patch(color='#999', label='Other'),
-        ]
-        fig.legend(handles=legend_patches, loc='lower left',
-                   bbox_to_anchor=(0.45, 0.005), fontsize=5.5, ncol=4,
-                   frameon=True, fancybox=True, framealpha=0.9,
-                   edgecolor='black', title='Neighbors', title_fontsize=6)
-
-        if save:
-            self._pub_save(fig, 'fig_representative')
-        plt.show()
-
-    @staticmethod
-    def _find_image(folder, name):
-        folder = Path(folder)
-        for ext in ['.jpg', '.jpeg', '.png', '.tiff', '.bmp']:
-            m = list(folder.rglob(f"{name}{ext}"))
-            if m: return str(m[0])
-            m = list(folder.rglob(f"*{name}*{ext}"))
-            if m: return str(m[0])
-        return None
 
     # ==================================================================
-    # SPATIAL ORDER: NN-deviation Voronoi maps (Figure 5)
-    # ==================================================================
-
-    @staticmethod
-    def _compute_voronoi_deviation(results, pixel_size):
-        """Compute per-cell |NN_dist - r0| / r0 and clipped Voronoi polygons."""
-        from scipy.spatial import Voronoi, cKDTree
-        from matplotlib.patches import Polygon as MplPolygon
-
-        centroids = np.array([o.centroid for o in results['objects']])
-        y_c, x_c = centroids[:, 0], centroids[:, 1]
-        points = np.column_stack([x_c, y_c])
-        H, W = results['segmentor'].labels.shape
-
-        # NN distances
-        tree = cKDTree(points)
-        dd, _ = tree.query(points, k=2)
-        nn_dist = dd[:, 1] * pixel_size
-
-        # r0 from the fit
-        r0 = results.get('r0_px', 30) * pixel_size
-
-        # Deviation: |NN - r0| / r0
-        deviation = np.abs(nn_dist - r0) / r0
-
-        # Voronoi polygons
-        vor = Voronoi(points)
-        polygons = []
-        valid_idx = []
-        for i, region_idx in enumerate(vor.point_region):
-            region = vor.regions[region_idx]
-            if -1 in region or len(region) == 0:
-                continue
-            verts = vor.vertices[region]
-            if np.any(verts < -10) or np.any(verts[:, 0] > W + 10) or np.any(verts[:, 1] > H + 10):
-                continue
-            verts = np.clip(verts, 0, [W, H])
-            polygons.append(verts)
-            valid_idx.append(i)
-
-        return {
-            'polygons': polygons,
-            'deviation': deviation[valid_idx],
-            'nn_dist': nn_dist[valid_idx],
-            'r0': r0,
-            'shape': (H, W),
-        }
-
-    def pub_spatial_order(self, image_folder, pixel_size=0.58, save=None):
-        """Publication-ready Figure 5: NN-deviation Voronoi maps for 4 donors.
-
-        Each Voronoi cell is colored by |NN_distance - r0| / r0:
-          - Blue  = cell at equilibrium spacing (ordered)
-          - Red   = cell far from equilibrium (disordered)
-
-        Layout: 4 rows × 2 columns (BS | AS), shared horizontal colorbar.
-        """
-        from cornealia.cornealia import cornealia as Cornealia
-        from matplotlib.collections import PatchCollection
-        from matplotlib.patches import Polygon as MplPolygon
-        from matplotlib.colors import Normalize
-
-        self._pub_style()
-        save = save if save is not None else self.save
-
-        processor = Cornealia(is_input_image_machine_output=False,
-                              pixel_size=pixel_size, verbose=False)
-
-        # --- Select 4 donors spanning the response spectrum ---
-        paired = self.paired.copy()
-        col_as, col_bs = 'K_ds_um_AS', 'K_ds_um_BS'
-        paired = paired[(paired[col_bs] > 0.005) & (paired[col_as] > 0.005)].copy()
-        paired['pct_change'] = (paired[col_as] - paired[col_bs]) / paired[col_bs] * 100
-        paired_sorted = paired.sort_values('pct_change').reset_index(drop=True)
-        nr = len(paired_sorted)
-
-        targets = [
-            ('Large increase', 0.95),
-            ('Modest increase', 0.65),
-            ('Near zero', 0.45),
-            ('Decrease', 0.10),
-        ]
-        donors = []
-        for label, q in targets:
-            row = paired_sorted.iloc[int(nr * q)]
-            donors.append({'label': label, 'row': row})
-
-        print("\nSelected donors for spatial order:")
-        for d in donors:
-            r = d['row']
-            print(f"  {d['label']:18s}  {r['patient_id']:15s}  "
-                  f"ΔK={r['pct_change']:+.1f}%")
-
-        # --- Process all donors ---
-        donor_data = []
-        all_devs = []
-
-        for d in donors:
-            r = d['row']
-            pid = r['patient_id']
-            bs_path = self._find_image(image_folder, r['Image_Name_BS'])
-            as_path = self._find_image(image_folder, r['Image_Name_AS'])
-            if bs_path is None or as_path is None:
-                print(f"  WARNING: images not found for {pid}")
-                continue
-
-            print(f"  Processing {pid}...")
-            res_bs = processor.collective_order(bs_path)
-            res_as = processor.collective_order(as_path)
-
-            met_bs = self._compute_voronoi_deviation(res_bs, pixel_size)
-            met_as = self._compute_voronoi_deviation(res_as, pixel_size)
-
-            K_bs = res_bs.get('K_ds', 0) / (pixel_size ** 2)
-            K_as = res_as.get('K_ds', 0) / (pixel_size ** 2)
-
-            all_devs.extend(met_bs['deviation'])
-            all_devs.extend(met_as['deviation'])
-
-            donor_data.append({
-                'label': d['label'],
-                'pct': r['pct_change'],
-                'met_bs': met_bs, 'met_as': met_as,
-                'K_bs': K_bs, 'K_as': K_as,
-                'res_bs': res_bs, 'res_as': res_as,
-            })
-
-        if not donor_data:
-            print("  ERROR: no donors processed.")
-            return
-
-        # --- Figure: 4 rows × 3 cols (BS | AS | g(r)) ---
-        all_devs = np.array(all_devs)
-        vmin, vmax = 0, np.percentile(all_devs, 95)
-        cmap = plt.cm.RdYlBu_r
-        norm = Normalize(vmin=vmin, vmax=vmax)
-
-        n = len(donor_data)
-        fig_w = 190 / 25.4
-        fig_h = fig_w * 1.0
-        fig = plt.figure(figsize=(fig_w, fig_h))
-        import matplotlib.gridspec as gridspec
-        gs = gridspec.GridSpec(n, 3, figure=fig, width_ratios=[1, 1, 0.9],
-                               hspace=0.03, wspace=0.08,
-                               left=0.12, right=0.97, top=0.95, bottom=0.06)
-
-        for row, dd in enumerate(donor_data):
-            # --- Voronoi panels (cols 0, 1) ---
-            for col, side in enumerate(['bs', 'as']):
-                ax = fig.add_subplot(gs[row, col])
-                met = dd[f'met_{side}']
-                polys = met['polygons']
-                devs = met['deviation']
-                shape = met['shape']
-
-                patches = [MplPolygon(p, closed=True) for p in polys]
-                pc = PatchCollection(patches, cmap=cmap, norm=norm,
-                                     edgecolors='black', linewidths=0.3, alpha=0.85)
-                pc.set_array(devs)
-                ax.add_collection(pc)
-                ax.set_xlim(0, shape[1])
-                ax.set_ylim(shape[0], 0)
-                ax.set_aspect('equal')
-                ax.axis('off')
-
-                side_label = 'BS' if side == 'bs' else 'AS'
-                K_val = dd[f'K_{side}']
-                mean_dev = np.mean(devs)
-                ax.set_title(f'{side_label}  K={K_val:.3f}  dev={mean_dev:.2f}',
-                             fontsize=7, fontweight='bold', pad=2)
-
-                if col == 0:
-                    ax.text(-0.02, 0.5, f"{dd['label']}\n$\\Delta$K={dd['pct']:+.0f}%",
-                            transform=ax.transAxes, fontsize=7, fontweight='bold',
-                            ha='right', va='center', rotation=90)
-
-            # --- g(r) panel (col 2) ---
-            ax_gr = fig.add_subplot(gs[row, 2])
-            res_bs_d = dd['res_bs']
-            res_as_d = dd['res_as']
-
-            r_bs = np.array(res_bs_d.get('r', res_bs_d.get('r_values', []))) * pixel_size
-            g_bs = np.array(res_bs_d.get('g_r', res_bs_d.get('g_r_values', [])))
-            r_as = np.array(res_as_d.get('r', res_as_d.get('r_values', []))) * pixel_size
-            g_as = np.array(res_as_d.get('g_r', res_as_d.get('g_r_values', [])))
-
-            if len(r_bs) > 0 and len(g_bs) > 0:
-                ax_gr.scatter(r_bs, g_bs, s=3, c=COLORS['BS'], alpha=0.3, edgecolors='none')
-            if len(r_as) > 0 and len(g_as) > 0:
-                ax_gr.scatter(r_as, g_as, s=3, c=COLORS['AS'], alpha=0.3, edgecolors='none')
-
-            # DS fit overlay
-            def _step_response(r, A, xi, lam, r_excl, phi):
-                H = 1.0 / (1.0 + np.exp(-(r - r_excl) / 0.3))
-                t = np.maximum(r - r_excl, 0.0)
-                return -A * np.exp(-t / xi) * np.sin(2 * np.pi * t / lam + phi)
-
-            for res_d, color, lbl in [(res_bs_d, COLORS['BS'], 'BS'),
-                                       (res_as_d, COLORS['AS'], 'AS')]:
-                popt = res_d.get('popt_qc', None)
-                if popt is not None:
-                    r_fit = np.linspace(1, max(len(r_bs), len(r_as)), 500)
-                    g_fit = 1.0 + _step_response(r_fit, *popt)
-                    ax_gr.plot(r_fit * pixel_size, g_fit, color=color, linewidth=1.5,
-                               label=lbl)
-
-            ax_gr.axhline(1.0, color='gray', linewidth=0.4, linestyle='--')
-            ax_gr.set_ylim(0, None)
-            ax_gr.set_xlim(0, 50)
-            ax_gr.set_box_aspect(0.65)
-            ax_gr.spines['top'].set_visible(False)
-            ax_gr.spines['right'].set_visible(False)
-            ax_gr.tick_params(labelsize=6)
-
-            # K annotation
-            ax_gr.text(0.97, 0.97,
-                       f'K$_{{ds,BS}}$={dd["K_bs"]:.3f}\n'
-                       f'K$_{{ds,AS}}$={dd["K_as"]:.3f}\n'
-                       f'$\\Delta$={dd["pct"]:+.0f}%',
-                       transform=ax_gr.transAxes, fontsize=5, fontweight='bold',
-                       ha='right', va='top',
-                       bbox=dict(facecolor='white', alpha=0.8, edgecolor='#ccc',
-                                 boxstyle='round,pad=0.3'))
-
-            if row == 0:
-                ax_gr.legend(fontsize=7, loc='upper left', frameon=False)
-                ax_gr.set_title('g(r)', fontsize=8, fontweight='bold', pad=2)
-            if row == n - 1:
-                ax_gr.set_xlabel(r'r ($\mu$m)', fontsize=7, fontweight='bold')
-            else:
-                ax_gr.set_xticklabels([])
-
-        # Column headers
-        fig.axes[0].text(0.5, 1.12, 'Before Stripping', transform=fig.axes[0].transAxes,
-                         fontsize=9, fontweight='bold', ha='center')
-        fig.axes[1].text(0.5, 1.12, 'After Stripping', transform=fig.axes[1].transAxes,
-                         fontsize=9, fontweight='bold', ha='center')
-
-        # Colorbar at bottom
-        cbar_ax = fig.add_axes([0.12, 0.02, 0.55, 0.012])
-        cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
-                          cax=cbar_ax, orientation='horizontal')
-        cb.set_label(r'|NN distance $-$ r$_0$| / r$_0$', fontsize=8, fontweight='bold')
-
-        if save:
-            self._pub_save(fig, 'fig_spatial_order')
-        plt.show()
-
-    # ==================================================================
-    # MECHANICAL DISEQUILIBRIUM (Fig 5)
-    # Row 1: (a) Truss network, (b) Force field, (c) |F| histogram
-    # Row 2: (d) ΔK vs Δ|F| hexbin, (e) Convergence arrows, (f) Co-evolution
-    # Row 3: (g) Local release, (h) Potential wells, (i) K vs V(r₀)
-    # Row 4: (j) K vs CD by |F|, (k) spatial_cv vs K, (l) hot_spots vs ΔK
+    # MECHANICAL DISEQUILIBRIUM (Fig 5) — Rows 1-2 only (a-h)
+    # Row 1: (a) Truss schematic | (b) Low-stress | (c) High-stress | (d) |F| histogram
+    # Row 2: (e) ΔF vs ΔCD       | (f) ΔK vs ΔF  | (g) K vs |F|    | (h) CD-K saddle
     # ==================================================================
 
     def pub_mechanical_disequilibrium(self, image_folder=None, pixel_size=0.58, save=None):
         """
-        Publication Figure 5 — Mechanical disequilibrium.
+        Publication Figure 5 — Mechanical disequilibrium (2-row version).
 
-        Row 1 (a-d): Spatial stress maps — auto-picks lowest/highest mean_F donors
-        Row 2 (e-h): Population hexbin, convergence arrows, co-evolution, K vs |F|
-        Row 3 (l):   Potential wells U(K) and U(F)
+        Row 1 (a-d): Spatial stress maps for lowest/highest mean|F| donors.
+        Row 2 (e-h): Population-level force–order relationships.
 
         Parameters
         ----------
         image_folder : str or Path, optional
-            Folder with images. If None, uses self.image_folder from CSV.
+            Folder with images for Row 1. If None, uses self.image_folder.
         pixel_size : float
-            µm/px for reprocessing representative images.
+            µm/px calibration.
         """
         save = save if save is not None else self.save
         self._pub_style()
 
-        from scipy.stats import spearmanr
         from matplotlib.collections import LineCollection
-        from matplotlib.lines import Line2D
-        from matplotlib.transforms import blended_transform_factory
         from numpy.polynomial.polynomial import polyfit
 
-        paired = self.paired
+        paired = self.paired.copy()
         col_K = 'K_ds_um'
         C_BS, C_AS = '#4A90D9', '#E8833A'
 
@@ -2508,34 +1470,31 @@ class cornealia_batch_plotter:
             print(f"  ⚠ Mechanical columns missing. Need: {need_cols}")
             return
 
-        # Resolve image folder
-        img_folder = image_folder or self.image_folder
-
-        # Compute ΔK%
-        paired = paired.copy()
         paired['dK_pct'] = (paired[f'{col_K}_AS'] - paired[f'{col_K}_BS']) / paired[f'{col_K}_BS'] * 100
 
         def _clip(x, y, pct=2):
-            xlo, xhi = np.percentile(x, [pct, 100-pct])
-            ylo, yhi = np.percentile(y, [pct, 100-pct])
+            xlo, xhi = np.percentile(x, [pct, 100 - pct])
+            ylo, yhi = np.percentile(y, [pct, 100 - pct])
             m = (x >= xlo) & (x <= xhi) & (y >= ylo) & (y <= yhi)
             return x[m], y[m], m
 
+        # ── Figure layout: 190mm × 160mm, 2 rows ──
         fig_w = 190 / 25.4
-        fig_h = 250 / 25.4
+        fig_h = 160 / 25.4
         fig = plt.figure(figsize=(fig_w, fig_h))
 
         gs_row1 = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1, 1],
-                                    left=0.08, right=0.95, top=0.97, bottom=0.78, wspace=0.45)
-        gs_row2 = fig.add_gridspec(1, 4, width_ratios=[1.1, 1.3, 1.0, 0.8],
-                                    left=0.04, right=0.96, top=0.68, bottom=0.40, wspace=0.35)
-        gs_row3 = fig.add_gridspec(1, 2, width_ratios=[1, 1],
-                                    left=0.10, right=0.90, top=0.30, bottom=0.04, wspace=0.45)
+                                    left=0.08, right=0.95, top=0.95, bottom=0.55,
+                                    wspace=0.45)
+        gs_row2 = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1, 1.3],
+                                    left=0.08, right=0.95, top=0.50, bottom=0.16,
+                                    wspace=0.48)
 
         # ══════════════════════════════════════════════════════════
         # ROW 1 (a-d): SPATIAL STRESS MAPS
         # ══════════════════════════════════════════════════════════
 
+        img_folder = image_folder or self.image_folder
         res_low, res_high = None, None
         K_low, K_high = None, None
 
@@ -2543,7 +1502,6 @@ class cornealia_batch_plotter:
             try:
                 from cornealia.cornealia import cornealia as Cornealia
 
-                # Auto-pick lowest and highest mean_F donors
                 bs_data = self.df[self.df['group'] == 'BS'].copy()
                 if 'mean_F' in bs_data.columns:
                     bs_sorted = bs_data.dropna(subset=['mean_F']).sort_values('mean_F')
@@ -2552,14 +1510,14 @@ class cornealia_batch_plotter:
                 else:
                     low_name, high_name = None, None
 
-                engine = Cornealia(pixel_size=pixel_size, is_input_image_machine_output=False, verbose=False)
+                engine = Cornealia(pixel_size=pixel_size,
+                                   is_input_image_machine_output=False, verbose=False)
 
                 for name, label in [(low_name, 'low'), (high_name, 'high')]:
                     if name is None:
                         continue
                     img_path = Path(img_folder) / (name if '.' in name else name + '.png')
                     if not img_path.exists():
-                        # Try common extensions
                         for ext in ['.png', '.jpg', '.bmp', '.tif', '.tiff']:
                             candidate = Path(img_folder) / (Path(name).stem + ext)
                             if candidate.exists():
@@ -2572,417 +1530,292 @@ class cornealia_batch_plotter:
                             if label == 'low':
                                 res_low = rf
                                 K_low = r.get('K_ds', r.get('K'))
-                                if K_low: K_low = float(K_low) / (pixel_size**2)
+                                if K_low:
+                                    K_low = float(K_low) / (pixel_size ** 2)
                             else:
                                 res_high = rf
                                 K_high = r.get('K_ds', r.get('K'))
-                                if K_high: K_high = float(K_high) / (pixel_size**2)
+                                if K_high:
+                                    K_high = float(K_high) / (pixel_size ** 2)
 
                 engine._ocr_reader = None
                 del engine
             except Exception as e:
                 print(f"  ⚠ Row 1 failed: {e}")
 
-        # Shared vmax for panels b and c
         vmax = np.percentile(res_high['F_mag'], 95) if res_high is not None else 1.0
 
-        # Panel a: Truss schematic (low-stress donor with image background)
+        # Panel a: Truss schematic
         ax_a = fig.add_subplot(gs_row1[0, 0])
         if res_low is not None:
             pts = res_low['pts_um']
             edges = res_low['edges']
             d_um = res_low['d_um']
             r0 = res_low['r0']
-
-            # Try loading raw image
-            if low_name and img_folder:
-                import matplotlib.image as mpimg
-                img_path = Path(img_folder) / (low_name if '.' in low_name else low_name + '.png')
-                try:
-                    img = mpimg.imread(str(img_path))
-                    H_px, W_px = img.shape[:2]
-                    extent_um = [0, W_px * pixel_size, H_px * pixel_size, 0]
-                    ax_a.imshow(img, extent=extent_um, aspect='auto',
-                                cmap='gray' if img.ndim == 2 else None, alpha=0.6, zorder=0)
-                except Exception:
-                    pass
-
             segments = [[pts[i], pts[j]] for i, j in edges]
-            edge_colors = ['#CC3311' if d_um[k] < r0 else '#0077BB' for k in range(len(edges))]
-            ax_a.add_collection(LineCollection(segments, colors=edge_colors, linewidths=0.3, alpha=0.35, zorder=1))
-            ax_a.scatter(pts[:, 0], pts[:, 1], s=2, c='white', edgecolors='#333', linewidths=0.2, zorder=2, alpha=0.8)
+            edge_colors = ['#CC3311' if d_um[k] < r0 else '#0077BB'
+                           for k in range(len(edges))]
+            ax_a.add_collection(LineCollection(segments, colors=edge_colors,
+                                              linewidths=0.3, alpha=0.35, zorder=1))
+            ax_a.scatter(pts[:, 0], pts[:, 1], s=2, c='white', edgecolors='#333',
+                         linewidths=0.2, zorder=2, alpha=0.8)
             ax_a.set_xlim(pts[:, 0].min(), pts[:, 0].max())
             ax_a.set_ylim(pts[:, 1].max(), pts[:, 1].min())
             ax_a.set_aspect('equal')
-
-            # Zoom inset
-            from matplotlib.patches import Rectangle
-            cx, cy = np.median(pts[:, 0]), np.median(pts[:, 1])
-            cn = np.argmin(np.sqrt((pts[:, 0] - cx)**2 + (pts[:, 1] - cy)**2))
-            zx, zy = pts[cn]
-            zr = r0 * 2.2
-            rect = Rectangle((zx - zr, zy - zr), 2*zr, 2*zr, lw=1.2, edgecolor='#009E73', facecolor='none', zorder=5)
-            ax_a.add_patch(rect)
-
-            ax_in = ax_a.inset_axes([0.55, 0.02, 0.43, 0.55])
-            ax_in.set_facecolor('#F8F8F5')
-            nmask = (edges[:, 0] == cn) | (edges[:, 1] == cn)
-            ring1 = set()
-            for i, j in edges[nmask]: ring1.add(i); ring1.add(j)
-            ring2 = set()
-            for nn in ring1:
-                nm2 = (edges[:, 0] == nn) | (edges[:, 1] == nn)
-                for i, j in edges[nm2]: ring2.add(i); ring2.add(j)
-            for k, (i, j) in enumerate(edges):
-                if i in ring2 and j in ring2:
-                    xi, yi = pts[i]; xj, yj = pts[j]
-                    if zx-zr < xi < zx+zr and zx-zr < xj < zx+zr and zy-zr < yi < zy+zr and zy-zr < yj < zy+zr:
-                        color = '#CC3311' if d_um[k] < r0 else '#0077BB'
-                        lw = 1.5 if (i in ring1 and j in ring1) else 0.5
-                        alpha = 0.9 if (i in ring1 and j in ring1) else 0.25
-                        ax_in.plot([xi, xj], [yi, yj], '-', color=color, linewidth=lw, alpha=alpha)
-            ax_in.add_patch(plt.Circle((zx, zy), r0, fill=False, color='#009E73', lw=1.5, ls='--', alpha=0.9))
-            ax_in.set_xlim(zx-zr, zx+zr); ax_in.set_ylim(zy+zr, zy-zr)
-            ax_in.set_aspect('equal'); ax_in.set_xticks([]); ax_in.set_yticks([])
-            for sp in ax_in.spines.values(): sp.set_edgecolor('#009E73'); sp.set_linewidth(1.2)
-
-            legend_el = [
-                Line2D([0], [0], color='#CC3311', lw=1.5, label=r'd < r$_0$'),
-                Line2D([0], [0], color='#0077BB', lw=1.5, label=r'd > r$_0$'),
-                Line2D([0], [0], color='#009E73', lw=1.5, ls='--', label=f'r₀={r0:.1f} µm'),
-            ]
-            ax_a.legend(handles=legend_el, fontsize=5, loc='upper center', ncol=3, framealpha=0.9)
         else:
-            ax_a.text(0.5, 0.5, 'No image folder', transform=ax_a.transAxes, ha='center', va='center', fontsize=9, color='#999')
-        ax_a.set_xlabel('x (µm)'); ax_a.set_ylabel('y (µm)')
-        ax_a.spines['top'].set_visible(False); ax_a.spines['right'].set_visible(False)
-        self._pub_panel_label(ax_a, 'a')
+            ax_a.text(0.5, 0.5, 'No image data', transform=ax_a.transAxes,
+                      ha='center', va='center', fontsize=9, color='#999')
+        ax_a.set_xlabel('x (µm)')
+        ax_a.spines['top'].set_visible(False)
+        ax_a.spines['right'].set_visible(False)
+        self._fig4_panel_label(ax_a, 'a')
 
-        # Panel b: Low-stress force field
-        ax_b = fig.add_subplot(gs_row1[0, 1])
-        sc_b = self._plot_force_panel(ax_b, res_low, K_low, 'Low stress', vmax, 'b', show_cbar=False)
-
-        # Panel c: High-stress force field
-        ax_c = fig.add_subplot(gs_row1[0, 2])
-        sc_c = self._plot_force_panel(ax_c, res_high, K_high, 'High stress', vmax, 'c', show_cbar=False)
-
-        # Shared colorbar beneath b and c
-        if sc_c is not None:
-            bb_b = gs_row1[0, 1].get_position(fig)
-            bb_c = gs_row1[0, 2].get_position(fig)
-            cbar_ax = fig.add_axes([bb_b.x0 + bb_b.width*0.1, bb_b.y0 - 0.025,
-                                    bb_c.x0 + bb_c.width*0.9 - bb_b.x0 - bb_b.width*0.1, 0.01])
-            cb = fig.colorbar(sc_c, cax=cbar_ax, orientation='horizontal')
-            cb.set_label(r'$|F_i|$ (µm$^{-1}$)', fontsize=8, fontweight='bold')
-            cb.ax.tick_params(labelsize=7)
+        # Panels b, c: Force fields
+        for idx, (res, K_val, subtitle, show_cb, label) in enumerate([
+            (res_low, K_low, 'Low stress', False, 'b'),
+            (res_high, K_high, 'High stress', True, 'c'),
+        ]):
+            ax = fig.add_subplot(gs_row1[0, idx + 1])
+            if res is not None:
+                sc = ax.scatter(res['pts_um'][:, 0], res['pts_um'][:, 1],
+                                c=res['F_mag'], s=8, cmap='YlOrRd',
+                                vmin=0, vmax=vmax, edgecolors='none', zorder=2)
+                threshold = np.percentile(res['F_mag'], 70)
+                high = res['F_mag'] >= threshold
+                if high.any():
+                    scale = np.percentile(res['F_mag'][high], 95)
+                    ax.quiver(res['pts_um'][high, 0], res['pts_um'][high, 1],
+                              res['F_residual'][high, 0], res['F_residual'][high, 1],
+                              res['F_mag'][high], cmap='YlOrRd', clim=(0, vmax),
+                              scale=scale * 18, width=0.004, headwidth=3,
+                              headlength=3.5, alpha=0.75, zorder=3)
+                if show_cb:
+                    plt.colorbar(sc, ax=ax, shrink=0.55, pad=0.02, aspect=12).set_label(
+                        r'$|F_i|$', fontsize=8)
+                ax.set_aspect('equal')
+                K_str = f'{K_val:.3f}' if K_val is not None else '?'
+                ax.text(0.97, 0.03,
+                        f'$K_{{ds}}$={K_str}\nmean$|F|$={res["F_mag"].mean():.2f}',
+                        transform=ax.transAxes, fontsize=6, fontweight='bold',
+                        color='white', ha='right', va='bottom',
+                        bbox=dict(boxstyle='round,pad=0.2', facecolor='black',
+                                  alpha=0.6, edgecolor='none'))
+            else:
+                ax.text(0.5, 0.5, 'No data', transform=ax.transAxes,
+                        ha='center', va='center', fontsize=9, color='#999')
+            ax.set_xlabel('x (µm)')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            self._fig4_panel_label(ax, label)
+            # Shift panel c a little to the left
+            if label == 'c':
+                _pc = ax.get_position()
+                ax.set_position([_pc.x0 - 0.03, _pc.y0, _pc.width, _pc.height])
 
         # Panel d: |F| histogram overlay
         ax_d = fig.add_subplot(gs_row1[0, 3])
+        ax_d.set_box_aspect(0.75)  # match height of equal-aspect panels a-c
+        # Shift panel d a little to the right
+        _pd = ax_d.get_position()
+        ax_d.set_position([_pd.x0 + 0.03, _pd.y0, _pd.width, _pd.height])
         if res_low is not None and res_high is not None:
             F_lo, F_hi = res_low['F_mag'], res_high['F_mag']
             bins = np.linspace(0, np.percentile(np.concatenate([F_lo, F_hi]), 98), 30)
-            ax_d.hist(F_lo, bins=bins, color=C_BS, alpha=0.5, edgecolor='white', lw=0.3, density=True, label='Low stress')
-            ax_d.hist(F_hi, bins=bins, color='#CC3311', alpha=0.5, edgecolor='white', lw=0.3, density=True, label='High stress')
+            ax_d.hist(F_lo, bins=bins, color=C_BS, alpha=0.5, edgecolor='white',
+                      lw=0.3, density=True, label='Low stress')
+            ax_d.hist(F_hi, bins=bins, color='#CC3311', alpha=0.5, edgecolor='white',
+                      lw=0.3, density=True, label='High stress')
             ax_d.axvline(F_lo.mean(), color=C_BS, lw=1.5, ls='--', alpha=0.8)
             ax_d.axvline(F_hi.mean(), color='#CC3311', lw=1.5, ls='--', alpha=0.8)
             ax_d.legend(fontsize=6, loc='upper right')
         else:
-            ax_d.text(0.5, 0.5, 'No image data', transform=ax_d.transAxes, ha='center', va='center', fontsize=9, color='#999')
-        ax_d.set_xlabel(r'$|F_i|$ (µm$^{-1}$)'); ax_d.set_ylabel('Density')
-        ax_d.spines['top'].set_visible(False); ax_d.spines['right'].set_visible(False)
-        self._pub_panel_label(ax_d, 'd')
+            ax_d.text(0.5, 0.5, 'No image data', transform=ax_d.transAxes,
+                      ha='center', va='center', fontsize=9, color='#999')
+        ax_d.set_xlabel(r'$|F_i|$ (µm$^{-1}$)')
+        ax_d.set_ylabel('Density')
+        ax_d.spines['top'].set_visible(False)
+        ax_d.spines['right'].set_visible(False)
+        self._fig4_panel_label(ax_d, 'd')
 
         # ══════════════════════════════════════════════════════════
-        # ROW 2 (e-h): POPULATION
+        # ROW 2 (e-h): POPULATION FORCE-ORDER RELATIONSHIPS
         # ══════════════════════════════════════════════════════════
 
-        # Panel e: Hexbin mean|F| vs ΔK%
+        # Panel e: ΔF vs ΔCD hexbin
         ax_e = fig.add_subplot(gs_row2[0, 0])
-        F_star = self._plot_hexbin_lowess(ax_e, paired, 'mean_F_BS', 'dK_pct',
-                                           r'Baseline mean $|F|$ (µm$^{-1}$)', 'e')
+        dF = (paired['mean_F_AS'] - paired['mean_F_BS']).values
+        dCD = (paired['CD_calc_AS'] - paired['CD_calc_BS']).values
+        valid_e = np.isfinite(dF) & np.isfinite(dCD)
+        dCD_c, dF_c, _ = _clip(dCD[valid_e], dF[valid_e], pct=1)
+        hb = ax_e.hexbin(dCD_c, dF_c, gridsize=18, cmap='Greys', mincnt=1, zorder=1)
+        cb = plt.colorbar(hb, ax=ax_e, shrink=0.35, pad=0.02, aspect=15)
+        cb.ax.set_title('Count', fontsize=7, fontweight='bold', pad=3)
+        cb.ax.tick_params(labelsize=6)
+        coeffs = polyfit(dCD_c, dF_c, 1)
+        x_fit = np.linspace(dCD_c.min(), dCD_c.max(), 100)
+        ax_e.plot(x_fit, coeffs[0] + coeffs[1] * x_fit, '--', color='#E65100',
+                  linewidth=2.0, alpha=0.8, zorder=3)
+        ax_e.axhline(0, color='black', lw=0.8, ls=':', zorder=1)
+        ax_e.axvline(0, color='black', lw=0.8, ls=':', zorder=1)
+        ax_e.set_xlabel(r'$\Delta$CD (cells/mm$^2$)')
+        ax_e.set_ylabel(r'$\Delta$ mean $|F|$ (µm$^{-1}$)')
+        ax_e.spines['top'].set_visible(False)
+        ax_e.spines['right'].set_visible(False)
+        rho_e, p_e = spearmanr(dCD_c, dF_c)
+        ax_e.text(0.95, 0.03, f'ρ = {rho_e:.3f}\np = {p_e:.1e}',
+                  transform=ax_e.transAxes, fontsize=7, ha='right', va='bottom',
+                  fontweight='bold', color='#333',
+                  bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                            alpha=0.8, edgecolor='none'))
+        ax_e.set_box_aspect(1)
+        self._fig4_panel_label(ax_e, 'e')
 
-        # Panel f: Convergence arrows by mean|F|
-        self._plot_convergence_arrows(fig, gs_row2[0, 1], paired, 'mean_F_BS', F_star, 'f',
-                                       r'Bins by mean $|F|$')
+        # Panel f: ΔK vs ΔF hexbin (co-evolution)
+        ax_f = fig.add_subplot(gs_row2[0, 1])
+        dK = paired['dK_pct'].values
+        valid_f = np.isfinite(dK) & np.isfinite(dF)
+        dF_f, dK_f, _ = _clip(dF[valid_f], dK[valid_f], pct=1)
+        hb = ax_f.hexbin(dF_f, dK_f, gridsize=18, cmap='Greys', mincnt=1, zorder=1)
+        cb = plt.colorbar(hb, ax=ax_f, shrink=0.35, pad=0.02, aspect=15)
+        cb.ax.set_title('Count', fontsize=7, fontweight='bold', pad=3)
+        cb.ax.tick_params(labelsize=6)
+        coeffs = polyfit(dF_f, dK_f, 1)
+        x_fit = np.linspace(dF_f.min(), dF_f.max(), 100)
+        ax_f.plot(x_fit, coeffs[0] + coeffs[1] * x_fit, '--', color='#E65100',
+                  linewidth=2.0, alpha=0.8, zorder=3)
+        ax_f.axhline(0, color='black', lw=0.8, ls=':', zorder=1)
+        ax_f.axvline(0, color='black', lw=0.8, ls=':', zorder=1)
+        ax_f.set_xlabel(r'$\Delta$ mean $|F|$ (µm$^{-1}$)')
+        ax_f.set_ylabel(r'$\Delta K_{ds}$ (%)')
+        ax_f.spines['top'].set_visible(False)
+        ax_f.spines['right'].set_visible(False)
+        rho_f, p_f = spearmanr(dF_f, dK_f)
+        ax_f.text(0.95, 0.03, f'ρ = {rho_f:.3f}\np = {p_f:.1e}',
+                  transform=ax_f.transAxes, fontsize=7, ha='right', va='bottom',
+                  fontweight='bold', color='#333',
+                  bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                            alpha=0.8, edgecolor='none'))
+        ax_f.text(0.03, 0.97, 'F↓ K↑', transform=ax_f.transAxes, fontsize=6,
+                  ha='left', va='top', color='#888', fontweight='bold')
+        ax_f.text(0.97, 0.97, 'F↑ K↑', transform=ax_f.transAxes, fontsize=6,
+                  ha='right', va='top', color='#CC3311', fontweight='bold')
+        ax_f.text(0.03, 0.35, 'F↓ K↓', transform=ax_f.transAxes, fontsize=6,
+                  ha='left', va='top', color='#CC3311', fontweight='bold')
+        ax_f.text(0.97, 0.35, 'F↑ K↓', transform=ax_f.transAxes, fontsize=6,
+                  ha='right', va='top', color='#888', fontweight='bold')
+        ax_f.set_box_aspect(1)
+        self._fig4_panel_label(ax_f, 'f')
 
-        # Panel g: Co-evolution ΔK vs Δ|F|
+        # Panel g: K vs |F| baseline scatter + LOWESS
         ax_g = fig.add_subplot(gs_row2[0, 2])
-        dK_v = paired['dK_pct'].values
-        dF_v = (paired['mean_F_AS'] - paired['mean_F_BS']).values
-        valid = np.isfinite(dK_v) & np.isfinite(dF_v)
-        dF_c, dK_c, _ = _clip(dF_v[valid], dK_v[valid], pct=1)
-        hb = ax_g.hexbin(dF_c, dK_c, gridsize=18, cmap='Greys', mincnt=1, zorder=1)
-        plt.colorbar(hb, ax=ax_g, shrink=0.6, pad=0.02).set_label('Count', fontsize=7)
-        ax_g.axhline(0, color='black', lw=0.8, ls=':', zorder=1)
-        ax_g.axvline(0, color='black', lw=0.8, ls=':', zorder=1)
-        coeffs = polyfit(dF_c, dK_c, 1)
-        x_fit = np.linspace(dF_c.min(), dF_c.max(), 100)
-        ax_g.plot(x_fit, coeffs[0] + coeffs[1] * x_fit, '--', color='#E65100', lw=2.0, alpha=0.8)
-        rho, p = spearmanr(dF_c, dK_c)
-        ax_g.text(0.95, 0.03, f'ρ = {rho:.3f}\np = {p:.1e}', transform=ax_g.transAxes,
-                  fontsize=7, ha='right', va='bottom', fontweight='bold', color='#333',
-                  bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8, edgecolor='none'))
-        ax_g.set_xlabel(r'$\Delta$ mean $|F|$ (µm$^{-1}$)'); ax_g.set_ylabel(r'$\Delta K_{ds}$ (%)')
-        ax_g.text(0.03, 0.97, 'F↓ K↑', transform=ax_g.transAxes, fontsize=6, ha='left', va='top', color='#888', fontweight='bold')
-        ax_g.text(0.97, 0.97, 'F↑ K↑', transform=ax_g.transAxes, fontsize=6, ha='right', va='top', color='#CC3311', fontweight='bold')
-        ax_g.text(0.03, 0.35, 'F↓ K↓', transform=ax_g.transAxes, fontsize=6, ha='left', va='top', color='#CC3311', fontweight='bold')
-        ax_g.text(0.97, 0.35, 'F↑ K↓', transform=ax_g.transAxes, fontsize=6, ha='right', va='top', color='#888', fontweight='bold')
-        ax_g.spines['top'].set_visible(False); ax_g.spines['right'].set_visible(False)
-        self._pub_panel_label(ax_g, 'g')
-
-        # Panel h: Cross-sectional K vs |F|
-        ax_h = fig.add_subplot(gs_row2[0, 3])
         K_all = paired[f'{col_K}_BS'].values
         F_all = paired['mean_F_BS'].values
-        valid_h = np.isfinite(K_all) & np.isfinite(F_all)
-        K_all, F_all = K_all[valid_h], F_all[valid_h]
+        valid_g = np.isfinite(K_all) & np.isfinite(F_all)
+        K_all, F_all = K_all[valid_g], F_all[valid_g]
         p99 = np.percentile(K_all, 99)
         m99 = K_all <= p99
-        ax_h.scatter(K_all[m99], F_all[m99], s=4, alpha=0.3, color='#333', edgecolors='none')
+        ax_g.scatter(K_all[m99], F_all[m99], s=4, alpha=0.3, color='#333', edgecolors='none')
         try:
             from statsmodels.nonparametric.smoothers_lowess import lowess
             si = np.argsort(K_all[m99])
             lw_fit = lowess(F_all[m99][si], K_all[m99][si], frac=0.4)
-            ax_h.plot(lw_fit[:, 0], lw_fit[:, 1], '-', color='#E65100', linewidth=2.5)
+            ax_g.plot(lw_fit[:, 0], lw_fit[:, 1], '-', color='#E65100', linewidth=2.5)
         except ImportError:
             pass
-        rho_h, p_h = spearmanr(K_all[m99], F_all[m99])
-        ax_h.text(0.05, 0.95, f'ρ = {rho_h:.3f}\nn = {len(K_all[m99])}', transform=ax_h.transAxes,
-                  fontsize=7, fontweight='bold', va='top',
-                  bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8, edgecolor='none'))
-        ax_h.set_xlabel(r'$K_{ds}$ (µm$^{-2}$)'); ax_h.set_ylabel(r'mean $|F|$ (µm$^{-1}$)')
-        ax_h.spines['top'].set_visible(False); ax_h.spines['right'].set_visible(False)
-        self._pub_panel_label(ax_h, 'h')
+        rho_g, p_g = spearmanr(K_all[m99], F_all[m99])
+        ax_g.text(0.05, 0.95, f'ρ = {rho_g:.3f}\nn = {len(K_all[m99])}',
+                  transform=ax_g.transAxes, fontsize=7, fontweight='bold', va='top',
+                  bbox=dict(boxstyle='round,pad=0.2', facecolor='white',
+                            alpha=0.8, edgecolor='none'))
+        ax_g.set_xlabel(r'$K_{ds}$ (µm$^{-2}$)')
+        ax_g.set_ylabel(r'mean $|F|$ (µm$^{-1}$)')
+        ax_g.spines['top'].set_visible(False)
+        ax_g.spines['right'].set_visible(False)
+        ax_g.set_box_aspect(1)
+        self._fig4_panel_label(ax_g, 'g')
+        # Shrink 20% diagonally (center-anchored)
+        _pg = ax_g.get_position()
+        _dw, _dh = _pg.width * 0.20 / 2, _pg.height * 0.20 / 2
+        ax_g.set_position([_pg.x0 + _dw, _pg.y0 + _dh, _pg.width * 0.80, _pg.height * 0.80])
 
-        # ══════════════════════════════════════════════════════════
-        # ROW 3 (l): POTENTIAL WELLS U(K) and U(F)
-        # ══════════════════════════════════════════════════════════
+        # Panel h: CD-K saddle colored by baseline |F|
+        ax_h = fig.add_subplot(gs_row2[0, 3])
+        self._fig5_saddle_panel(ax_h, paired, col_K)
+        ax_h.set_box_aspect(1)
 
-        try:
-            from statsmodels.nonparametric.smoothers_lowess import lowess as lowess_fn
-
-            def _make_potential(x_bs, x_as, frac=0.4):
-                valid = np.isfinite(x_bs) & np.isfinite(x_as)
-                xb, xa = x_bs[valid], x_as[valid]
-                dx = xa - xb
-                p2, p98 = np.percentile(xb, [2, 98])
-                m = (xb >= p2) & (xb <= p98)
-                xb, dx = xb[m], dx[m]
-                si = np.argsort(xb)
-                lw = lowess_fn(dx[si], xb[si], frac=frac)
-                crossings = np.where(np.diff(np.sign(lw[:, 1])))[0]
-                x_star = None
-                if len(crossings) > 0:
-                    i = crossings[0]
-                    x0, x1 = lw[i, 0], lw[i+1, 0]
-                    y0, y1 = lw[i, 1], lw[i+1, 1]
-                    x_star = x0 - y0 * (x1 - x0) / (y1 - y0) if y1 != y0 else x0
-                ddx = np.diff(lw[:, 0])
-                mid_v = (lw[:-1, 1] + lw[1:, 1]) / 2
-                U = np.concatenate([[0], np.cumsum(-mid_v * ddx)])
-                U -= U.min()
-                return lw[:, 0], U, x_star
-
-            # U(K)
-            ax_l1 = fig.add_subplot(gs_row3[0, 0])
-            xK, UK, K_star = _make_potential(paired[f'{col_K}_BS'].values, paired[f'{col_K}_AS'].values)
-            ax_l1.fill_between(xK, UK, alpha=0.15, color='#4A90D9')
-            ax_l1.plot(xK, UK, '-', color='#4A90D9', linewidth=2)
-            if K_star:
-                U_s = np.interp(K_star, xK, UK)
-                ax_l1.plot(K_star, U_s, 'o', color='#0072B2', markersize=6, markeredgecolor='white', markeredgewidth=1.2, zorder=5)
-                ax_l1.axvline(K_star, color='#0072B2', lw=1, ls='--', alpha=0.4)
-                ax_l1.text(K_star, UK.max() * 0.75, f'  $K^*$={K_star:.3f}', fontsize=7, fontweight='bold', color='#0072B2', va='center')
-            ax_l1.set_xlabel(r'$K_{ds}$ (µm$^{-2}$)'); ax_l1.set_ylabel(r'$U(K)$')
-            ax_l1.spines['top'].set_visible(False); ax_l1.spines['right'].set_visible(False)
-            self._pub_panel_label(ax_l1, 'i')
-
-            # U(F)
-            ax_l2 = fig.add_subplot(gs_row3[0, 1])
-            xF, UF, F_star_w = _make_potential(paired['mean_F_BS'].values, paired['mean_F_AS'].values)
-            ax_l2.fill_between(xF, UF, alpha=0.15, color='#CC3311')
-            ax_l2.plot(xF, UF, '-', color='#CC3311', linewidth=2)
-            if F_star_w:
-                U_s = np.interp(F_star_w, xF, UF)
-                ax_l2.plot(F_star_w, U_s, 'o', color='#CC3311', markersize=6, markeredgecolor='white', markeredgewidth=1.2, zorder=5)
-                ax_l2.axvline(F_star_w, color='#CC3311', lw=1, ls='--', alpha=0.4)
-                ax_l2.text(F_star_w, UF.max() * 0.75, f'  $|F|^*$={F_star_w:.3f}', fontsize=7, fontweight='bold', color='#CC3311', va='center')
-            ax_l2.set_xlabel(r'mean $|F|$ (µm$^{-1}$)'); ax_l2.set_ylabel(r'$U(|F|)$')
-            ax_l2.spines['top'].set_visible(False); ax_l2.spines['right'].set_visible(False)
-
-        except ImportError:
-            ax_l1 = fig.add_subplot(gs_row3[0, 0])
-            ax_l1.text(0.5, 0.5, 'statsmodels required\nfor potential wells', transform=ax_l1.transAxes,
-                      ha='center', va='center', fontsize=9, color='#999')
-            self._pub_panel_label(ax_l1, 'i')
-
-        plt.tight_layout()
         if save:
             self._pub_save(fig, 'fig5_mechanical_disequilibrium')
         plt.show()
 
-    # ── Helpers for mechanical disequilibrium ──
+    def _fig5_saddle_panel(self, ax, paired, col_K):
+        """CD-K phase portrait with donors colored by baseline mean|F|."""
+        from scipy.optimize import brentq
 
-    def _plot_force_panel(self, ax, result, K_ds, subtitle, vmax, label, show_cbar=False):
-        """Force field panel: edges + heatmap + vectors."""
-        if result is None:
-            ax.text(0.5, 0.5, 'No data', transform=ax.transAxes, ha='center', va='center', fontsize=9, color='#999')
-            ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
-            self._pub_panel_label(ax, label)
-            return None
+        cd_bs = paired['CD_calc_BS'].values
+        k_bs = paired[f'{col_K}_BS'].values
+        cd_as = paired['CD_calc_AS'].values
+        k_as = paired[f'{col_K}_AS'].values
+        f_bs = paired['mean_F_BS'].values
 
-        from matplotlib.collections import LineCollection
-        pts = result['pts_um']; edges = result['edges']
-        d_um = result['d_um']; r0 = result['r0']
-        F_res = result['F_residual']; F_mag = result['F_mag']
+        valid = (np.isfinite(cd_bs) & np.isfinite(k_bs) &
+                 np.isfinite(cd_as) & np.isfinite(k_as) & np.isfinite(f_bs))
+        cd_bs, k_bs = cd_bs[valid], k_bs[valid]
+        cd_as, k_as = cd_as[valid], k_as[valid]
+        f_bs = f_bs[valid]
+        dcd = cd_as - cd_bs
+        dk = k_as - k_bs
 
-        segments = [[pts[i], pts[j]] for i, j in edges]
-        edge_colors = ['#E8CCCC' if d_um[k] < r0 else '#CCE0F0' for k in range(len(edges))]
-        ax.add_collection(LineCollection(segments, colors=edge_colors, linewidths=0.25, alpha=0.3))
+        lo, hi = np.percentile(k_bs, [1, 99])
+        trim = (k_bs >= lo) & (k_bs <= hi)
+        cd_bs, k_bs, dcd, dk, f_bs = (cd_bs[trim], k_bs[trim], dcd[trim],
+                                        dk[trim], f_bs[trim])
 
-        sc = ax.scatter(pts[:, 0], pts[:, 1], c=F_mag, s=8, cmap='YlOrRd',
-                        vmin=0, vmax=vmax, edgecolors='none', zorder=2)
+        # Phase field
+        R = self._compute_phase_field(cd_bs, k_bs, dcd, dk, seed=999)
 
-        threshold = np.percentile(F_mag, 70)
-        high = F_mag >= threshold
-        if high.any():
-            scale = np.percentile(F_mag[high], 95)
-            ax.quiver(pts[high, 0], pts[high, 1], F_res[high, 0], F_res[high, 1],
-                      F_mag[high], cmap='YlOrRd', clim=(0, vmax),
-                      scale=scale*18, width=0.004, headwidth=3, headlength=3.5, alpha=0.75, zorder=3)
-
-        if show_cbar:
-            plt.colorbar(sc, ax=ax, shrink=0.75, pad=0.02).set_label(r'$|F_i|$', fontsize=8)
-
-        ax.set_aspect('equal')
-        ax.set_xlabel('x (µm)')
-        ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
-
-        K_str = f'{K_ds:.3f}' if K_ds is not None else '?'
-        ax.text(0.97, 0.03, f'$K_{{ds}}$={K_str}\nmean$|F|$={F_mag.mean():.2f}',
-                transform=ax.transAxes, fontsize=6, fontweight='bold', color='white',
-                ha='right', va='bottom',
-                bbox=dict(boxstyle='round,pad=0.2', facecolor='black', alpha=0.6, edgecolor='none'))
-        ax.set_title(f'{label}   {subtitle}', fontweight='bold', fontsize=9, loc='left', pad=4)
-        return sc
-
-    def _plot_hexbin_lowess(self, ax, paired, metric_col, dk_col, xlabel, label, lowess_frac=0.45):
-        """Hexbin of baseline metric vs ΔK% with LOWESS fit. Returns crossing value."""
-        from matplotlib.transforms import blended_transform_factory
-
-        x = paired[metric_col].to_numpy(dtype=float)
-        y = paired[dk_col].to_numpy(dtype=float)
-        valid = np.isfinite(x) & np.isfinite(y)
-        x, y = x[valid], y[valid]
-        xlo, xhi = np.percentile(x, [1, 99])
-        ylo, yhi = np.percentile(y, [1, 99])
-        m = (x >= xlo) & (x <= xhi) & (y >= ylo) & (y <= yhi)
-        xc, yc = x[m], y[m]
-
-        hb = ax.hexbin(xc, yc, gridsize=18, cmap='Greys', mincnt=1, zorder=1)
-        plt.colorbar(hb, ax=ax, shrink=0.6, pad=0.02).set_label('Count', fontsize=7)
-
-        crossing_val = None
-        try:
-            from statsmodels.nonparametric.smoothers_lowess import lowess
-            si = np.argsort(xc)
-            lw_fit = lowess(yc[si], xc[si], frac=lowess_frac)
-            ax.plot(lw_fit[:, 0], lw_fit[:, 1], '-', color='#E65100', linewidth=3.0, label='LOWESS', zorder=3)
-            crossings = np.where(np.diff(np.sign(lw_fit[:, 1])))[0]
-            if len(crossings) > 0:
-                i = crossings[0]
-                x0, x1, y0, y1 = lw_fit[i, 0], lw_fit[i+1, 0], lw_fit[i, 1], lw_fit[i+1, 1]
-                crossing_val = x0 - y0 * (x1 - x0) / (y1 - y0) if y1 != y0 else x0
-                ax.axvline(crossing_val, color='#0072B2', lw=2.0, ls='--', alpha=0.9, zorder=2)
-                trans = blended_transform_factory(ax.transData, ax.transAxes)
-                ax.text(crossing_val, 0.80, f'  $|F|^*$', transform=trans, fontsize=7,
-                        fontweight='bold', color='#0072B2', va='top', ha='left')
-        except ImportError:
-            pass
-
-        ax.axhline(0, color='black', lw=0.8, ls=':', zorder=1)
-        ax.set_xlabel(xlabel, fontsize=9)
-        ax.set_ylabel(r'$\Delta K_{ds}$ (%)', fontsize=9)
-        if ax.get_legend_handles_labels()[0]:
-            ax.legend(fontsize=6, loc='upper right', framealpha=0.9)
-        ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
-
-        from scipy.stats import spearmanr
-        rho, p = spearmanr(xc, yc)
-        ax.text(0.95, 0.03, f'ρ = {rho:.3f}\np = {p:.1e}', transform=ax.transAxes,
-                fontsize=7, ha='right', va='bottom', fontweight='bold', color='#333',
-                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8, edgecolor='none'))
-        self._pub_panel_label(ax, label)
-        return crossing_val
-
-    def _plot_convergence_arrows(self, fig, subplot_spec, paired, metric_col, crossing_val, label, y_label_text):
-        """Binned arrow plot: metric bins → K_ds direction."""
-        from matplotlib.transforms import blended_transform_factory
-        from matplotlib.lines import Line2D
-
-        col_K = 'K_ds_um'
+        # Scatter colored by |F|
         C_BS, C_AS = '#4A90D9', '#E8833A'
+        s_lim = np.percentile(f_bs, 95)
+        sc = ax.scatter(cd_bs, k_bs, c=f_bs, s=4, cmap='YlOrRd',
+                        vmin=0, vmax=s_lim, alpha=0.5, edgecolors='none',
+                        zorder=1, rasterized=True)
+        cb = plt.colorbar(sc, ax=ax, shrink=0.5, pad=0.02)
+        cb.set_label('mean |F| (µm$^{-1}$)', fontsize=6, fontweight='bold')
+        cb.ax.tick_params(labelsize=6)
 
-        gs_inner = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=subplot_spec,
-                                                     width_ratios=[1, 4], wspace=0.04)
-        ax_hist = fig.add_subplot(gs_inner[0])
-        ax = fig.add_subplot(gs_inner[1], sharey=ax_hist)
+        # Quiver field
+        U, V = R['U'].copy(), R['V'].copy()
+        dmask = self._density_mask(R['X_g'], R['K_g'], R['x_bs'], R['y_bs'])
+        U[~dmask] = np.nan
+        V[~dmask] = np.nan
+        mag = np.sqrt(np.nan_to_num(U) ** 2 + np.nan_to_num(V) ** 2)
+        ax.quiver(R['X_g'], R['K_g'],
+                  U * R['x_sd'], V * R['y_sd'], mag,
+                  cmap='cool', alpha=0.7, angles='xy', scale_units='xy', scale=1,
+                  width=0.004, headwidth=4, headlength=5, zorder=3)
 
-        bs_metric = paired[metric_col].to_numpy(dtype=float)
-        bs_kv = paired[f'{col_K}_BS'].to_numpy(dtype=float)
-        as_kv = paired[f'{col_K}_AS'].to_numpy(dtype=float)
-        valid = np.isfinite(bs_metric) & np.isfinite(bs_kv) & np.isfinite(as_kv)
-        bs_metric, bs_kv, as_kv = bs_metric[valid], bs_kv[valid], as_kv[valid]
+        # Nullclines + fixed point
+        try:
+            cd_null = brentq(R['f_dy'], R['x_mids'][0], R['x_mids'][-1])
+            ax.axvline(cd_null, color=C_AS, ls='--', lw=1.0, alpha=0.7)
+        except ValueError:
+            cd_null = None
+        try:
+            k_null = brentq(R['f_dx'], R['y_mids'][0], R['y_mids'][-1])
+            ax.axhline(k_null, color=C_BS, ls='--', lw=1.0, alpha=0.7)
+        except ValueError:
+            k_null = None
+        if cd_null is not None and k_null is not None:
+            ax.plot(cd_null, k_null, '*', color='#E65100', markersize=12,
+                    markeredgecolor='white', markeredgewidth=0.8, zorder=10)
 
-        if crossing_val is None:
-            ax.text(0.5, 0.5, 'Crossing not found', transform=ax.transAxes, ha='center', va='center')
-            self._pub_panel_label(ax, label); return
+        ax.set_xlabel('Cell Density (cells/mm²)')
+        ax.set_ylabel(r'K$_{ds}$ (µm$^{-2}$)')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:.1f}k'))
+        self._fig4_panel_label(ax, 'h')
 
-        n_bins = 15
-        p1, p99 = np.percentile(bs_metric, [1, 99])
-        bin_edges = np.linspace(p1, p99, n_bins + 1)
-        bin_counts = []
-
-        for i in range(n_bins):
-            hi_op = (bs_metric <= bin_edges[i+1]) if i == n_bins-1 else (bs_metric < bin_edges[i+1])
-            mask = (bs_metric >= bin_edges[i]) & hi_op
-            count = int(mask.sum()); bin_counts.append(count)
-            if count < 3: continue
-            mean_bs_k = np.mean(bs_kv[mask]); mean_as_k = np.mean(as_kv[mask])
-            mean_m = np.mean(bs_metric[mask])
-            dk_mean = mean_as_k - mean_bs_k
-            expected = (dk_mean > 0) if (mean_m < crossing_val) else (dk_mean < 0)
-            color = C_AS if expected else '#bbb'
-            alpha = 0.85 if expected else 0.40
-            ax.annotate('', xy=(mean_as_k, i), xytext=(mean_bs_k, i),
-                        arrowprops=dict(arrowstyle='->', color=color, lw=1.8 if expected else 1.0, alpha=alpha))
-            ax.plot(mean_bs_k, i, 'o', color=C_BS, markersize=4, markeredgecolor='white', markeredgewidth=0.3, zorder=4)
-            ax.plot(mean_as_k, i, 'o', color=color, markersize=4, markeredgecolor='white', markeredgewidth=0.3, zorder=4)
-
-        cross_bin = (crossing_val - p1) / (p99 - p1) * n_bins
-        ax.axhline(cross_bin, color='#0072B2', lw=1.0, ls=':', alpha=0.5)
-        ax_hist.axhline(cross_bin, color='#0072B2', lw=1.0, ls=':', alpha=0.5)
-
-        ax.set_xlabel(r'$K_{ds}$ (µm$^{-2}$)', fontsize=9)
-        ax.set_ylim(-1, n_bins); ax.set_yticks([])
-        ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False); ax.spines['left'].set_visible(False)
-
-        legend_el = [
-            Line2D([0], [0], marker='o', color='w', markerfacecolor=C_BS, markersize=4, label='BS', linewidth=0),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor=C_AS, markersize=4, label='AS', linewidth=0),
-            Line2D([0], [0], color=C_AS, lw=1.5, label='Expected'),
-            Line2D([0], [0], color='#bbb', lw=1.0, label='Opposite'),
-        ]
-        ax.legend(handles=legend_el, fontsize=6, loc='lower right', framealpha=0.9)
-        self._pub_panel_label(ax, label)
-
-        y_pos = np.arange(n_bins)
-        bar_colors = [C_BS if c >= 3 else '#ddd' for c in bin_counts]
-        ax_hist.barh(y_pos, bin_counts, height=0.75, color=bar_colors, alpha=0.4, edgecolor='white', linewidth=0.3)
-        ax_hist.set_xlim(max(max(bin_counts, default=0), 1) * 1.15, 0)
-        ax_hist.set_xlabel('n', fontsize=7); ax_hist.set_yticks([])
-        ax_hist.spines['top'].set_visible(False); ax_hist.spines['right'].set_visible(False); ax_hist.spines['left'].set_visible(False)
-        ax_hist.tick_params(axis='x', labelsize=6)
 
     # ==================================================================
     # ALL AT ONCE
@@ -2991,12 +1824,8 @@ class cornealia_batch_plotter:
     def all(self, save=None):
         """Run all plot methods in sequence."""
         save = save if save is not None else self.save
-        self.distributions(save=save)
-        self.as_vs_bs_improvement_all(save=save)
         self.pub_boxplots(save=save)
         self.pub_K_deep_dive(save=save)
         self.pub_validation(save=save)
-        self.pub_K_independence(save=save)
-        self.pub_comprehensive(save=save)
         self.pub_collective_order(save=save)
         self.pub_mechanical_disequilibrium(save=save)
