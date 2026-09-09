@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 try:
     import easyocr
     _HAS_EASYOCR = True
-except ImportError:
+except Exception:
     _HAS_EASYOCR = False
 from collections import defaultdict
 from scipy.signal import savgol_filter
@@ -14,24 +14,12 @@ from multiprocessing import Pool, freeze_support
 import os
 import sys
 import time
-
-# Auto-configure paths when run as CLI (python cornealia.py)
-if __name__ == '__main__' or (not getattr(sys, 'frozen', False) and '__spec__' not in dir()):
-    _this_dir = os.path.dirname(os.path.abspath(__file__))
-    _backend_dir = os.path.dirname(_this_dir)
-    for _p in [_backend_dir, os.path.join(_backend_dir, 'shared_modules'), _this_dir]:
-        if _p not in sys.path:
-            sys.path.insert(0, _p)
-
 from tqdm import tqdm
 from scipy.optimize import curve_fit
 
 
 from shared_modules.cellade.cellade import CellADE
-try:
-    from .plotters.cornealia_plotter import cornealia_plotter
-except ImportError:
-    from plotters.cornealia_plotter import cornealia_plotter
+from .plotters.cornealia_plotter import cornealia_plotter
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1324,20 +1312,12 @@ class cornealia :
         r_test = np.linspace(r_excl, r_excl + lam, 500)
         r0 = r_test[np.argmax(_gr(r_test))]
 
-        # Per-node residual force vector and signed strain
+        # Per-node residual force vector
         F_residual = np.zeros((n, 2))
-        strain_sum = np.zeros(n)
-        strain_count = np.zeros(n)
         for k, (i, j) in enumerate(edges):
             f_vec = F_scalar[k] * unit[k]
             F_residual[j] += f_vec
             F_residual[i] -= f_vec
-            # Signed strain: (d - r0) / r0 — positive = tension, negative = compression
-            s = (d_um[k] - r0) / r0
-            strain_sum[i] += s; strain_sum[j] += s
-            strain_count[i] += 1; strain_count[j] += 1
-        strain_count[strain_count == 0] = 1
-        signed_strain = strain_sum / strain_count
 
         F_mag = np.sqrt(np.sum(F_residual**2, axis=1))
         compressed = d_um < r0
@@ -1355,7 +1335,6 @@ class cornealia :
             'F_scalar':         F_scalar,
             'F_residual':       F_residual,
             'F_mag':            F_mag,
-            'signed_strain':    signed_strain,
             'compressed':       compressed,
             'hot_spots':        hot_spots,
             'threshold_90':     float(threshold_90),
@@ -1364,7 +1343,6 @@ class cornealia :
             # Scalar summaries
             'mean_F':           float(np.mean(F_mag)),
             'std_F':            float(np.std(F_mag)),
-            'mean_signed_strain': float(np.mean(signed_strain)),
             'spatial_cv':       float(np.std(F_mag) / np.mean(F_mag)) if np.mean(F_mag) > 1e-8 else 0.0,
             'frac_compression': float(compressed.sum() / len(edges)),
             'n_hot_spots':      int(hot_spots.sum()),
@@ -1407,7 +1385,6 @@ class cornealia :
                 co['frac_compression'] = rf['frac_compression']
                 co['spatial_cv'] = rf['spatial_cv']
                 co['n_hot_spots'] = rf['n_hot_spots']
-                co['mean_signed_strain'] = rf['mean_signed_strain']
                 reporter.done('force', {
                     'mean_F': round(rf['mean_F'], 4),
                     'frac_compression': round(rf['frac_compression'], 2),
@@ -1418,7 +1395,6 @@ class cornealia :
                 co['frac_compression'] = np.nan
                 co['spatial_cv'] = np.nan
                 co['n_hot_spots'] = 0
-                co['mean_signed_strain'] = np.nan
                 reporter.skip('force')
         except Exception as e:
             reporter.fail('force', e)
@@ -1473,17 +1449,7 @@ class cornealia :
 
     def collective_order_batch(self, folder_path, n_workers=1,
                            extensions=('.jpg', '.jpeg', '.png', '.tiff', '.bmp'),
-                           progress_cb=None, save_full=False):
-        """
-        Batch process all images in a folder.
-        
-        Parameters
-        ----------
-        save_full : bool
-            If True, keep full results including centroids, residual_field,
-            g(r) curves, and fit parameters. Warning: large memory footprint.
-            If False (default), strip heavy data and keep only scalars.
-        """
+                           progress_cb=None):
         valid_extensions = extensions
         p = Path(folder_path)
         image_paths = [img_path for img_path in p.rglob('*.*')
@@ -1514,17 +1480,16 @@ class cornealia :
                 if 'error' in r:
                     n_failed += 1
                     pbar.set_postfix_str(f"FAILED: {img_path.name}", refresh=False)
-                if not save_full:
-                    # Strip heavy data — keep only scalars and small dicts
-                    for key in ('segmentation', 'cell_area', 'input_image',
-                                'dot_centroids', 'residual_field', '_reporter',
-                                'g_r_smooth', 'v_r',
-                                'r_valid', 'v_r_valid',
-                                'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
-                                'r_fit_ds', 'v_fit_ds',
-                                'popt_qc', 'coeffs_qr', 'coeffs_qg',
-                                'popt_mr', 'popt_mg', 'popt_ds'):
-                        r.pop(key, None)
+                # Strip heavy data — keep only scalars and small dicts
+                for key in ('segmentation', 'cell_area', 'input_image',
+                            'dot_centroids', 'residual_field', '_reporter',
+                            'g_r_smooth', 'v_r',
+                            'r_valid', 'v_r_valid',
+                            'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
+                            'r_fit_ds', 'v_fit_ds',
+                            'popt_qc', 'coeffs_qr', 'coeffs_qg',
+                            'popt_mr', 'popt_mg', 'popt_ds'):
+                    r.pop(key, None)
                 results.append(r)
                 pbar.update(1)
                 if progress_cb:
@@ -1546,7 +1511,6 @@ class cornealia :
                 'SAVGOL_ORDER':             self.SAVGOL_ORDER,
                 'fitting_method':           self.fitting_method,
                 'verbose':                  False,
-                '_save_full':               save_full,
             }
 
             str_paths = [str(p) for p in image_paths]
@@ -1595,12 +1559,10 @@ class cornealia :
 # Both must be module-level (not methods) so Windows spawn can find them.
 
 _worker_instance = None
-_worker_save_full = False
 
 def _worker_init(config):
     """Called once when each worker process starts."""
-    global _worker_instance, _worker_save_full
-    _worker_save_full = config.pop('_save_full', False)
+    global _worker_instance
     _worker_instance = cornealia(**config)
     # Pre-warm the OCR reader so the first image isn't slow
     _worker_instance._get_ocr_reader()
@@ -1610,18 +1572,17 @@ def _worker_process_image(image_path):
     try:
         result = _worker_instance.mechanical_state(image_path)
 
-        if not _worker_save_full:
-            # Remove heavy data — keep only scalars and small arrays
-            # Keep r_values and g_r (small arrays ~76 floats) for g(r) population NPZ
-            for key in ('segmentation', 'cell_area', 'input_image',
-                         'dot_centroids', 'residual_field', '_reporter',
-                         'g_r_smooth', 'v_r',
-                         'r_valid', 'v_r_valid',
-                         'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
-                         'r_fit_ds', 'v_fit_ds',
-                         'popt_qc', 'coeffs_qr', 'coeffs_qg',
-                         'popt_mr', 'popt_mg', 'popt_ds'):
-                result.pop(key, None)
+        # Remove heavy data that can't fit through the pipe
+        # Keep r_values and g_r (small arrays ~76 floats) for g(r) population NPZ
+        for key in ('segmentation', 'cell_area', 'input_image',
+                     'dot_centroids', 'residual_field', '_reporter',
+                     'g_r_smooth', 'v_r',
+                     'r_valid', 'v_r_valid',
+                     'r_fit_raw', 'v_fit_raw', 'r_fit_guided', 'v_fit_guided',
+                     'r_fit_ds', 'v_fit_ds',
+                     'popt_qc', 'coeffs_qr', 'coeffs_qg',
+                     'popt_mr', 'popt_mg', 'popt_ds'):
+            result.pop(key, None)
 
         return result
     except Exception as e:
@@ -1908,6 +1869,38 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='cornealia',
         description='Cornealia: Collective order analysis of cell monolayers',
+    )
+    sub = parser.add_subparsers(dest='command')
+
+    # --- single command ---
+    sp = sub.add_parser('single', help='Process a single image')
+    sp.add_argument('--image', required=True, help='Path to image file')
+    sp.add_argument('--output', default=None, help='Output directory (default: same as image)')
+    sp.add_argument('--pixel-size', type=float, default=0.58, help='Pixel size in µm/px (default: 0.58)')
+    sp.add_argument('--machine', action='store_true', help='Input is machine output (has OCR metrics area)')
+    sp.add_argument('--invert', action='store_true', help='Invert image contrast (for bright-field)')
+    sp.add_argument('--plot', action='store_true', help='Generate plots')
+    sp.add_argument('--cellade-params', default=None, help='JSON string of CellADE params')
+
+    # --- batch command ---
+    bp = sub.add_parser('batch', help='Process a folder of images in parallel')
+    bp.add_argument('--folder', required=True, help='Path to image folder')
+    bp.add_argument('--output', required=True, help='Output root directory')
+    bp.add_argument('--pixel-size', type=float, default=0.58, help='Pixel size in µm/px (default: 0.58)')
+    bp.add_argument('--workers', type=int, default=8, help='Number of parallel workers (default: 8)')
+    bp.add_argument('--invert', action='store_true', help='Invert image contrast (for bright-field)')
+    bp.add_argument('--formats', default='png,jpg,bmp', help='Comma-separated image extensions (default: png,jpg,bmp)')
+    bp.add_argument('--cellade-params', default=None, help='JSON string of CellADE params, e.g. \'{"log_min_sigma":5,"log_max_sigma":8}\'')
+
+    args = parser.parse_args()
+
+    if args.command == 'single':
+        _cli_single(args)
+    elif args.command == 'batch':
+        _cli_batch(args)
+    else:
+        parser.print_help()
+r analysis of cell monolayers',
     )
     sub = parser.add_subparsers(dest='command')
 

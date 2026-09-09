@@ -37,7 +37,6 @@ a = Analysis(
         (os.path.join(base_dir, 'backend', 'cornealia'), os.path.join('backend', 'cornealia')),
         (os.path.join(base_dir, 'backend', 'shared_modules'), os.path.join('backend', 'shared_modules')),
         (os.path.join(base_dir, 'backend', 'cellintella', '*.py'), os.path.join('backend', 'cellintella')),
-        (os.path.join(base_dir, 'docs'), 'docs'),
         # Root files
         (os.path.join(base_dir, 'app.py'), '.'),
         (os.path.join(base_dir, 'backend', 'project_manager.py'), '.'),
@@ -120,6 +119,7 @@ a = Analysis(
         'cupy',
         'cupyx',
         'numba',
+        'torchvision',
         # Dev tools
         'IPython',
         'jupyter',

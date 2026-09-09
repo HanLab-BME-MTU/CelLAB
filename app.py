@@ -3800,9 +3800,13 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                 )
 
                 batch_plot_map = {
+                    'distributions':               ('distributions',               '01_distributions.png'),
+                    'as_vs_bs_improvement':         ('as_vs_bs_improvement_all',    None),
                     'pub_boxplots':                ('pub_boxplots',                'fig2_as_vs_bs_boxplots.png'),
                     'pub_K_deep_dive':             ('pub_K_deep_dive',             'fig3_K_deep_dive.png'),
                     'pub_validation':              ('pub_validation',              'fig4_validation.png'),
+                    'pub_K_independence':           ('pub_K_independence',          'fig6_K_independence.png'),
+                    'pub_comprehensive':           ('pub_comprehensive',           None),
                     'pub_collective_order':         ('pub_collective_order',        'fig4_collective_order.png'),
                     'pub_mechanical_disequilibrium':('pub_mechanical_disequilibrium','fig5_mechanical_disequilibrium.png'),
                 }
@@ -4597,11 +4601,13 @@ def step_export_plot(ws_id, pipeline_id, step_id):
                 plt.rcParams['savefig.dpi'] = dpi
 
                 batch_plot_map = {
-                    'pub_boxplots': 'pub_boxplots',
-                    'pub_K_deep_dive': 'pub_K_deep_dive',
-                    'pub_validation': 'pub_validation',
-                    'pub_collective_order': 'pub_collective_order',
-                    'pub_mechanical_disequilibrium': 'pub_mechanical_disequilibrium',
+                    'distributions': 'distributions', 'histogram': 'histogram',
+                    'as_vs_bs_boxplots': 'as_vs_bs_boxplots', 'as_vs_bs_scatter': 'as_vs_bs_scatter',
+                    'as_vs_bs_histograms': 'as_vs_bs_histograms', 'validation_scatter': 'validation_scatter',
+                    'validation_bland_altman': 'validation_bland_altman', 'deep_dive': 'deep_dive',
+                    'pub_boxplots': 'pub_boxplots', 'pub_K_deep_dive': 'pub_K_deep_dive',
+                    'pub_validation': 'pub_validation', 'pub_K_independence': 'pub_K_independence',
+                    'pub_comprehensive': 'pub_comprehensive',
                 }
                 method_name = batch_plot_map.get(plot_type)
                 if method_name:
@@ -8192,38 +8198,63 @@ def browse_directory():
         return api_error(str(e), 500)
 
 
-@app.route('/api/browse_save', methods=['POST'])
-def browse_save():
-    """Open a native save-file or folder dialog.
-    Body: { "mode": "file"|"folder", "title": "...", "default_name": "...",
-            "filetypes": [["TIFF Files", "*.tif"], ["All", "*.*"]], "initial_dir": "..." }
-    Returns: { "success": true, "path": "chosen/path" } or { "success": false } if cancelled.
-    """
-    try:
+def _native_file_dialog(mode='file', title='Open', initial_dir=None, filetypes=None, default_name='', save=False):
+    """Cross-platform native file dialog. Uses AppleScript on macOS, tkinter elsewhere."""
+    import platform
+    if initial_dir is None:
+        initial_dir = os.path.expanduser('~')
+
+    if platform.system() == 'Darwin':
+        # macOS: use AppleScript via Finder (no special permissions needed)
+        import subprocess
+        try:
+            if mode == 'folder':
+                script = f'set theFolder to choose folder with prompt "{title}"\nreturn POSIX path of theFolder'
+            elif save:
+                script = f'set theFile to choose file name with prompt "{title}" default name "{default_name}"\nreturn POSIX path of theFile'
+            else:
+                script = f'set theFile to choose file with prompt "{title}"\nreturn POSIX path of theFile'
+            result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, timeout=120)
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+            return None
+        except Exception as e:
+            print(f"  macOS dialog error: {e}")
+            return None
+    else:
+        # Windows/Linux: use tkinter
         import tkinter as tk
         from tkinter import filedialog
-        body = request.get_json() or {}
-        mode = body.get('mode', 'file')
-        title = body.get('title', 'Save As')
-        initial_dir = body.get('initial_dir', os.path.expanduser('~'))
-        default_name = body.get('default_name', '')
-        filetypes = body.get('filetypes', [['All Files', '*.*']])
-
         root = tk.Tk()
         root.withdraw()
         root.attributes('-topmost', True)
-
         if mode == 'folder':
             chosen = filedialog.askdirectory(title=title, initialdir=initial_dir)
-        else:
+        elif save:
             chosen = filedialog.asksaveasfilename(
-                title=title,
-                initialdir=initial_dir,
-                initialfile=default_name,
-                filetypes=[tuple(ft) for ft in filetypes],
-            )
+                title=title, initialdir=initial_dir, initialfile=default_name,
+                filetypes=[tuple(ft) for ft in (filetypes or [['All Files', '*.*']])])
+        else:
+            chosen = filedialog.askopenfilename(
+                title=title, initialdir=initial_dir,
+                filetypes=[tuple(ft) for ft in (filetypes or [['All Files', '*.*']])])
         root.destroy()
+        return chosen if chosen else None
 
+
+@app.route('/api/browse_save', methods=['POST'])
+def browse_save():
+    """Open a native save-file or folder dialog."""
+    try:
+        body = request.get_json() or {}
+        chosen = _native_file_dialog(
+            mode=body.get('mode', 'file'),
+            title=body.get('title', 'Save As'),
+            initial_dir=body.get('initial_dir', os.path.expanduser('~')),
+            filetypes=body.get('filetypes'),
+            default_name=body.get('default_name', ''),
+            save=True,
+        )
         if not chosen:
             return jsonify({'success': False, 'error': 'Cancelled'})
         return jsonify({'success': True, 'path': chosen})
@@ -8233,35 +8264,15 @@ def browse_save():
 
 @app.route('/api/browse_open', methods=['POST'])
 def browse_open():
-    """Open a native file/folder picker dialog (Windows Explorer).
-    Body: { "mode": "file"|"folder", "title": "...",
-            "filetypes": [["CelLAB Projects", "*.cellab"], ["All", "*.*"]],
-            "initial_dir": "..." }
-    Returns: { "success": true, "path": "chosen/path" } or { "success": false } if cancelled.
-    """
+    """Open a native file/folder picker dialog."""
     try:
-        import tkinter as tk
-        from tkinter import filedialog
         body = request.get_json() or {}
-        mode = body.get('mode', 'file')
-        title = body.get('title', 'Open')
-        initial_dir = body.get('initial_dir', os.path.expanduser('~'))
-        filetypes = body.get('filetypes', [['All Files', '*.*']])
-
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes('-topmost', True)
-
-        if mode == 'folder':
-            chosen = filedialog.askdirectory(title=title, initialdir=initial_dir)
-        else:
-            chosen = filedialog.askopenfilename(
-                title=title,
-                initialdir=initial_dir,
-                filetypes=[tuple(ft) for ft in filetypes],
-            )
-        root.destroy()
-
+        chosen = _native_file_dialog(
+            mode=body.get('mode', 'file'),
+            title=body.get('title', 'Open'),
+            initial_dir=body.get('initial_dir', os.path.expanduser('~')),
+            filetypes=body.get('filetypes'),
+        )
         if not chosen:
             return jsonify({'success': False, 'error': 'Cancelled'})
         return jsonify({'success': True, 'path': chosen})
@@ -8276,7 +8287,7 @@ def browse_open():
 _cellintella = None
 _cellintella_loading = False
 _cellintella_config = {
-    'n_ctx': 8192,
+    'n_ctx': 4096,
     'n_threads': 10,
     'timeout': 500,
 }
@@ -8319,10 +8330,7 @@ def _retrieve_docs(query):
     cornealia_kw = ['cornea', 'endotheli', 'specular', 'morphometr', 'cell density', 'hexagonal',
                     'g(r)', 'v(r)', 'radial distribution', 'collective order', 'pixel_size',
                     'pixel size', 'k value', 'morse', 'batch', 'as vs bs', 'cd_calc', 'cv_calc',
-                    'hex_calc', 'ave_calc', 'cornealia', 'setpoint', 'k*', 'k_ds', 'homeostatic',
-                    'attractor', 'force field', 'mean_f', 'delaunay', 'truss', 'residual force',
-                    'exclusion', 'interior cell', 'cellchek', 'green dot', 'passage', 'culture',
-                    'phase contrast', 'damped sine', 'quality gate', 'reliable', 'noise']
+                    'hex_calc', 'ave_calc', 'cornealia']
     fastia_kw = ['focal adhesion', 'fa ', 'timelapse', 'tracking', 'detection', 'paxillin',
                  'assembly', 'disassembly', 'kinetics', 'fastia']
     immunia_kw = ['immune', 'nk cell', 'natural killer', 'tumor', 'chemotaxis', 'keller-segel',
@@ -8353,76 +8361,28 @@ def _retrieve_docs(query):
     # Level 2: Load detail files if query is specific
     detail_kw = {
         'cornealia': {
-            # Plotters (light file, ~1278 tokens)
-            'plot': 'cornealia/plotters.md',
-            'visual': 'cornealia/plotters.md',
-            'figure': 'cornealia/plotters.md',
-            'publication': 'cornealia/plotters.md',
-            # Troubleshooting (light file, ~1137 tokens)
-            'error': 'cornealia/troubleshooting.md',
-            'fail': 'cornealia/troubleshooting.md',
-            'crash': 'cornealia/troubleshooting.md',
-            'segment': 'cornealia/troubleshooting.md',
-            'cultur': 'cornealia/troubleshooting.md',
-            'nan': 'cornealia/troubleshooting.md',
-            'wrong': 'cornealia/troubleshooting.md',
-            "don't": 'cornealia/troubleshooting.md',
-            "doesn't": 'cornealia/troubleshooting.md',
-            # API (medium file, ~1339 tokens)
             'pixel': 'cornealia/API.md',
             'parameter': 'cornealia/API.md',
             'constructor': 'cornealia/API.md',
-            'cellade_param': 'cornealia/API.md',
-            'invert': 'cornealia/API.md',
-            'machine_type': 'cornealia/API.md',
-            # Batch (medium file, ~1430 tokens)
-            'batch': 'cornealia/batch_processing.md',
-            'as vs bs': 'cornealia/batch_processing.md',
-            'as_vs_bs': 'cornealia/batch_processing.md',
-            'paired': 'cornealia/batch_processing.md',
-            'csv': 'cornealia/batch_processing.md',
-            'cli': 'cornealia/batch_processing.md',
-            'command line': 'cornealia/batch_processing.md',
-            # Collective order (heavy file, ~2186 tokens) — last to avoid overflow
             'collective_order': 'cornealia/collective_order.md',
-            'k_ds': 'cornealia/collective_order.md',
-            'k value': 'cornealia/collective_order.md',
-            'spring constant': 'cornealia/collective_order.md',
-            'quality gate': 'cornealia/collective_order.md',
-            'damped sine': 'cornealia/collective_order.md',
-            'force field': 'cornealia/collective_order.md',
-            'rmse': 'cornealia/collective_order.md',
-            'morse': 'cornealia/collective_order.md',
-            'fitting': 'cornealia/collective_order.md',
-            'reliable': 'cornealia/collective_order.md',
+            'batch': 'cornealia/batch_processing.md',
+            'plot': 'cornealia/plotters.md',
+            'error': 'cornealia/troubleshooting.md',
+            'fail': 'cornealia/troubleshooting.md',
+            'crash': 'cornealia/troubleshooting.md',
+            'reliable': 'cornealia/troubleshooting.md',
         },
         'platform': {
             'project': 'platform/project_format.md',
             '.cellab': 'platform/project_format.md',
-            'manifest': 'platform/project_format.md',
-            'folder structure': 'platform/project_format.md',
-            'save': 'platform/project_format.md',
-            'open': 'platform/project_format.md',
-            'archive': 'platform/project_format.md',
             'console': 'platform/console_commands.md',
             'terminal': 'platform/console_commands.md',
-            'python': 'platform/console_commands.md',
             'git': 'platform/console_commands.md',
             'commit': 'platform/console_commands.md',
-            'variable': 'platform/console_commands.md',
-            'namespace': 'platform/console_commands.md',
             'gui': 'platform/gui_architecture.md',
             'layout': 'platform/gui_architecture.md',
             'menu': 'platform/gui_architecture.md',
             'toolbar': 'platform/gui_architecture.md',
-            'panel': 'platform/gui_architecture.md',
-            'shortcut': 'platform/gui_architecture.md',
-            'keyboard': 'platform/gui_architecture.md',
-            'task manager': 'platform/gui_architecture.md',
-            'cli': 'platform/cli_usage.md',
-            'command line': 'platform/cli_usage.md',
-            'headless': 'platform/cli_usage.md',
-            'script': 'platform/cli_usage.md',
         },
     }
 
@@ -8624,9 +8584,12 @@ def _get_cellintella():
         print(f"✅ CellIntella initialized (n_ctx={_cellintella_config['n_ctx']}, n_threads={_cellintella_config['n_threads']})")
         return _cellintella
     except Exception as e:
+        err_str = str(e)
         print(f"❌ CellIntella init failed: {e}")
         traceback.print_exc()
         _cellintella_loading = False
+        # Store error for user-facing message
+        _cellintella_config['_init_error'] = err_str
         return None
 
 
@@ -8692,9 +8655,16 @@ def cellintella_query():
 
         ai = _get_cellintella()
         if ai is None:
+            init_error = _cellintella_config.get('_init_error', '')
+            if 'c000001d' in init_error.lower() or 'illegal instruction' in init_error.lower():
+                msg = "⚠️ CellIntella cannot run on this computer — the CPU does not support required instructions (AVX2). All other CelLAB features work normally."
+            elif init_error:
+                msg = f"⚠️ CellIntella failed to initialize: {init_error}"
+            else:
+                msg = "⏳ CellIntella is loading the Llama model... please wait 2-3 minutes and try again."
             return api_response({
-                "response": "CellIntella is loading the Llama model... please wait 2-3 minutes and try again.",
-                "mode": "loading",
+                "response": msg,
+                "mode": "error" if init_error else "loading",
             })
 
         # Retrieve relevant docs from our hierarchical system
@@ -9488,122 +9458,6 @@ def console_exec():
         return api_response({"stdout": "", "stderr": "", "result": None, "magic": "clear"})
     if code in ('exit', 'quit'):
         return api_response({"stdout": "Use Ctrl+` to close the console", "stderr": "", "result": None})
-
-    # ── Shell-like aliases ──────────────────────────────────────────
-    if code == 'help':
-        help_text = (
-            "CelLAB Python Console — Quick Reference\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "  pwd                          — current directory\n"
-            "  ls                           — list current directory\n"
-            "  ls <path>                    — list a specific path\n"
-            "  cd <path>                    — change directory\n"
-            "  cd                           — go to project root\n"
-            "  cd ..                        — go up one level\n"
-            "  clear / cls / clc            — clear console\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "  workspaces                   — list all workspaces & pipelines\n"
-            "  results <ws> <pipe> <step>   — get results directory\n"
-            "  load <ws> <pipe> <step>      — load full_results.pkl as 'data'\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "  Available: project, np, pd, plt, os, json, Path\n"
-            "  Example:   results workspace_1 cornealia-1 morphometry\n"
-            "  Example:   load workspace_1 cornealia-1 morphometry\n"
-        )
-        return api_response({"stdout": help_text, "stderr": "", "result": None})
-
-    if code == 'pwd':
-        cwd = ns.get('_cwd', str(_project.root) if _project else os.getcwd())
-        return api_response({"stdout": cwd, "stderr": "", "result": None})
-
-    if code == 'workspaces':
-        if not _project:
-            return api_response({"stdout": "", "stderr": "No project open", "result": None})
-        lines = []
-        for ws in _project.list_workspaces():
-            lines.append(f"📁 {ws['name']} ({ws['id']})")
-            for p in ws.get('pipelines', []):
-                lines.append(f"   └─ {p['name']} ({p['id']}) [{p['type']}]")
-        return api_response({"stdout": "\n".join(lines), "stderr": "", "result": None})
-
-    if code.startswith('ls'):
-        arg = code[2:].strip()
-        cwd = ns.get('_cwd', str(_project.root) if _project else os.getcwd())
-        target = Path(arg) if arg else Path(cwd)
-        if not target.is_absolute():
-            target = Path(cwd) / target
-        try:
-            if not target.exists():
-                return api_response({"stdout": "", "stderr": f"Path not found: {target}", "result": None})
-            if target.is_file():
-                sz = target.stat().st_size
-                unit = 'B'
-                if sz > 1024*1024: sz, unit = sz/(1024*1024), 'MB'
-                elif sz > 1024: sz, unit = sz/1024, 'KB'
-                return api_response({"stdout": f"📄 {target.name}  ({sz:.1f} {unit})", "stderr": "", "result": None})
-            items = sorted(target.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
-            lines = [f"📂 {target}\n"]
-            for item in items:
-                icon = "📁" if item.is_dir() else "📄"
-                lines.append(f"  {icon} {item.name}")
-            return api_response({"stdout": "\n".join(lines), "stderr": "", "result": None})
-        except Exception as e:
-            return api_response({"stdout": "", "stderr": str(e), "result": None})
-
-    if code.startswith('cd'):
-        arg = code[2:].strip()
-        cwd = ns.get('_cwd', str(_project.root) if _project else os.getcwd())
-        if not arg:
-            ns['_cwd'] = str(_project.root) if _project else os.getcwd()
-        elif arg == '..':
-            ns['_cwd'] = str(Path(cwd).parent)
-        else:
-            target = Path(arg) if Path(arg).is_absolute() else Path(cwd) / arg
-            if target.exists() and target.is_dir():
-                ns['_cwd'] = str(target.resolve())
-            else:
-                return api_response({"stdout": "", "stderr": f"Directory not found: {target}", "result": None})
-        return api_response({"stdout": f"📂 {ns['_cwd']}", "stderr": "", "result": None})
-
-    if code.startswith('results'):
-        parts = code.split()
-        if len(parts) < 4:
-            return api_response({"stdout": "", "stderr": "Usage: results <workspace_id> <pipeline_id> <step_id>", "result": None})
-        try:
-            rdir = _project.get_results_dir(parts[1], parts[2], parts[3])
-            items = list(rdir.iterdir()) if rdir.exists() else []
-            lines = [f"📂 {rdir}\n"]
-            for item in items:
-                icon = "📁" if item.is_dir() else "📄"
-                lines.append(f"  {icon} {item.name}")
-            ns['results_path'] = rdir
-            lines.append(f"\n→ results_path set to this directory")
-            return api_response({"stdout": "\n".join(lines), "stderr": "", "result": None})
-        except Exception as e:
-            return api_response({"stdout": "", "stderr": str(e), "result": None})
-
-    if code.startswith('load'):
-        parts = code.split()
-        if len(parts) < 4:
-            return api_response({"stdout": "", "stderr": "Usage: load <workspace_id> <pipeline_id> <step_id>", "result": None})
-        try:
-            import pickle
-            rdir = _project.get_results_dir(parts[1], parts[2], parts[3])
-            pkl_path = rdir / 'full_results.pkl'
-            json_path = rdir / 'analysis_results.json'
-            if pkl_path.exists():
-                with open(pkl_path, 'rb') as f:
-                    ns['data'] = pickle.load(f)
-                keys = list(ns['data'].keys()) if isinstance(ns['data'], dict) else 'non-dict'
-                return api_response({"stdout": f"✅ Loaded full_results.pkl → 'data'\n   Type: {type(ns['data']).__name__}\n   Keys: {keys}", "stderr": "", "result": None})
-            elif json_path.exists():
-                with open(json_path) as f:
-                    ns['data'] = json.load(f)
-                return api_response({"stdout": f"✅ Loaded analysis_results.json → 'data'\n   Type: dict\n   Keys: {list(ns['data'].keys())}", "stderr": "", "result": None})
-            else:
-                return api_response({"stdout": "", "stderr": f"No results file found in {rdir}", "result": None})
-        except Exception as e:
-            return api_response({"stdout": "", "stderr": str(e), "result": None})
 
     # Always update project reference for shared/git
     if stype in ('shared', 'git'):
