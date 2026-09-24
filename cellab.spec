@@ -36,9 +36,10 @@ a = Analysis(
         # Backend modules (released only)
         (os.path.join(base_dir, 'backend', 'cornealia'), os.path.join('backend', 'cornealia')),
         (os.path.join(base_dir, 'backend', 'shared_modules'), os.path.join('backend', 'shared_modules')),
+        (os.path.join(base_dir, 'backend', 'orchestrators'), os.path.join('backend', 'orchestrators')),
         (os.path.join(base_dir, 'backend', 'cellintella', '*.py'), os.path.join('backend', 'cellintella')),
         # Root files
-        (os.path.join(base_dir, 'app.py'), '.'),
+        (os.path.join(base_dir, 'cellab.py'), '.'),
         (os.path.join(base_dir, 'backend', 'project_manager.py'), '.'),
         (os.path.join(base_dir, 'backend', 'cellade_manager.py'), '.'),
         (os.path.join(base_dir, 'modules.lab.json'), '.'),

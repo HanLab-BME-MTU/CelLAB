@@ -44,7 +44,7 @@ def start_flask(port):
 
     # Import and run Flask app
     sys.path.insert(0, get_base_dir())
-    from app import app
+    from cellab import app
     app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)
 
 def wait_for_server(port, timeout=15):

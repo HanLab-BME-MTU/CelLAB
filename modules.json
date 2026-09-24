@@ -1,6 +1,8 @@
 {
   "cornealia":       { "enabled": true,  "released": "2026-08", "label": "Cornealia" },
   "cornealia_batch": { "enabled": true,  "released": "2026-08", "label": "Cornealia Batch" },
+  "signal_associa_single": { "enabled": true,  "released": "2026-09", "label": "Signal Associa — Single" },
+  "signal_associa_batch":  { "enabled": true,  "released": "2026-09", "label": "Signal Associa — Batch" },
   "fastia":          { "enabled": false, "released": null,      "label": "FastIA" },
   "immunia":         { "enabled": false, "released": null,      "label": "Immunia" },
   "cellvisia":       { "enabled": false, "released": null,      "label": "CellVisia" },
