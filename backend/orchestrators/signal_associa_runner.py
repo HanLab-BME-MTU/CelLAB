@@ -363,11 +363,18 @@ def _run_pairs_parallel(signals, pairs, assoc_config, alpha, n_jobs, progress_cb
     _emit(0)
     tasks = (delayed(_run_one_pair_all_methods)(a, b, signals[a], signals[b], assoc_config, alpha)
              for (a, b) in pairs)
+    # In a PyInstaller-frozen app, joblib's default 'loky' backend spawns workers by
+    # re-launching the executable, which PyInstaller cannot handle (workers die with
+    # TerminatedWorkerError / the app restarts on new ports). The stdlib 'multiprocessing'
+    # backend IS supported by PyInstaller's runtime hook together with the launcher's
+    # multiprocessing.freeze_support(), so use it when frozen; keep loky in dev.
+    import sys as _sys
+    backend = 'multiprocessing' if getattr(_sys, 'frozen', False) else 'loky'
     try:
-        gen = Parallel(n_jobs=int(n_jobs), return_as='generator')(tasks)
+        gen = Parallel(n_jobs=int(n_jobs), backend=backend, return_as='generator')(tasks)
     except TypeError:
         # Older joblib without return_as: fall back to blocking list
-        gen = Parallel(n_jobs=int(n_jobs))(tasks)
+        gen = Parallel(n_jobs=int(n_jobs), backend=backend)(tasks)
 
     done = 0
     for pair_rows in gen:
@@ -396,6 +403,8 @@ def _run_pairs(signals: Dict, pairs: List[Tuple[str, str]], assoc_config: Dict,
                                        int(n_jobs), progress_cb=progress_cb)
         except ImportError:
             print("[Associa] joblib not available — falling back to serial CPU.")
+        except Exception as e:
+            print(f"[Associa] parallel path failed ({e}) — falling back to serial CPU.")
 
     Associa = _get_engine()
     all_methods = list(assoc_config.get('methods', {}).keys())
