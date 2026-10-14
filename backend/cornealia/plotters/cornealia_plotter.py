@@ -1307,14 +1307,14 @@ class cornealia_plotter:
             tick_p = '\u2713' if peak_ok else '\u2717'
             ax.annotate(f'Peak {tick_p}', xy=(r_osc[peak_idx], g_osc[peak_idx]),
                         xytext=(5, 6), textcoords='offset points',
-                        fontsize=6.5, fontweight='bold', color=C_FIT)
+                        fontsize=6.5, fontweight='bold', color=C_FIT, fontfamily='DejaVu Sans')
 
             # Annotate zero crossing
             ax.axvline(x=r_osc[zc_idx], color=C_GRAY, linestyle=':', linewidth=1, zorder=3)
             tick_z = '\u2713' if zc_ok else '\u2717'
             ax.annotate(f'Zero {tick_z}', xy=(r_osc[zc_idx], 0),
                         xytext=(4, -4), textcoords='offset points',
-                        fontsize=6.5, fontweight='bold', color=C_DARK)
+                        fontsize=6.5, fontweight='bold', color=C_DARK, fontfamily='DejaVu Sans')
 
             # Annotate trough
             ax.plot(r_osc[trough_idx], g_osc[trough_idx], '^', color=C_RED,
@@ -1322,7 +1322,7 @@ class cornealia_plotter:
             tick_t = '\u2713' if trough_ok else '\u2717'
             ax.annotate(f'Trough {tick_t}', xy=(r_osc[trough_idx], g_osc[trough_idx]),
                         xytext=(-8, -14), textcoords='offset points',
-                        fontsize=6.5, fontweight='bold', color=C_RED)
+                        fontsize=6.5, fontweight='bold', color=C_RED, fontfamily='DejaVu Sans')
 
             # --- Compute all four quality gate checks ---
             params_ok = (xi_val < 95) and (8 < lam_val < 70)
@@ -1397,14 +1397,17 @@ class cornealia_plotter:
         if len(r_fit_raw) > 0:
             ax.axvspan(r_fit_raw[0], r_fit_raw[-1], alpha=0.08, color=C_QR)
             ax.plot(r_fit_raw, v_fit_raw, 'o', color=C_QR, markersize=3, alpha=0.5)
-        if coeffs_qr is not None:
-            rd = np.linspace(r_fit_raw[0], r_fit_raw[-1], 200)
-            ax.plot(rd, np.polyval(coeffs_qr, rd), '-', color=C_QR, lw=2,
-                    label=f'Quad ({K_qr/px2:.4f})')
+        # Morse solid and thin underneath, Quad dashed and thicker on top, so both stay visible
+        # where they nearly coincide on the narrow raw window
+        _g_curves = []
         if popt_mr is not None and len(r_fit_raw) > 0:
             rd = np.linspace(r_fit_raw[0], r_fit_raw[-1], 200)
-            ax.plot(rd, morse_fig(rd, *popt_mr), '-', color=C_MR, lw=2,
-                    label=f'Morse ({K_mr/px2:.4f})')
+            _g_curves.append((rd, morse_fig(rd, *popt_mr), dict(ls='-', color=C_MR, lw=1.6, zorder=3)))
+            ax.plot(*_g_curves[-1][:2], **_g_curves[-1][2], label=f'Morse ({K_mr/px2:.4f})')
+        if coeffs_qr is not None:
+            rd = np.linspace(r_fit_raw[0], r_fit_raw[-1], 200)
+            _g_curves.append((rd, np.polyval(coeffs_qr, rd), dict(ls=(0, (3, 1.5)), color=C_QR, lw=2.2, zorder=4)))
+            ax.plot(*_g_curves[-1][:2], **_g_curves[-1][2], label=f'Quad ({K_qr/px2:.4f})')
         ax.axhline(0, color=C_DARK, ls='--', lw=0.8)
         ax.set_xlabel('r (px)', fontweight='bold')
         ax.set_ylabel('V(r)', fontweight='bold')

@@ -278,6 +278,12 @@ PRESET_IMMUNIA = {
     'use_stress_splitting': False,
     'use_intercellular_fill': False,
     'use_dark_object_exclusion': False,
+    # Spaghetti removal (optional): drop mesh-like objects whose total
+    # boundary (outer + internal hole edges) is much longer than the
+    # perimeter of a circle with the same enclosed (hole-filled) area.
+    'remove_spaghetti': False,
+    'spaghetti_max_ratio': 3.0,
+    'spaghetti_min_area': 20,
     # General
     'min_area': 5,
 }
@@ -617,6 +623,7 @@ class CellADE:
             max_sigma=self.params.get('log_max_sigma', 30),
             num_sigma=self.params.get('log_num_sigma', 15),
             threshold=self.params.get('log_threshold', 0.01),
+            overlap=self.params.get('log_overlap', 0.5),
         )
         # blobs: (y, x, sigma) — store as (N, 3)
         self.seeds = blobs
@@ -1085,6 +1092,39 @@ class CellADE:
         self.labels = expanded.astype(np.int32)
 
     # =============================================================
+    # OPTIONAL: SPAGHETTI REMOVAL
+    # =============================================================
+
+    def spaghetti_ratios(self, labels: np.ndarray) -> Dict[int, float]:
+        """
+        Per object: total perimeter (outer boundary + all internal hole
+        boundaries) divided by the perimeter of a circle with the same
+        enclosed area (holes filled), 2*sqrt(pi*A_filled).
+        Solid cells give ~1-1.5; mesh-like 'spaghetti' gives much more.
+        Objects smaller than spaghetti_min_area (filled) are skipped.
+        """
+        min_a = self.params.get('spaghetti_min_area', 20)
+        ratios = {}
+        for o in regionprops(labels):
+            a_filled = getattr(o, 'area_filled', None)
+            if a_filled is None:
+                a_filled = o.filled_area
+            if a_filled < min_a:
+                continue
+            ratios[o.label] = float(o.perimeter / (2.0 * np.sqrt(np.pi * a_filled)))
+        return ratios
+
+    def remove_spaghetti(self) -> None:
+        """Remove objects whose spaghetti ratio exceeds spaghetti_max_ratio."""
+        max_r = self.params.get('spaghetti_max_ratio', 3.0)
+        self.spaghetti_info = self.spaghetti_ratios(self.labels)
+        bad = [lab for lab, r in self.spaghetti_info.items() if r > max_r]
+        self.spaghetti_removed_ids = bad
+        self.spaghetti_removed = np.isin(self.labels, bad) if bad else np.zeros_like(self.labels, bool)
+        if bad:
+            self.labels = np.where(self.spaghetti_removed, 0, self.labels)
+
+    # =============================================================
     # STEP 12: EXTRACT PROPERTIES
     # =============================================================
 
@@ -1180,6 +1220,10 @@ class CellADE:
             _step(0.85, 'Filling intercellular gaps...')
             self.fill_intercellular_gaps()
 
+        if p.get('remove_spaghetti', False):
+            _step(0.88, 'Removing spaghetti objects...')
+            self.remove_spaghetti()
+
         # --- Final extraction ---
 
         _step(0.90, 'Extracting properties...')
@@ -1210,10 +1254,15 @@ class CellADE:
         self.extract_foreground()
         self.params['fcm_mode'] = original_mode
 
-        # Clean up: fill holes, remove small objects
+        # Clean up: (optional spaghetti removal), fill holes, remove small objects
         from scipy import ndimage as ndi
         from skimage import morphology
-        mask = ndi.binary_fill_holes(self.foreground)
+        fg = self.foreground
+        if self.params.get('remove_spaghetti', False):
+            self.labels = relabel(fg > 0)
+            self.remove_spaghetti()
+            fg = self.labels > 0
+        mask = ndi.binary_fill_holes(fg)
         min_area = self.params.get('min_area', 5)
         mask = morphology.remove_small_objects(mask, min_size=min_area)
 

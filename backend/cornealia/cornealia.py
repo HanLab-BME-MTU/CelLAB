@@ -219,12 +219,23 @@ class cornealia :
         This allows the same configured object to be reused across many images,
         including parallel batch processing via multiprocessing.Pool.
         
-        pixel_size   : float  μm/px
+        pixel_size   : float or (sx, sy)  μm/px. A tuple gives non-square pixels
+                       (sx along columns/x, sy along rows/y). Internally
+                       self.pixel_size = s = sqrt(sx*sy) (effective size, s^2 =
+                       pixel area) and distances are weighted per axis by
+                       ax = sx/s, ay = sy/s, so all lengths are in effective px.
         machine_type : str    Machine profile key (e.g. 'cellchek_d') or 'none'
         verbose      : bool   True → print per-image details; False → silent (used in batch)
         """
 
-        self.pixel_size=pixel_size
+        if np.ndim(pixel_size) == 0:
+            _sx = _sy = float(pixel_size)
+        else:
+            _sx, _sy = (float(v) for v in pixel_size)
+        self.pixel_size_xy = (_sx, _sy)            # (sx, sy) μm/px as given
+        self.pixel_size = float(np.sqrt(_sx * _sy))  # effective s; s^2 = pixel area
+        self.ax = _sx / self.pixel_size            # per-axis weights, ax*ay = 1
+        self.ay = _sy / self.pixel_size
         self.pixel_size_ref=0.58   # reference pixel size (clinical specular microscopy) # the unit should be  μm/px
         self.is_input_image_machine_output=is_input_image_machine_output
         self.machine_type=machine_type
@@ -476,13 +487,15 @@ class cornealia :
         else:
             px2_to_mm2 = px2 / 1e6
 
-            # Exclusion zone
-            MAX_R = int(min(H, W) * self.exclusion_ratio)
+            # Exclusion zone (effective px; per-axis margin in pixels)
+            MAX_R = int(min(H * self.ay, W * self.ax) * self.exclusion_ratio)
+            MAX_R_x = MAX_R / self.ax
+            MAX_R_y = MAX_R / self.ay
             y_coords = centroids[:, 0]
             x_coords = centroids[:, 1]
 
-            interior_mask = ((y_coords >= MAX_R) & (y_coords <= H - MAX_R) &
-                            (x_coords >= MAX_R) & (x_coords <= W - MAX_R))
+            interior_mask = ((y_coords >= MAX_R_y) & (y_coords <= H - MAX_R_y) &
+                            (x_coords >= MAX_R_x) & (x_coords <= W - MAX_R_x))
 
             interior_areas = areas[interior_mask]
 
@@ -498,15 +511,15 @@ class cornealia :
             CV_calc  = float(SD_calc / Ave_calc * 100) if Ave_calc > 0 else 0.0
 
             # CD: direct count over interior area
-            interior_H = H - 2 * MAX_R
-            interior_W = W - 2 * MAX_R
+            interior_H = H - 2 * MAX_R_y
+            interior_W = W - 2 * MAX_R_x
             interior_area_mm2 = (interior_H * interior_W) * px2_to_mm2
             CD_calc = len(interior_areas) / interior_area_mm2
 
             # HEX: Delaunay neighbors from centroids (robust, gap-independent)
             interior_centroids = centroids[interior_mask]
-            interior_points = np.column_stack([interior_centroids[:, 1],
-                                            interior_centroids[:, 0]])  # (x, y)
+            interior_points = np.column_stack([interior_centroids[:, 1] * self.ax,
+                                            interior_centroids[:, 0] * self.ay])  # (x, y), effective px
 
             n_int = len(interior_areas)
             if n_int >= 4:
@@ -569,10 +582,12 @@ class cornealia :
         y_coords = centroids[:, 0]
         x_coords = centroids[:, 1]
 
-        MAX_R = int(min(cell_H, cell_W) * self.exclusion_ratio)
+        MAX_R = int(min(cell_H * self.ay, cell_W * self.ax) * self.exclusion_ratio)  # effective px
+        MAX_R_x = MAX_R / self.ax                                 # margin in pixels per axis
+        MAX_R_y = MAX_R / self.ay
 
-        interior_region = ((y_coords >= MAX_R) & (y_coords <= cell_H - MAX_R) &
-                        (x_coords >= MAX_R) & (x_coords <= cell_W - MAX_R))
+        interior_region = ((y_coords >= MAX_R_y) & (y_coords <= cell_H - MAX_R_y) &
+                        (x_coords >= MAX_R_x) & (x_coords <= cell_W - MAX_R_x))
 
         # --- Global density and shell settings ---
         global_density = len(y_coords) / (cell_H * cell_W)
@@ -603,7 +618,7 @@ class cornealia :
 
             dx = x_coords - x_c
             dy = y_coords - y_c
-            distances = np.sqrt(dx**2 + dy**2)
+            distances = np.sqrt((self.ax * dx)**2 + (self.ay * dy)**2)  # effective px
             distances[i] = 0
 
             d = distances[distances > 0]
@@ -1261,16 +1276,19 @@ class cornealia :
 
         # Extract centroids and interior mask
         centroids = seg['centroids']  # (N, 2) row, col
-        MAX_R = int(min(H, W) * self.exclusion_ratio)
+        MAX_R = int(min(H * self.ay, W * self.ax) * self.exclusion_ratio)
+        MAX_R_x = MAX_R / self.ax
+        MAX_R_y = MAX_R / self.ay
         y, x = centroids[:, 0], centroids[:, 1]
-        interior = ((y >= MAX_R) & (y <= H - MAX_R) &
-                     (x >= MAX_R) & (x <= W - MAX_R))
+        interior = ((y >= MAX_R_y) & (y <= H - MAX_R_y) &
+                     (x >= MAX_R_x) & (x <= W - MAX_R_x))
         pts = centroids[interior]
         if len(pts) < 10:
             return None
 
         # Convert to (x, y) in µm
-        pts_um = np.column_stack([pts[:, 1], pts[:, 0]]) * px
+        sx, sy = self.pixel_size_xy
+        pts_um = np.column_stack([pts[:, 1] * sx, pts[:, 0] * sy])
         n = len(pts_um)
 
         # Delaunay triangulation → unique edges
@@ -1534,7 +1552,7 @@ class cornealia :
                                 n_failed=n_failed)
         else:
             config = {
-                'pixel_size':               self.pixel_size,
+                'pixel_size':               self.pixel_size_xy,
                 'is_input_image_machine_output': self.is_input_image_machine_output,
                 'fcm_method':               self.fcm_method,
                 'min_expansion_shells':     self.min_expansion_shells,
@@ -1639,7 +1657,9 @@ def _cli_process_one(args):
 
     img_path_str, pixel_size, invert, cellade_params = args
     img_path = Path(img_path_str)
-    px2 = pixel_size ** 2
+    _sx, _sy = (pixel_size, pixel_size) if np.ndim(pixel_size) == 0 else pixel_size
+    px2 = _sx * _sy                 # pixel area = s^2
+    s_eff = float(np.sqrt(px2))     # effective pixel size
 
     proc = cornealia(
         is_input_image_machine_output=False,
@@ -1676,7 +1696,7 @@ def _cli_process_one(args):
             'K_um':                safe('K', px2),
             'K_Vmin_um':           safe('K_Vmin', px2),
             'K_gpeak_um':          safe('K_gpeak', px2),
-            'r0_um':               round(r.get('r0_fit', np.nan) * pixel_size, 3)
+            'r0_um':               round(r.get('r0_fit', np.nan) * s_eff, 3)
                                    if not np.isnan(r.get('r0_fit', np.nan)) else np.nan,
             'v_min':               r.get('v_min', np.nan),
             'g_peak':              r.get('g_peak', np.nan),
@@ -1725,8 +1745,9 @@ def _cli_single(args):
         print(f"Error: Image not found: {image_path}")
         return
 
-    pixel_size = args.pixel_size
-    px2 = pixel_size ** 2
+    pixel_size = args.pixel_size[0] if len(args.pixel_size) == 1 else tuple(args.pixel_size)
+    _sx, _sy = (pixel_size, pixel_size) if np.ndim(pixel_size) == 0 else pixel_size
+    px2 = _sx * _sy
     cellade_params = json.loads(args.cellade_params) if args.cellade_params else None
 
     output_dir = Path(args.output) if args.output else image_path.parent
@@ -1786,7 +1807,7 @@ def _cli_batch(args):
     from concurrent.futures import ProcessPoolExecutor, as_completed
 
     folder = Path(args.folder)
-    pixel_size = args.pixel_size
+    pixel_size = args.pixel_size[0] if len(args.pixel_size) == 1 else tuple(args.pixel_size)
     n_workers = args.workers
     invert = args.invert
     cellade_params = json.loads(args.cellade_params) if args.cellade_params else None
@@ -1915,7 +1936,7 @@ if __name__ == '__main__':
     sp = sub.add_parser('single', help='Process a single image')
     sp.add_argument('--image', required=True, help='Path to image file')
     sp.add_argument('--output', default=None, help='Output directory (default: same as image)')
-    sp.add_argument('--pixel-size', type=float, default=0.58, help='Pixel size in µm/px (default: 0.58)')
+    sp.add_argument('--pixel-size', type=float, nargs='+', default=[0.58], help='Pixel size in µm/px: one value (square) or two values SX SY (default: 0.58)')
     sp.add_argument('--machine', action='store_true', help='Input is machine output (has OCR metrics area)')
     sp.add_argument('--invert', action='store_true', help='Invert image contrast (for bright-field)')
     sp.add_argument('--plot', action='store_true', help='Generate plots')
@@ -1925,7 +1946,7 @@ if __name__ == '__main__':
     bp = sub.add_parser('batch', help='Process a folder of images in parallel')
     bp.add_argument('--folder', required=True, help='Path to image folder')
     bp.add_argument('--output', required=True, help='Output root directory')
-    bp.add_argument('--pixel-size', type=float, default=0.58, help='Pixel size in µm/px (default: 0.58)')
+    bp.add_argument('--pixel-size', type=float, nargs='+', default=[0.58], help='Pixel size in µm/px: one value (square) or two values SX SY (default: 0.58)')
     bp.add_argument('--workers', type=int, default=8, help='Number of parallel workers (default: 8)')
     bp.add_argument('--invert', action='store_true', help='Invert image contrast (for bright-field)')
     bp.add_argument('--formats', default='png,jpg,bmp', help='Comma-separated image extensions (default: png,jpg,bmp)')
