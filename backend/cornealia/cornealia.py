@@ -48,11 +48,47 @@ MACHINE_PROFILES = {
         'preview_rect': {'x': 24, 'y': 261, 'w': 684, 'h': 514},
         'default_pixel_size': 0.58,
         'green_dot_detection': True,
+        'screenshot':   True,             # crop the cell panel + OCR the metrics panel
+        'pixel_size_xy': (0.58, 0.58),    # fixed, for the cropped panel (not the 1000x750 um frame)
+        'source': 'Primary cohort calibration (CellChek D screenshot crop)',
     },
-    # Future machines:
-    # 'topcon_sp3000p': { ... },
-    # 'tomey_em4000': { ... },
+    # Raw-image devices: pixel size = official field of view / image size, per image.
+    # fov_um = (long side, short side); the long side is matched to the image's long side.
+    'cellchek_20': {
+        'name': 'CellChek 20 (Konan Medical)',
+        'description': 'Clinical specular microscope; raw image export.',
+        'screenshot': False,
+        'fov_um': (550.0, 250.0),
+        'source': 'konanmedical.com/cellchek-20: field of view 0.25 mm x 0.55 mm',
+    },
+    'hai_eb2000xyz': {
+        'name': 'EB-2000xyz (HAI Labs)',
+        'description': 'Eye bank specular microscope; raw image export.',
+        'screenshot': False,
+        'fov_um': (500.0, 450.0),
+        'source': 'hailabs.com/product/eb-2000xyz: field of view 450 um x 500 um',
+    },
+    'hai_eb3000xyz': {
+        'name': 'EB-3000xyz (HAI Labs)',
+        'description': 'Eye bank specular microscope (inverted head); raw image export.',
+        'screenshot': False,
+        'fov_um': (500.0, 450.0),
+        'source': 'hailabs.com EB-3000xyz specifications: field of view 450 um x 500 um',
+    },
 }
+
+
+def pixel_size_from_fov(fov_um, image_hw):
+    """(sx, sy) in um/px from a field of view and an image size.
+
+    fov_um   : (a, b) um, in any order; the longer side is matched to the
+               image's longer side (a camera's field has the image's orientation).
+    image_hw : (H, W) px of the image the field of view refers to.
+    """
+    H, W = int(image_hw[0]), int(image_hw[1])
+    long_um, short_um = max(fov_um), min(fov_um)
+    fov_w, fov_h = (long_um, short_um) if W >= H else (short_um, long_um)
+    return (fov_w / W, fov_h / H)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -212,7 +248,8 @@ class PipelineReporter:
 class cornealia :
     
     def __init__(self, is_input_image_machine_output=True, machine_type='cellchek_d', fcm_method='local', min_expansion_shells=5,min_interior_cells_ratio=0.4,exclusion_ratio=0.15,
-                shell_thickness=1,fitting_half_width=10,SAVGOL_WINDOW=11,SAVGOL_ORDER=3, fitting_method='morse',pixel_size=0.58,verbose=True,invert_image=False,cellade_params=None):
+                shell_thickness=1,fitting_half_width=10,SAVGOL_WINDOW=11,SAVGOL_ORDER=3, fitting_method='morse',pixel_size=0.58,verbose=True,invert_image=False,cellade_params=None,
+                fov_um=None):
         """
         Parameters-only constructor. No image is loaded here.
         All processing methods receive image_path as input and return results as dicts.
@@ -224,18 +261,15 @@ class cornealia :
                        self.pixel_size = s = sqrt(sx*sy) (effective size, s^2 =
                        pixel area) and distances are weighted per axis by
                        ax = sx/s, ay = sy/s, so all lengths are in effective px.
+        fov_um       : (a, b) um or None. If given, the pixel size is set per image
+                       from its size: pixel_size_from_fov(fov_um, (H, W)) of the
+                       analysed image; pixel_size is then only the fallback.
         machine_type : str    Machine profile key (e.g. 'cellchek_d') or 'none'
         verbose      : bool   True → print per-image details; False → silent (used in batch)
         """
 
-        if np.ndim(pixel_size) == 0:
-            _sx = _sy = float(pixel_size)
-        else:
-            _sx, _sy = (float(v) for v in pixel_size)
-        self.pixel_size_xy = (_sx, _sy)            # (sx, sy) μm/px as given
-        self.pixel_size = float(np.sqrt(_sx * _sy))  # effective s; s^2 = pixel area
-        self.ax = _sx / self.pixel_size            # per-axis weights, ax*ay = 1
-        self.ay = _sy / self.pixel_size
+        self._set_pixel_size(pixel_size)
+        self.fov_um = tuple(float(v) for v in fov_um) if fov_um is not None else None
         self.pixel_size_ref=0.58   # reference pixel size (clinical specular microscopy) # the unit should be  μm/px
         self.is_input_image_machine_output=is_input_image_machine_output
         self.machine_type=machine_type
@@ -256,6 +290,22 @@ class cornealia :
         # Excluded from pickling so multiprocessing workers each create their own.
         self._ocr_reader = None
 
+
+    def _set_pixel_size(self, pixel_size):
+        """Set (sx, sy), effective s = sqrt(sx*sy) and per-axis weights."""
+        if np.ndim(pixel_size) == 0:
+            _sx = _sy = float(pixel_size)
+        else:
+            _sx, _sy = (float(v) for v in pixel_size)
+        self.pixel_size_xy = (_sx, _sy)              # (sx, sy) μm/px
+        self.pixel_size = float(np.sqrt(_sx * _sy))  # effective s; s^2 = pixel area
+        self.ax = _sx / self.pixel_size              # per-axis weights, ax*ay = 1
+        self.ay = _sy / self.pixel_size
+
+    def _apply_fov(self, H, W):
+        """If a field of view is set, set the pixel size from this image size."""
+        if self.fov_um is not None:
+            self._set_pixel_size(pixel_size_from_fov(self.fov_um, (H, W)))
 
     # ------------------------------------------------------------------
     # Pickle support — exclude the non-picklable EasyOCR reader
@@ -386,6 +436,7 @@ class cornealia :
         -------
         dict with CD_calc, Ave_calc, SD_calc, CV_calc, HEX_calc, metrics_method, etc.
         """
+        self._apply_fov(H, W)
         from scipy.spatial import Voronoi, Delaunay, ConvexHull
 
         px2 = self.pixel_size ** 2
@@ -579,6 +630,7 @@ class cornealia :
         """
 
         cell_H, cell_W = image_dims
+        self._apply_fov(cell_H, cell_W)
         y_coords = centroids[:, 0]
         x_coords = centroids[:, 1]
 
@@ -1119,6 +1171,7 @@ class cornealia :
 
         if centroids is not None and image_dims is not None:
             # Centroid-only mode: skip image loading and segmentation
+            self._apply_fov(*image_dims)
             reporter.skip('load')
             reporter.skip('preprocess')
             reporter.skip('segment')
@@ -1135,6 +1188,7 @@ class cornealia :
                 raise
 
             co_results['image_path'] = str(image_path)
+            co_results['pixel_size_x'], co_results['pixel_size_y'] = self.pixel_size_xy
             co_results['_reporter'] = reporter.get_board()
             return co_results
 
@@ -1168,6 +1222,9 @@ class cornealia :
 
         if self.invert_image:
             cell_area = 255 - cell_area
+
+        # Pixel size from the device field of view and this image's size
+        self._apply_fov(*cell_area.shape[:2])
 
         # 3. Segmentation
         reporter.start('segment')
@@ -1223,6 +1280,8 @@ class cornealia :
         results = {
             # image data
             'image_path':      str(image_path),
+            'pixel_size_x':    self.pixel_size_xy[0],
+            'pixel_size_y':    self.pixel_size_xy[1],
             'input_image':     input_image,
             'cell_area':       cell_area,
             'machine_metrics': machine_metrics,
@@ -1272,6 +1331,7 @@ class cornealia :
             return None
 
         H, W = seg['H'], seg['W']
+        self._apply_fov(H, W)
         px = self.pixel_size
 
         # Extract centroids and interior mask
@@ -1553,6 +1613,10 @@ class cornealia :
         else:
             config = {
                 'pixel_size':               self.pixel_size_xy,
+                'fov_um':                   self.fov_um,
+                'machine_type':             self.machine_type,
+                'invert_image':             self.invert_image,
+                'cellade_params':           self.cellade_params,
                 'is_input_image_machine_output': self.is_input_image_machine_output,
                 'fcm_method':               self.fcm_method,
                 'min_expansion_shells':     self.min_expansion_shells,

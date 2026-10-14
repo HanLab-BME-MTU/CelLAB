@@ -770,7 +770,7 @@ def _run_cornealia(project, ws_id, pipeline_id, step_id, params, results_dir, pr
             plt.savefig(str(plots_dir / "original.png"), dpi=150, bbox_inches='tight')
             plt.close()
 
-            is_machine = all_params.get('machine_type', 'none') != 'none'
+            is_machine = _cornealia_device(all_params)['is_machine']
             outputs['image_size'] = f"{img_rgb.shape[1]} x {img_rgb.shape[0]}"
             outputs['machine_type'] = all_params.get('machine_type', 'none')
 
@@ -938,7 +938,10 @@ def _generate_instance_report(pipeline_dir, all_params, outputs, board=None, ima
     lines.append("|-----------|-------|")
     config_items = {
         'pixel_size': 'Pixel Size (µm/px)',
-        'machine_type': 'Image Source',
+        'pixel_size_x': 'Pixel Size X (µm/px)',
+        'pixel_size_y': 'Pixel Size Y (µm/px)',
+        'pixel_override': 'Pixel Size Overridden',
+        'machine_type': 'Device',
         'sigma_mode': 'Sigma Detection',
         'fcm_method': 'FCM Method',
         'fitting_method': 'Fitting Method',
@@ -949,7 +952,8 @@ def _generate_instance_report(pipeline_dir, all_params, outputs, board=None, ima
         if key in all_params:
             val = all_params[key]
             if key == 'machine_type':
-                val = 'Raw Image' if val == 'none' else val.replace('_', ' ').title()
+                from cornealia.cornealia import MACHINE_PROFILES as _MP
+                val = 'Custom (raw image)' if val == 'none' else _MP.get(val, {}).get('name', val)
             lines.append(f"| {label} | {val} |")
     lines.append("")
 
@@ -978,7 +982,9 @@ def _generate_instance_report(pipeline_dir, all_params, outputs, board=None, ima
     lines.append("## Key Results")
     lines.append("")
     result_groups = {
-        'Segmentation': [('n_cells', 'Cells Detected', '')],
+        'Segmentation': [('n_cells', 'Cells Detected', ''),
+                         ('pixel_size_x', 'Pixel size X used', ' µm/px'),
+                         ('pixel_size_y', 'Pixel size Y used', ' µm/px')],
         'Classic Metrics': [
             ('CD_calc', 'Cell Density (CD)', ' cells/mm²'),
             ('Ave_calc', 'Average Cell Area', ' µm²'),
@@ -986,6 +992,8 @@ def _generate_instance_report(pipeline_dir, all_params, outputs, board=None, ima
             ('HEX_calc', 'Hexagonality', '%'),
         ],
         'Collective Order': [
+            ('K_ds_um', 'K_ds (damped sine)', ' µm⁻²'),
+            ('r0_um', 'Equilibrium distance r₀', ' µm'),
             ('K', 'K (Morse guided)', ' px⁻²'),
             ('K_ds', 'K_ds (damped sine)', ' px⁻²'),
             ('r0_fit', 'Equilibrium distance r₀', ' px'),
@@ -993,7 +1001,7 @@ def _generate_instance_report(pipeline_dir, all_params, outputs, board=None, ima
             ('reliable', 'Quality gate', ''),
         ],
         'Mechanical State': [
-            ('mean_F', 'Mean |F|', ''),
+            ('mean_F', 'Mean |F|', ' µm⁻¹'),
             ('frac_compression', 'Fraction in compression', ''),
             ('n_hot_spots', 'Hot spots', ''),
             ('spatial_cv', 'Spatial CV', ''),
@@ -1035,7 +1043,10 @@ def _generate_run_report(results_dir, step_id, all_params, board=None, outputs=N
 
     param_labels = {
         'pixel_size': 'Pixel Size (µm/px)',
-        'machine_type': 'Image Source',
+        'pixel_size_x': 'Pixel Size X (µm/px)',
+        'pixel_size_y': 'Pixel Size Y (µm/px)',
+        'pixel_override': 'Pixel Size Overridden',
+        'machine_type': 'Device',
         'sigma_mode': 'Sigma Detection',
         'fcm_method': 'FCM Method',
         'fitting_method': 'Fitting Method',
@@ -1053,11 +1064,17 @@ def _generate_run_report(results_dir, step_id, all_params, board=None, outputs=N
         'batch_folder': 'Batch Folder',
         'input_file': 'Input File',
     }
+    _used = outputs or {}
     for key, label in param_labels.items():
+        if key in ('pixel_size_x', 'pixel_size_y') and _used.get(key):
+            val = f"{_used[key]:.4f} (used)"
+            lines.append(f"| {label} | {val} |")
+            continue
         if key in all_params:
             val = all_params[key]
             if key == 'machine_type':
-                val = 'Raw Image' if val == 'none' else val.replace('_', ' ').title()
+                from cornealia.cornealia import MACHINE_PROFILES as _MP
+                val = 'Custom (raw image)' if val == 'none' else _MP.get(val, {}).get('name', val)
             lines.append(f"| {label} | {val} |")
     lines.append("")
 
@@ -1092,12 +1109,15 @@ def _generate_run_report(results_dir, step_id, all_params, board=None, outputs=N
             'Ave_calc': ('Average Cell Area', ' µm²'),
             'CV_calc': ('Coefficient of Variation', '%'),
             'HEX_calc': ('Hexagonality', '%'),
-            'K': ('K (collective order)', ' µm⁻²'),
-            'K_ds': ('K_ds (damped sine)', ' µm⁻²'),
+            'K_um': ('K (collective order)', ' µm⁻²'),
+            'K_ds_um': ('K_ds (damped sine)', ' µm⁻²'),
+            'r0_um': ('Equilibrium distance r₀', ' µm'),
+            'K': ('K (collective order)', ' px⁻²'),
+            'K_ds': ('K_ds (damped sine)', ' px⁻²'),
             'r0_fit': ('Equilibrium distance r₀', ' px'),
             'g_peak': ('g(r) peak height', ''),
             'reliable': ('Quality gate', ''),
-            'mean_F': ('Mean residual force |F|', ''),
+            'mean_F': ('Mean residual force |F|', ' µm⁻¹'),
             'n_hot_spots': ('Hot spots', ''),
             'frac_compression': ('Fraction in compression', ''),
             'n_total': ('Total images', ''),
@@ -1118,6 +1138,57 @@ def _generate_run_report(results_dir, step_id, all_params, board=None, outputs=N
     report_path = results_dir / "run_report.md"
     report_path.write_text('\n'.join(lines), encoding='utf-8')
     return str(report_path)
+
+
+def _cornealia_device(all_params):
+    """Resolve the selected device into pixel-size settings.
+
+    machine_type   : device key in MACHINE_PROFILES, or 'none' (custom).
+    pixel_override : 'Yes' to use the typed values instead of the device values.
+    pixel_size_x/y : typed values (um/px); legacy 'pixel_size' is the fallback.
+
+    Returns dict: machine_type, profile, is_machine (screenshot crop + OCR),
+    pixel_size (scalar or (sx, sy)), fov_um (or None), override (bool).
+    """
+    from cornealia.cornealia import MACHINE_PROFILES
+    machine_type = all_params.get('machine_type', 'none')
+    profile = MACHINE_PROFILES.get(machine_type)
+    ov = all_params.get('pixel_override', 'No')
+    override = (str(ov).lower() in ('yes', 'true', '1')) or profile is None
+
+    legacy = float(all_params.get('pixel_size', 0.58))
+    px_x = float(all_params.get('pixel_size_x', legacy) or legacy)
+    px_y = float(all_params.get('pixel_size_y', px_x) or px_x)
+
+    fov_um = None
+    if override:
+        pixel_size = (px_x, px_y)
+    elif profile.get('fov_um') is not None:
+        fov_um = tuple(profile['fov_um'])      # pixel size set per image from its size
+        pixel_size = (px_x, px_y)              # fallback only
+    else:
+        pixel_size = tuple(profile.get('pixel_size_xy', (profile.get('default_pixel_size', 0.58),) * 2))
+
+    return {
+        'machine_type': machine_type,
+        'profile': profile,
+        'is_machine': bool(profile and profile.get('screenshot', False)),
+        'pixel_size': pixel_size,
+        'fov_um': fov_um,
+        'override': override,
+    }
+
+
+def _px_columns(df, all_params):
+    """Per-row (px2, s) for unit conversion: from pixel_size_x/y columns if present."""
+    import numpy as np
+    if 'pixel_size_x' in df.columns and 'pixel_size_y' in df.columns:
+        px2 = df['pixel_size_x'].astype(float) * df['pixel_size_y'].astype(float)
+    else:
+        ps = _cornealia_device(all_params)['pixel_size']
+        sx, sy = (ps, ps) if np.ndim(ps) == 0 else ps
+        px2 = float(sx) * float(sy)
+    return px2, np.sqrt(px2)
 
 
 def _cornealia_config(all_params):
@@ -1141,14 +1212,14 @@ def _cornealia_config(all_params):
     if 'clahe_clip' in all_params:
         cellade_params['clahe_clip'] = float(all_params['clahe_clip'])
 
-    # Machine type
-    machine_type = all_params.get('machine_type', 'none')
-    is_machine = machine_type != 'none'
+    # Device: pixel size (fixed, from field of view, or overridden) and screenshot handling
+    dev = _cornealia_device(all_params)
 
     return {
-        'pixel_size': float(all_params.get('pixel_size', 0.58)),
-        'is_input_image_machine_output': is_machine,
-        'machine_type': machine_type,
+        'pixel_size': dev['pixel_size'],
+        'fov_um': dev['fov_um'],
+        'is_input_image_machine_output': dev['is_machine'],
+        'machine_type': dev['machine_type'],
         'fcm_method': all_params.get('fcm_method', 'local'),
         'fitting_method': all_params.get('fitting_method', 'morse'),
         'min_expansion_shells': int(all_params.get('min_expansion_shells', 5)),
@@ -1486,6 +1557,9 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
         results['n_hot_spots'] = 0
         reporter.skip('force')
 
+    # Pixel size actually used for this image (device field of view, fixed, or typed)
+    results['pixel_size_x'], results['pixel_size_y'] = engine.pixel_size_xy
+
     # Extract safe results
     safe_results = _extract_safe_results(results)
     print("  [DIAG] Safe results extracted")
@@ -1532,6 +1606,16 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
         "n_hot_spots": scalar_results.get('n_hot_spots', 0),
         "pipeline_board": reporter.get_board(),
     }
+    # Physical units (pixel area sx*sy, effective size s = sqrt(sx*sy))
+    _sx, _sy = scalar_results.get('pixel_size_x'), scalar_results.get('pixel_size_y')
+    if _sx and _sy:
+        _px2, _s = _sx * _sy, (_sx * _sy) ** 0.5
+        morph_outputs['pixel_size_x'], morph_outputs['pixel_size_y'] = _sx, _sy
+        for _k in ('K', 'K_ds'):
+            if isinstance(morph_outputs.get(_k), (int, float)):
+                morph_outputs[f'{_k}_um'] = morph_outputs[_k] / _px2
+        if isinstance(morph_outputs.get('r0_fit'), (int, float)):
+            morph_outputs['r0_um'] = morph_outputs['r0_fit'] * _s
     _generate_run_report(results_dir, 'morphometry', all_params,
                          board=reporter.get_board(), outputs=morph_outputs,
                          image_name=os.path.basename(image_path))
@@ -1726,8 +1810,8 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
                         df = df[cols]
 
                     # Compute micrometer-converted columns for batch plotter
-                    px = float(all_params.get('pixel_size', 0.58))
-                    px2 = px * px
+                    # (per-row pixel size: device field of view can differ per image)
+                    px2, px = _px_columns(df, all_params)
                     if 'K' in df.columns:
                         df['K_um'] = df['K'] / px2
                     if 'K_ds' in df.columns:
@@ -3802,10 +3886,9 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
             if 'K' in df_check.columns and 'K_um' not in df_check.columns:
                 try:
                     setup_params = project.load_params(ws_id, pipeline_id, 'batch_setup')
-                    px = float(setup_params.get('pixel_size', 0.58))
-                except:
-                    px = 0.58
-                px2 = px * px
+                except Exception:
+                    setup_params = {}
+                px2, px = _px_columns(df_check, setup_params)
                 for col_src, col_dst in [('K','K_um'),('K_ds','K_ds_um'),('K_Vmin','K_Vmin_um'),('K_gpeak','K_gpeak_um'),
                                           ('K_quad_raw','K_quad_raw_um'),('K_morse_raw','K_morse_raw_um'),
                                           ('K_quad_guided','K_quad_guided_um'),('K_morse_guided','K_morse_guided_um')]:
@@ -3815,7 +3898,7 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                     df_check['r_0_um'] = df_check['r0_fit'] * px
                     df_check['r_0_px'] = df_check['r0_fit']
                 needs_save = True
-                print(f"  [BATCH] Added _um columns (pixel_size={px})")
+                print(f"  [BATCH] Added _um columns (per-row pixel size)")
 
             if needs_save:
                 df_check.to_csv(csv_path, index=False)

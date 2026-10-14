@@ -2079,6 +2079,9 @@ function _restoreParams(bodyEl, sub, itemId) {
     bodyEl.querySelectorAll('[data-param="sigma_mode"]').forEach(el => {
         toggleSigmaFields(el);
     });
+    bodyEl.querySelectorAll('[data-param="machine_type"]').forEach(el => {
+        cornealiaDeviceChange(el);
+    });
 
     // Signal Associa: re-apply trichotomy lock + method-conditional visibility
     const _saForm = bodyEl.querySelector('.settings-form [data-param="m_ccm"]') ? bodyEl.querySelector('.settings-form') : null;
@@ -3152,9 +3155,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Select a corneal endothelium image (specular microscopy or raw).</p>`);
 
         if (id === 'image-type') return wrap(`
-            <div class="form-row"><span class="form-label">Image Source</span><select class="form-select" data-param="machine_type"><option value="none">Raw Image (no machine)</option><option value="cellchek_d">CellChek D (Konan Medical)</option></select></div>
-            <div class="form-row"><span class="form-label">Invert Image</span><select class="form-select" data-param="invert_image"><option value="No">No</option><option value="Yes">Yes (bright-field)</option></select></div>
-            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics (CD, Ave, SD, CV, HEX) via OCR from the info panel.<br>Invert: Use for bright-field images where cells are dark on light background.</p>`);
+            ${_cornealiaDeviceHTML()}`);
 
         if (id === 'preview') return `
             <p style="font-size:var(--fs-sm);color:var(--text-tertiary)">Select an image first, then preview will appear in the Graphics panel.</p>`;
@@ -3175,7 +3176,6 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
 
         if (id === 'morph-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">Collective Order Analysis</p>
-            <div class="form-row"><span class="form-label">Pixel Size</span><input class="form-input" data-param="pixel_size" type="number" value="0.58" step="0.01" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">μm/px</span></div>
             <div class="form-row"><span class="form-label">Fitting Method</span><select class="form-select" data-param="fitting_method"><option value="ds">Damped Sine (recommended)</option><option value="morse_guided">Morse Guided</option><option value="quad_guided">Quadratic Guided</option><option value="morse_raw">Morse Raw</option><option value="quad_raw">Quadratic Raw (Yamamoto)</option></select></div>
             <div class="form-row"><span class="form-label">Exclusion Ratio</span><input class="form-input" data-param="exclusion_ratio" type="number" value="0.15" step="0.01" style="width:80px"></div>
             <div class="form-row"><span class="form-label">Shell Thickness</span><input class="form-input" data-param="shell_thickness" type="number" value="1" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
@@ -3191,9 +3191,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <div id="batchFolderInfo" style="margin-top:8px;font-size:var(--fs-xs);color:var(--text-tertiary)"></div>`);
 
         if (id === 'image-type') return wrap(`
-            <div class="form-row"><span class="form-label">Image Source</span><select class="form-select" data-param="machine_type"><option value="none">Raw Image (no machine)</option><option value="cellchek_d">CellChek D (Konan Medical)</option></select></div>
-            <div class="form-row"><span class="form-label">Invert Image</span><select class="form-select" data-param="invert_image"><option value="No">No</option><option value="Yes">Yes (bright-field)</option></select></div>
-            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">CellChek D: Crops cell area from machine screenshot and reads classical metrics via OCR.<br>Invert: Use for bright-field images where cells are dark on light background.</p>`);
+            ${_cornealiaDeviceHTML()}`);
 
         if (id === 'seg-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">CellADE Segmentation Parameters</p>
@@ -3211,7 +3209,6 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
 
         if (id === 'morph-params') return wrap(`
             <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">Analysis Parameters</p>
-            <div class="form-row"><span class="form-label">Pixel Size</span><input class="form-input" data-param="pixel_size" type="number" value="0.58" step="0.01" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">μm/px</span></div>
             <div class="form-row"><span class="form-label">Fitting Method</span><select class="form-select" data-param="fitting_method"><option value="ds">Damped Sine (recommended)</option><option value="morse_guided">Morse Guided</option><option value="quad_guided">Quadratic Guided</option><option value="morse_raw">Morse Raw</option><option value="quad_raw">Quadratic Raw (Yamamoto)</option></select></div>
             <div class="form-row"><span class="form-label">Exclusion Ratio</span><input class="form-input" data-param="exclusion_ratio" type="number" value="0.15" step="0.01" style="width:80px"></div>
             <div class="form-row"><span class="form-label">Shell Thickness</span><input class="form-input" data-param="shell_thickness" type="number" value="1" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>`);
@@ -6124,6 +6121,9 @@ function populateFormFromParams(formEl, savedParams) {
     formEl.querySelectorAll('[data-param="sigma_mode"]').forEach(el => {
         toggleSigmaFields(el);
     });
+    formEl.querySelectorAll('[data-param="machine_type"]').forEach(el => {
+        cornealiaDeviceChange(el);
+    });
 }
 
 // ═════════════════════════════════════════════
@@ -8061,6 +8061,72 @@ function autoFillWavelengths(selectEl, chIndex) {
         // Trigger change events for param saving
         emInput.dispatchEvent(new Event('change', { bubbles: true }));
         exInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+}
+
+// ── Cornealia: device → pixel size ──────────────────────────
+// Mirrors MACHINE_PROFILES in backend/cornealia/cornealia.py (keep in sync).
+// px: fixed pixel size (x, y); fov: official field of view (long, short) in µm,
+// pixel size = field / image size, set per image by the backend.
+const CORNEALIA_DEVICES = {
+    none:          { name: 'Custom (raw image)' },
+    cellchek_d:    { name: 'CellChek D (Konan Medical)', px: [0.58, 0.58],
+                     note: 'Screenshot: crops the cell panel and reads CD, Ave, SD, CV, HEX via OCR. Fixed 0.58 µm/px for the cropped panel.' },
+    cellchek_20:   { name: 'CellChek 20 (Konan Medical)', fov: [550, 250] },
+    hai_eb2000xyz: { name: 'EB-2000xyz (HAI Labs)',       fov: [500, 450] },
+    hai_eb3000xyz: { name: 'EB-3000xyz (HAI Labs)',       fov: [500, 450] },
+};
+
+function _cornealiaDeviceHTML() {
+    const opts = Object.entries(CORNEALIA_DEVICES)
+        .map(([k, d]) => `<option value="${k}">${d.name}</option>`).join('');
+    const unit = '<span style="font-size:var(--fs-xs);color:var(--text-tertiary)">μm/px</span>';
+    return `
+            <div class="form-row"><span class="form-label">Device</span><select class="form-select" data-param="machine_type" onchange="cornealiaDeviceChange(this)">${opts}</select></div>
+            <div class="form-row"><span class="form-label">Invert Image</span><select class="form-select" data-param="invert_image"><option value="No">No</option><option value="Yes">Yes (bright-field)</option></select></div>
+            <div class="form-row"><span class="form-label">Pixel Size X</span><input class="form-input" data-param="pixel_size_x" type="number" value="0.58" step="0.001" style="width:80px">${unit}</div>
+            <div class="form-row"><span class="form-label">Pixel Size Y</span><input class="form-input" data-param="pixel_size_y" type="number" value="0.58" step="0.001" style="width:80px">${unit}</div>
+            <div class="form-row cornealia-override-row" style="display:none"><span class="form-label">Override</span><label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-xs)"><input type="checkbox" data-param="pixel_override" onchange="cornealiaDeviceChange(this)">Edit device values</label></div>
+            <p class="cornealia-device-info" style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Enter the pixel size of your images.</p>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:4px">X = horizontal, Y = vertical. Invert: use for bright-field images where cells are dark on a light background.</p>`;
+}
+
+// Lock or unlock the pixel fields for the selected device (also re-run after restoring params).
+function cornealiaDeviceChange(el) {
+    const form = el.closest('.settings-form');
+    if (!form) return;
+    const sel = form.querySelector('[data-param="machine_type"]');
+    const px = form.querySelector('[data-param="pixel_size_x"]');
+    const py = form.querySelector('[data-param="pixel_size_y"]');
+    const ov = form.querySelector('[data-param="pixel_override"]');
+    const ovRow = form.querySelector('.cornealia-override-row');
+    const info = form.querySelector('.cornealia-device-info');
+    if (!sel || !px || !py) return;
+
+    const d = CORNEALIA_DEVICES[sel.value] || CORNEALIA_DEVICES.none;
+    const custom = !d.px && !d.fov;
+    if (ovRow) ovRow.style.display = custom ? 'none' : '';
+    const editable = custom || (ov && ov.checked);
+
+    px.disabled = py.disabled = !editable;
+    if (editable) {
+        px.placeholder = py.placeholder = '';
+        if (!px.value) px.value = '0.58';
+        if (!py.value) py.value = px.value;
+    } else if (d.px) {
+        px.value = d.px[0]; py.value = d.px[1];
+    } else {
+        px.value = ''; py.value = '';
+        px.placeholder = py.placeholder = 'auto';
+    }
+
+    if (info) {
+        let txt;
+        if (custom) txt = 'Enter the pixel size of your images.';
+        else if (d.px) txt = d.note || `Fixed ${d.px[0]} × ${d.px[1]} µm/px.`;
+        else txt = `Official field of view ${d.fov[0]} × ${d.fov[1]} µm. Pixel size = field of view ÷ image size, set per image (long side to long side).`;
+        if (!custom && editable) txt += ' Override on: the values above are used instead.';
+        info.textContent = txt;
     }
 }
 
