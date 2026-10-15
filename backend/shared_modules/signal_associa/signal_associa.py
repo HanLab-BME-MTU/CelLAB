@@ -43,6 +43,7 @@ from .surrogate_generator import SurrogateGenerator
 METHOD_DEFAULTS = {
     'pearson':             {'signal_version': 'raw',        'n_surrogates': 0},
     'spearman':            {'signal_version': 'raw',        'n_surrogates': 0},
+    'pearson_lagscan':     {'signal_version': 'raw',        'n_surrogates': 100},
     'mutual_information':  {'signal_version': 'raw',        'n_surrogates': 100},
     'granger_causality':   {'signal_version': 'stationary', 'n_surrogates': 0},
     'ccm':                 {'signal_version': 'raw',        'n_surrogates': 100},
@@ -57,7 +58,7 @@ def _load_methods():
     global METHOD_FUNCTIONS
     if METHOD_FUNCTIONS:
         return
-    from .methods.correlation import pearson, spearman
+    from .methods.correlation import pearson, spearman, pearson_lagscan
     from .methods.mutual_info import mutual_information
     from .methods.granger import granger_causality
     from .methods.ccm import ccm, ccm_test_surrogates_batch
@@ -66,6 +67,7 @@ def _load_methods():
     METHOD_FUNCTIONS.update({
         'pearson': pearson,
         'spearman': spearman,
+        'pearson_lagscan': pearson_lagscan,
         'mutual_information': mutual_information,
         'granger_causality': granger_causality,
         'ccm': ccm,
