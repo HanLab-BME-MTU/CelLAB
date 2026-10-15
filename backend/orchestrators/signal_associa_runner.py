@@ -137,6 +137,15 @@ def _build_assoc_config(p: Dict, sampling_rate: float) -> Tuple[Dict, float, Lis
         }
     if _as_bool(p.get('m_pearson')):
         active['pearson'] = {'signal_version': 'raw', 'n_surrogates': n_surrogates}
+    if _as_bool(p.get('m_lagscan')):
+        # Lag-scanned Pearson (Machacek & Danuser): best |r| over lags -max_lag..+max_lag,
+        # parametric 1.96/sqrt(N) and IAAFT surrogates (same lag scan on every surrogate)
+        active['pearson_lagscan'] = {
+            'max_lag': int(float(p.get('lag_max_lag', 15) or 15)),
+            'min_overlap': int(float(p.get('lag_min_overlap', 10) or 10)),
+            'signal_version': 'raw',
+            'n_surrogates': n_surrogates,
+        }
     if _as_bool(p.get('m_mi')):
         active['mutual_information'] = {'signal_version': 'raw',
                                         'n_surrogates': n_surrogates}
@@ -251,6 +260,7 @@ def _load_signals(results_dir: Path):
 _MLABEL = {
     'ccm': 'CCM', 'granger_causality': 'Granger', 'pearson': 'Pearson',
     'spearman': 'Spearman', 'mutual_information': 'MI', 'transfer_entropy': 'TE',
+    'pearson_lagscan': 'Lag-scanned Pearson',
 }
 
 
@@ -292,6 +302,12 @@ def _row_from_result(a, b, method_name, r, alpha):
         'signal_version': r.get('signal_version', ''),
         'null_distribution': (list(map(float, null)) if null is not None else None),
     }
+    if method_name == 'pearson_lagscan':
+        d = r.get('details', {}) or {}
+        row['sig_parametric'] = bool(d.get('significant_parametric', False))
+        row['r_best'] = _f(d.get('r_best', np.nan))
+        row['lag_best'] = d.get('lag_best')
+        row['threshold_parametric'] = _f(d.get('threshold_parametric', np.nan))
     return row, sig
 
 
@@ -487,7 +503,33 @@ def _run_pairs(signals: Dict, pairs: List[Tuple[str, str]], assoc_config: Dict,
 _SUMMARY_COLS = ['signal_x', 'signal_y', 'method', 'statistic',
                  'p_parametric', 'sig_parametric', 'p_surrogate', 'sig_surrogate',
                  'surr_mean', 'surr_std', 'n_surrogates',
-                 'p_best', 'significant', 'effect_size']
+                 'p_best', 'significant', 'effect_size',
+                 'r_best', 'lag_best', 'threshold_parametric']   # last three: lag-scanned Pearson only
+
+
+def _pairs_wide(rows: List[Dict]) -> pd.DataFrame:
+    """One row per pair; per method: statistic, parametric and surrogate p, significance
+    (and best lag / signed r* for lag-scanned Pearson). Easier to read than the long table."""
+    out: Dict[Tuple[str, str], Dict] = {}
+    for r in rows:
+        m = r.get('method')
+        if not m or m == 'error':
+            continue
+        key = (r.get('signal_x'), r.get('signal_y'))
+        row = out.setdefault(key, {'signal_x': key[0], 'signal_y': key[1]})
+        lab = _MLABEL.get(m, m).replace(' ', '_').replace('-', '_')
+        row[f'{lab}_statistic'] = r.get('statistic')
+        row[f'{lab}_p_param'] = r.get('p_parametric')
+        row[f'{lab}_p_surr'] = r.get('p_surrogate')
+        row[f'{lab}_significant'] = bool(r.get('significant'))
+        if m == 'pearson_lagscan':
+            row[f'{lab}_lag_best'] = r.get('lag_best')
+            row[f'{lab}_r_best'] = r.get('r_best')
+    df = pd.DataFrame(list(out.values()))
+    sig_cols = [c for c in df.columns if c.endswith('_significant')]
+    if sig_cols:
+        df['n_sig_methods'] = df[sig_cols].sum(axis=1).astype(int)
+    return df
 
 
 def _write_readme(results_dir: Path, result: Dict, mode: str):
@@ -543,6 +585,7 @@ def _write_readme(results_dir: Path, result: Dict, mode: str):
         'ccm': f"E={_g('ccm_E', 2)}, τ={_g('ccm_tau', 1)}, boots={_g('ccm_n_boot', 20)}",
         'granger_causality': f"maxlag={_g('gc_maxlag', 5)}, criterion={_g('gc_criterion', 'aic')}",
         'pearson': 'linear correlation',
+        'pearson_lagscan': f"lags ±{_g('lag_max_lag', 15)}; |r*| vs 1.96/√N and IAAFT surrogates",
         'mutual_information': 'nonlinear dependence',
         'transfer_entropy': 'directed information',
     }
@@ -605,6 +648,7 @@ def _save_results(results_dir: Path, result: Dict, mode: str, progress_cb=None):
     pd.DataFrame(rows).to_csv(str(results_dir / 'summary.csv'), index=False)
     with open(str(results_dir / 'summary.json'), 'w') as f:
         json.dump({'columns': _SUMMARY_COLS, 'rows': rows}, f, indent=2, default=str)
+    _pairs_wide(rows).to_csv(str(results_dir / 'pairs_summary.csv'), index=False)
 
     # Meta
     meta = {
@@ -647,7 +691,7 @@ def _save_results(results_dir: Path, result: Dict, mode: str, progress_cb=None):
     if run_id:
         run_dir = results_dir / 'runs' / run_id
         (run_dir / 'plots').mkdir(parents=True, exist_ok=True)
-        for fn in ('summary.csv', 'summary.json', 'meta.json', 'README.md'):
+        for fn in ('summary.csv', 'pairs_summary.csv', 'summary.json', 'meta.json', 'README.md'):
             src = results_dir / fn
             if src.exists():
                 shutil.copy2(str(src), str(run_dir / fn))
@@ -819,6 +863,7 @@ def _do_analyze(project, ws_id, pipeline_id, step_id, params, results_dir,
             'method': r.get('method'), 'statistic': r.get('statistic'),
             'p_parametric': r.get('p_parametric'), 'p_surrogate': r.get('p_surrogate'),
             'p_value': r.get('p_best'), 'significant': bool(r.get('significant')),
+            'lag_best': r.get('lag_best'), 'r_best': r.get('r_best'),   # lag-scanned Pearson only
         }
         for r in pair_results if r.get('method') != 'error'
     ]

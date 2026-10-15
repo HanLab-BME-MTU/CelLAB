@@ -156,8 +156,9 @@ class AssociaManager:
         Config structure:
         {
             stationarizer: { method, bp_low, bp_high },
-            methods: { m_ccm, m_granger, m_pearson, m_mi, m_te,
-                       ccm_E, ccm_tau, ccm_n_boot, gc_maxlag, gc_criterion },
+            methods: { m_ccm, m_granger, m_pearson, m_lagscan, m_mi, m_te,
+                       ccm_E, ccm_tau, ccm_n_boot, gc_maxlag, gc_criterion,
+                       lag_max_lag, lag_min_overlap },
             surrogate: { method, n, alpha },
         }
 
@@ -198,6 +199,14 @@ class AssociaManager:
             active_methods['pearson'] = {
                 'signal_version': 'raw',
                 'n_surrogates': 0,
+            }
+        if mc.get('m_lagscan'):
+            # Lag-scanned Pearson (Machacek & Danuser); same lag scan on every IAAFT surrogate
+            active_methods['pearson_lagscan'] = {
+                'max_lag': int(mc.get('lag_max_lag', 15)),
+                'min_overlap': int(mc.get('lag_min_overlap', 10)),
+                'signal_version': 'raw',
+                'n_surrogates': n_surrogates,
             }
         if mc.get('m_mi'):
             active_methods['mutual_information'] = {

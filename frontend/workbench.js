@@ -3083,6 +3083,7 @@ function saSyncMethods(elOrForm) {
     const show = (sel, vis) => form.querySelectorAll(sel).forEach(e => e.style.display = vis ? '' : 'none');
     show('.sa-method-block[data-for="ccm"]', on('m_ccm'));
     show('.sa-method-block[data-for="granger"]', on('m_granger'));
+    show('.sa-method-block[data-for="lagscan"]', on('m_lagscan'));
 }
 
 // Signal Associa: load a saved plot PNG into the Graphics panel.
@@ -3297,6 +3298,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             ${_sacheck('m_ccm', 'CCM — Convergent Cross Mapping', 'checked onchange="saSyncMethods(this)"')}
             ${_sacheck('m_granger', 'Granger Causality', 'onchange="saSyncMethods(this)"')}
             ${_sacheck('m_pearson', 'Pearson Correlation', 'onchange="saSyncMethods(this)"')}
+            ${_sacheck('m_lagscan', 'Lag-scanned Pearson (Danuser)', 'onchange="saSyncMethods(this)"')}
             ${_sacheck('m_mi', 'Mutual Information', 'onchange="saSyncMethods(this)"')}
             ${_sacheck('m_te', 'Transfer Entropy', 'onchange="saSyncMethods(this)"')}
 
@@ -3311,6 +3313,13 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
                 ${_sahead('Granger parameters')}
                 <div class="form-row"><span class="form-label">Max lag</span><input class="form-input" data-param="gc_maxlag" type="number" value="5" style="width:80px"></div>
                 <div class="form-row"><span class="form-label">Criterion</span><select class="form-select" data-param="gc_criterion"><option value="aic">AIC</option><option value="bic">BIC</option></select></div>
+            </div>
+
+            <div class="sa-method-block" data-for="lagscan">
+                ${_sahead('Lag-scanned Pearson parameters')}
+                <div class="form-row"><span class="form-label">Max lag (±)</span><input class="form-input" data-param="lag_max_lag" type="number" value="15" min="1" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">frames</span></div>
+                <div class="form-row"><span class="form-label">Min overlap</span><input class="form-input" data-param="lag_min_overlap" type="number" value="10" min="3" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">frames</span></div>
+                ${_sahint('Best |r| over lags −max…+max (Machacek &amp; Danuser). Reports the parametric 1.96/√N test and the surrogate test (same lag scan on every surrogate).')}
             </div>`);
 
         // 2. Stationarizer
@@ -4130,6 +4139,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             const ccmOn = mc.ccm !== false;
             const gcOn = mc.granger === true;
             const pearOn = mc.pearson === true;
+            const lagOn = mc.pearson_lagscan === true;
             const miOn = mc.mutual_info === true;
             const teOn = mc.transfer_entropy === true;
             return asWrap(`
@@ -4149,6 +4159,11 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
                     <div class="form-row"><span class="form-label">Lag criterion</span><select class="form-select" data-param="gc_criterion"><option value="aic"${(mc.gc_criterion||'aic')==='aic'?' selected':''}>AIC</option><option value="bic"${mc.gc_criterion==='bic'?' selected':''}>BIC</option></select></div>
                 </div>
                 <label style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:var(--fs-xs)"><input type="checkbox" data-param="m_pearson" ${pearOn?'checked':''}> <b>Pearson</b> — Correlation</label>
+                <label style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:var(--fs-xs)"><input type="checkbox" data-param="m_lagscan" ${lagOn?'checked':''}> <b>Lag-scanned Pearson</b> — best |r| over lags (Danuser)</label>
+                <div style="margin-left:20px;margin-bottom:10px">
+                    <div class="form-row"><span class="form-label">Max lag (±)</span><input class="form-input" data-param="lag_max_lag" type="number" value="${mc.lag_max_lag ?? 15}" style="width:60px"></div>
+                    <div class="form-row"><span class="form-label">Min overlap</span><input class="form-input" data-param="lag_min_overlap" type="number" value="${mc.lag_min_overlap ?? 10}" style="width:60px"></div>
+                </div>
                 <label style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:var(--fs-xs)"><input type="checkbox" data-param="m_mi" ${miOn?'checked':''}> <b>MI</b> — Mutual Information</label>
                 <label style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:var(--fs-xs)"><input type="checkbox" data-param="m_te" ${teOn?'checked':''}> <b>TE</b> — Transfer Entropy</label>`);
         }
@@ -6477,6 +6492,26 @@ async function discoverExistingResults(subId) {
 // Signal Associa: remembered batch type per pipeline ('all_pairs' | 'paired'),
 // set on load/run completion, read by the batch plot menu.
 const _saBatchTypeByPipeline = {};
+const _saMetaLoading = new Set();
+
+// After a reload the in-memory batch type / method list is empty, so restore them from the
+// saved run (batch_run/results/meta.json) and redraw the tree. Without this a pre-paired run
+// would be shown with the all-pairs menu (matrices) and its own items would disappear.
+async function _saRestoreBatchMeta(sub) {
+    const ws = getActiveWorkspace();
+    if (!ws || !sub || _saMetaLoading.has(sub.pipelineId)) return;
+    _saMetaLoading.add(sub.pipelineId);
+    try {
+        const r = await fetch(`/api/step/${ws.id}/${sub.pipelineId}/batch_run/results/meta.json?t=${Date.now()}`);
+        if (!r.ok) return;                       // no run yet: keep defaults
+        const meta = await r.json();
+        if (meta.batch_type) _saBatchTypeByPipeline[sub.pipelineId] = meta.batch_type;
+        if (Array.isArray(meta.methods) && meta.methods.length) sub._saLastMethods = meta.methods;
+        renderModuleTree(sub);
+    } catch (e) {
+        console.warn('Signal Associa: could not restore run meta', e);
+    }
+}
 
 // Signal Associa: live progress board (fixed template) shown while the run is going.
 function renderSaBoard(b) {
@@ -6536,7 +6571,7 @@ function renderSaBoard(b) {
 function renderSaReport(report, alpha, elapsed) {
     if (!Array.isArray(report) || !report.length) return '';
     const a = (alpha != null) ? alpha : 0.05;
-    const mlabel = { ccm:'CCM', granger_causality:'Granger', pearson:'Pearson', spearman:'Spearman', mutual_information:'MI', transfer_entropy:'TE' };
+    const mlabel = { ccm:'CCM', granger_causality:'Granger', pearson:'Pearson', pearson_lagscan:'Lag-scan Pearson', spearman:'Spearman', mutual_information:'MI', transfer_entropy:'TE' };
     const fmt = (v, d = 4) => (v == null || Number.isNaN(v)) ? '—' : (Math.abs(v) < 1e-4 && v !== 0 ? v.toExponential(2) : Number(v).toFixed(d));
 
     // group rows by pair
@@ -6572,7 +6607,7 @@ function renderSaReport(report, alpha, elapsed) {
                 : `<span style="color:var(--text-tertiary)">✗ no</span>`;
             const dash = `<span style="color:var(--text-tertiary)">—</span>`;
             html += `<tr style="border-top:1px solid var(--surface-3)">
-                <td style="padding:3px 10px;color:var(--text-secondary)">${mlabel[r.method] || r.method}</td>
+                <td style="padding:3px 10px;color:var(--text-secondary)">${mlabel[r.method] || r.method}${(r.method === 'pearson_lagscan' && r.lag_best != null) ? ` <span style="color:var(--text-tertiary)">(lag ${r.lag_best}, r*=${fmt(r.r_best, 3)})</span>` : ''}</td>
                 <td style="padding:3px 10px;text-align:right">${fmt(r.statistic)}</td>
                 <td style="padding:3px 10px;text-align:right">${(r.p_parametric != null) ? fmt(r.p_parametric) : dash}</td>
                 <td style="padding:3px 10px;text-align:right">${(r.p_surrogate != null) ? fmt(r.p_surrogate) : dash}</td>
@@ -6813,7 +6848,13 @@ async function doRunAnalysis(moduleType, stepId) {
                         let saHtml = `<div style="color:var(--status-ok);margin-bottom:4px">✓ Completed</div>`;
                         if (result.results_dir) saHtml += `<div style="opacity:.5;font-size:var(--fs-xs);margin-bottom:8px">${result.results_dir}</div>`;
                         if (outputs.sa_board) saHtml += renderSaBoard(outputs.sa_board);
-                        if (outputs.sa_report) saHtml += `<div style="margin-top:8px">${renderSaReport(outputs.sa_report, outputs.alpha, outputs.elapsed_s)}</div>`;
+                        if (outputs.sa_report) {
+                            const _csvBase = `/api/step/${ws.id}/${pipelineId}/${stepId}/results`;
+                            saHtml += `<div style="margin-top:8px;display:flex;gap:12px;font-size:var(--fs-xs)">
+                                <a href="${_csvBase}/pairs_summary.csv" download="pairs_summary.csv" style="color:#42a5f5">⬇ Pairs summary CSV (one row per pair)</a>
+                                <a href="${_csvBase}/summary.csv" download="summary.csv" style="color:var(--text-tertiary)">⬇ Full table CSV (one row per pair × method)</a></div>`;
+                            saHtml += `<div style="margin-top:8px">${renderSaReport(outputs.sa_report, outputs.alpha, outputs.elapsed_s)}</div>`;
+                        }
                         logHtml = saHtml;
                     } else if (outputs.batch_board) {
                         logHtml += renderBatchBoard(outputs.batch_board);
@@ -7862,6 +7903,113 @@ function setMovieDisplayMode(mode) {
 // ═════════════════════════════════════════════
 // BATCH TABLE & CSV DOWNLOAD
 // ═════════════════════════════════════════════
+
+// ═════════════════════════════════════════════
+// Signal Associa — pairs table (one row per pair, from pairs_summary.csv)
+// ═════════════════════════════════════════════
+function _saCsvStep(moduleType, stepId) {
+    return moduleType === 'signal_associa_batch' ? 'batch_run' : stepId;
+}
+
+function _saParseCsv(text) {
+    const lines = text.replace(/\r/g, '').split('\n').filter(l => l.length);
+    const split = (l) => {                       // handles quoted fields
+        const out = []; let cur = '', q = false;
+        for (let i = 0; i < l.length; i++) {
+            const c = l[i];
+            if (c === '"') { if (q && l[i + 1] === '"') { cur += '"'; i++; } else q = !q; }
+            else if (c === ',' && !q) { out.push(cur); cur = ''; }
+            else cur += c;
+        }
+        out.push(cur); return out;
+    };
+    const cols = split(lines[0]);
+    const rows = lines.slice(1).map(l => { const v = split(l); const r = {}; cols.forEach((c, i) => r[c] = v[i]); return r; });
+    return { cols, rows };
+}
+
+async function showSaPairsTable(sub, moduleType, stepId, opts = {}) {
+    const ws = getActiveWorkspace();
+    if (!ws || !sub) return;
+    const gfx = document.getElementById(`graphicsBody-${sub.id}`);
+    if (!gfx) return;
+    const base = `/api/step/${ws.id}/${sub.pipelineId}/${_saCsvStep(moduleType, stepId)}/results`;
+    let text;
+    try {
+        const r = await fetch(`${base}/pairs_summary.csv?t=${Date.now()}`);
+        if (!r.ok) throw new Error(r.status);
+        text = await r.text();
+    } catch (e) {
+        gfx.innerHTML = `<div style="padding:16px;color:var(--text-tertiary)">No pairs table yet — run the analysis (tables are written by runs made with the current version).</div>`;
+        return;
+    }
+    const { cols, rows } = _saParseCsv(text);
+    const methods = [...new Set(cols.filter(c => c.endsWith('_significant') && c !== 'n_methods_significant').map(c => c.replace(/_significant$/, '')))];
+    const nKey = cols.includes('n_sig_methods') ? 'n_sig_methods' : 'n_methods_significant';   // older CSVs
+    const label = (m) => m.replace(/_/g, ' ').replace('Lag scanned Pearson', 'Lag-scan Pearson');
+
+    sub._saTable = sub._saTable || { sigOnly: false, sortCol: null, sortDir: 1 };
+    const st = sub._saTable;
+    if (opts.toggleSig) st.sigOnly = !st.sigOnly;
+    if (opts.sortCol) { st.sortDir = (st.sortCol === opts.sortCol) ? -st.sortDir : 1; st.sortCol = opts.sortCol; }
+
+    let view = rows.slice();
+    if (st.sigOnly) view = view.filter(r => parseInt(r[nKey] || '0') > 0);
+    if (st.sortCol) {
+        const k = st.sortCol, d = st.sortDir;
+        view.sort((a, b) => {
+            const x = parseFloat(a[k]), y = parseFloat(b[k]);
+            if (isFinite(x) && isFinite(y)) return d * (x - y);
+            return d * String(a[k] ?? '').localeCompare(String(b[k] ?? ''));
+        });
+    }
+    const fmt = (v, dig = 3) => {
+        if (v === undefined || v === null || v === '' || v === 'nan') return '—';
+        const f = parseFloat(v);
+        if (!isFinite(f)) return v;
+        if (Math.abs(f) > 0 && Math.abs(f) < 1e-3) return f.toExponential(1);
+        return Number.isInteger(f) ? String(f) : f.toFixed(dig);
+    };
+    const isTrue = (v) => v === 'True' || v === 'true' || v === '1';
+    const th = (key, txt) => `<th style="cursor:pointer;white-space:nowrap" onclick="showSaPairsTable(getActiveWorkspace().subtabs.get('${sub.id}'),'${moduleType}','${stepId}',{sortCol:'${key}'})">${txt}${st.sortCol === key ? (st.sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+
+    const nSig = rows.filter(r => parseInt(r[nKey] || '0') > 0).length;
+    const head1 = `<tr><th colspan="2"></th>${methods.map(m => {
+        const lag = m.startsWith('Lag_scanned');
+        return `<th colspan="${lag ? 4 : 3}" style="text-align:center;border-left:2px solid var(--chrome-border)">${label(m)}</th>`;
+    }).join('')}<th></th></tr>`;
+    const head2 = `<tr>${th('signal_x', 'Signal X')}${th('signal_y', 'Signal Y')}${methods.map(m => {
+        const lag = m.startsWith('Lag_scanned');
+        return `${th(m + '_statistic', 'stat').replace('<th ', '<th style="border-left:2px solid var(--chrome-border)" ')}${th(m + '_p_surr', 'p (surr)')}${lag ? th(m + '_lag_best', 'lag') : ''}<th>sig</th>`;
+    }).join('')}${th(nKey, '# sig')}</tr>`;
+    const body = view.map(r => `<tr>
+        <td>${r.signal_x}</td><td>${r.signal_y}</td>
+        ${methods.map(m => {
+            const sig = isTrue(r[m + '_significant']);
+            const lag = m.startsWith('Lag_scanned');
+            const bg = sig ? 'background:rgba(76,175,80,0.15)' : '';
+            return `<td style="border-left:2px solid var(--chrome-border);${bg}">${fmt(r[m + '_statistic'])}</td>
+                    <td style="${bg}">${fmt(r[m + '_p_surr'], 4)}</td>
+                    ${lag ? `<td style="${bg}">${fmt(r[m + '_lag_best'], 0)}</td>` : ''}
+                    <td class="${sig ? 'cell-ok' : ''}" style="${bg}">${sig ? '✓' : ''}</td>`;
+        }).join('')}
+        <td style="font-weight:700">${r[nKey] ?? ''}</td></tr>`).join('');
+
+    gfx.style.background = 'var(--surface-0)';
+    gfx.innerHTML = `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden">
+            <div style="padding:6px 10px;font-size:var(--fs-sm);font-weight:700;color:var(--text-secondary);border-bottom:2px solid var(--chrome-border);flex-shrink:0;background:var(--surface-1);display:flex;align-items:center;gap:10px">
+                <span style="flex:1">Pairs Table — ${rows.length} pairs · ${nSig} with ≥1 significant method${st.sigOnly ? ` · showing ${view.length}` : ''}</span>
+                <label style="font-size:var(--fs-xs);font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer">
+                    <input type="checkbox" ${st.sigOnly ? 'checked' : ''} onchange="showSaPairsTable(getActiveWorkspace().subtabs.get('${sub.id}'),'${moduleType}','${stepId}',{toggleSig:true})"> significant only</label>
+                <a class="btn btn-default" href="${base}/pairs_summary.csv" download="pairs_summary.csv" style="height:22px;font-size:var(--fs-xs);display:inline-flex;align-items:center;text-decoration:none">💾 CSV</a>
+            </div>
+            <div style="flex:1;overflow:auto">
+                <table class="batch-table"><thead>${head1}${head2}</thead><tbody>${body}</tbody></table>
+            </div>
+        </div>`;
+    updateStatus(`Pairs table: ${rows.length} pairs`);
+}
 
 async function showBatchTable(moduleType, stepId, pipelineIdOverride) {
     const ws = getActiveWorkspace();
@@ -10811,6 +10959,9 @@ async function assocRunAnalysis() {
             m_ccm: savedParams.m_ccm === true || savedParams.m_ccm === 'true' || savedParams.m_ccm === undefined,
             m_granger: savedParams.m_granger === true || savedParams.m_granger === 'true',
             m_pearson: savedParams.m_pearson === true || savedParams.m_pearson === 'true',
+            m_lagscan: savedParams.m_lagscan === true || savedParams.m_lagscan === 'true',
+            lag_max_lag: parseInt(savedParams.lag_max_lag) || 15,
+            lag_min_overlap: parseInt(savedParams.lag_min_overlap) || 10,
             m_mi: savedParams.m_mi === true || savedParams.m_mi === 'true',
             m_te: savedParams.m_te === true || savedParams.m_te === 'true',
             ccm_E: parseInt(savedParams.ccm_E) || 2,
@@ -11113,16 +11264,22 @@ function getAvailablePlots(moduleType, stepId) {
         if (stepId === 'analysis') return [
             { id: 'null_distributions', icon: '📊', label: 'Null Distributions' },
             { id: 'pair_summary',       icon: '📈', label: 'Pair Summary' },
+            ...[
+                { id: 'pairs_table',      icon: '📋', label: 'Pairs Table' },
+                { id: 'export_pairs_csv', icon: '💾', label: 'Export — pairs summary (CSV)' },
+                { id: 'export_full_csv',  icon: '💾', label: 'Export — full table (CSV)' },
+            ],
         ];
         return [];
     }
     if (moduleType === 'signal_associa_batch') {
-        const _mlabel = { ccm:'CCM', granger_causality:'Granger', pearson:'Pearson', mutual_information:'MI', transfer_entropy:'TE' };
+        const _mlabel = { ccm:'CCM', granger_causality:'Granger', pearson:'Pearson', pearson_lagscan:'Lag-scan Pearson', mutual_information:'MI', transfer_entropy:'TE' };
         const _ws = getActiveWorkspace();
         const _sub = _ws?.subtabs.get(_ws?.activeSubtab);
         const _methods = (_sub && _sub._saLastMethods && _sub._saLastMethods.length)
             ? _sub._saLastMethods
             : ['ccm', 'granger_causality', 'pearson', 'mutual_information', 'transfer_entropy'];
+        if (_sub && !(_sub.pipelineId in _saBatchTypeByPipeline)) _saRestoreBatchMeta(_sub);
         const _btype = (_sub && _saBatchTypeByPipeline[_sub.pipelineId]) || 'all_pairs';
 
         if (stepId === 'batch_setup') return [
@@ -11131,7 +11288,11 @@ function getAvailablePlots(moduleType, stepId) {
         if (stepId === 'batch_run' || stepId === 'batch_results') {
             // Pre-paired columns → combined pairs summary (independent pairs, no matrix/network)
             if (_btype === 'paired') {
-                const items = [{ id: 'pairs_summary', icon: '🔲', label: 'Pairs Summary' }];
+                const items = [{ id: 'pairs_summary', icon: '🔲', label: 'Pairs Summary' }, ...[
+                { id: 'pairs_table',      icon: '📋', label: 'Pairs Table' },
+                { id: 'export_pairs_csv', icon: '💾', label: 'Export — pairs summary (CSV)' },
+                { id: 'export_full_csv',  icon: '💾', label: 'Export — full table (CSV)' },
+            ]];
                 if (stepId === 'batch_setup') items.unshift({ id: 'signal_traces', icon: '📈', label: 'Signal Traces' });
                 return items;
             }
@@ -11140,6 +11301,11 @@ function getAvailablePlots(moduleType, stepId) {
                 { id: 'significance_matrix', icon: '🔲', label: 'Significance Matrix' },
                 { id: 'network_any',         icon: '🕸', label: 'Coupling Network' },
             ];
+            items.push(...[
+                { id: 'pairs_table',      icon: '📋', label: 'Pairs Table' },
+                { id: 'export_pairs_csv', icon: '💾', label: 'Export — pairs summary (CSV)' },
+                { id: 'export_full_csv',  icon: '💾', label: 'Export — full table (CSV)' },
+            ]);
             for (const m of _methods) {
                 items.push({ id: `matrix_${m}_statistic`, icon: '📊', label: `${_mlabel[m] || m} — Statistic Matrix` });
                 if (stepId === 'batch_results') {
@@ -11429,6 +11595,27 @@ async function doInsertPlot(sub, moduleType, stepId, plotType) {
 
     // Find the result entry
     const entry = sub.insertedResults?.find(r => r.plotType === plotType);
+
+    // Signal Associa pairs table: rendered in the GUI from the saved CSV
+    if (plotType === 'pairs_table') {
+        if (entry) { entry.status = 'done'; entry.url = 'table'; }
+        renderModuleTree(sub);
+        showSaPairsTable(sub, moduleType, stepId);
+        return;
+    }
+
+    // Signal Associa CSV exports: download the saved table instead of rendering a plot
+    if (plotType === 'export_pairs_csv' || plotType === 'export_full_csv') {
+        const fn = plotType === 'export_pairs_csv' ? 'pairs_summary.csv' : 'summary.csv';
+        const url = `/api/step/${ws.id}/${pipelineId}/${_saCsvStep(moduleType, stepId)}/results/${fn}`;
+        const a = document.createElement('a');
+        a.href = url; a.download = fn;
+        document.body.appendChild(a); a.click(); a.remove();
+        if (entry) { entry.status = 'done'; entry.url = url; }
+        renderModuleTree(sub);
+        updateStatus(`Downloaded ${fn}`);
+        return;
+    }
     if (entry) entry.status = 'generating';
     renderModuleTree(sub);
 
@@ -11482,6 +11669,16 @@ function onInsertedResultClick(subId, plotType) {
     // Special: batch table
     if (plotType === 'batch_table') {
         showBatchTable(sub.moduleType, sub.stepId);
+        return;
+    }
+
+    // Special: Signal Associa pairs table / CSV export
+    if (plotType === 'pairs_table') {
+        showSaPairsTable(sub, sub.moduleType, sub.stepId);
+        return;
+    }
+    if (plotType === 'export_pairs_csv' || plotType === 'export_full_csv') {
+        doInsertPlot(sub, sub.moduleType, sub.stepId, plotType);
         return;
     }
 
