@@ -1054,6 +1054,7 @@ def _generate_run_report(results_dir, step_id, all_params, board=None, outputs=N
         'log_max_sigma': 'LoG Max Sigma',
         'log_num_sigma': 'LoG Num Sigma',
         'log_threshold': 'LoG Threshold',
+        'log_overlap': 'LoG Overlap',
         'min_area': 'Min Cell Area (px²)',
         'clahe_clip': 'CLAHE Clip',
         'exclusion_ratio': 'Exclusion Ratio',
@@ -1207,6 +1208,8 @@ def _cornealia_config(all_params):
         cellade_params['log_num_sigma'] = int(all_params['log_num_sigma'])
     if 'log_threshold' in all_params:
         cellade_params['log_threshold'] = float(all_params['log_threshold'])
+    if 'log_overlap' in all_params:
+        cellade_params['log_overlap'] = float(all_params['log_overlap'])
     if 'min_area' in all_params:
         cellade_params['min_area'] = int(all_params['min_area'])
     if 'clahe_clip' in all_params:
@@ -1460,7 +1463,10 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
 
     # Previous steps already completed in segmentation step
     reporter.done('load')
-    reporter.done('preprocess')
+    if _cornealia_device(all_params)['is_machine']:
+        reporter.done('preprocess')
+    else:
+        reporter.skip('preprocess')     # raw image: no screenshot crop/OCR
     reporter.done('segment')
 
     with open(seg_pickle, 'rb') as f:

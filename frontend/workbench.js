@@ -3169,6 +3169,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             </div>
             <div class="form-row"><span class="form-label">LoG Num Sigma</span><input class="form-input" data-param="log_num_sigma" type="number" value="15" style="width:80px"></div>
             <div class="form-row"><span class="form-label">LoG Threshold</span><input class="form-input" data-param="log_threshold" type="number" value="0.01" step="0.001" style="width:80px"></div>
+            <div class="form-row"><span class="form-label">LoG Overlap</span><input class="form-input" data-param="log_overlap" type="number" value="0.5" min="0" max="1" step="0.05" style="width:80px"></div>
             <div class="form-row"><span class="form-label">FCM Method</span><select class="form-select" data-param="fcm_method"><option value="local">Local</option><option value="global">Global</option></select></div>
             <div class="form-row"><span class="form-label">CLAHE Clip</span><input class="form-input" data-param="clahe_clip" type="number" value="0.03" step="0.01" style="width:80px"></div>
             <div class="form-row"><span class="form-label">Min Cell Area</span><input class="form-input" data-param="min_area" type="number" value="30" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px²</span></div>
@@ -3202,6 +3203,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             </div>
             <div class="form-row"><span class="form-label">LoG Num Sigma</span><input class="form-input" data-param="log_num_sigma" type="number" value="15" style="width:80px"></div>
             <div class="form-row"><span class="form-label">LoG Threshold</span><input class="form-input" data-param="log_threshold" type="number" value="0.01" step="0.001" style="width:80px"></div>
+            <div class="form-row"><span class="form-label">LoG Overlap</span><input class="form-input" data-param="log_overlap" type="number" value="0.5" min="0" max="1" step="0.05" style="width:80px"></div>
             <div class="form-row"><span class="form-label">FCM Method</span><select class="form-select" data-param="fcm_method"><option value="local">Local</option><option value="global">Global</option></select></div>
             <div class="form-row"><span class="form-label">CLAHE Clip</span><input class="form-input" data-param="clahe_clip" type="number" value="0.03" step="0.01" style="width:80px"></div>
             <div class="form-row"><span class="form-label">Min Cell Area</span><input class="form-input" data-param="min_area" type="number" value="30" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px²</span></div>

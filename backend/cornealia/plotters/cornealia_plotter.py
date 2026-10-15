@@ -68,6 +68,13 @@ class cornealia_plotter:
         # wrap it in a simple namespace so self.c.xxx still works throughout
         from types import SimpleNamespace
         self.c = SimpleNamespace(**results)
+
+        # Pixel size used for this image: (sx, sy) if the engine reported it,
+        # else the scalar pixel_size, else the CellChek default 0.58 µm/px.
+        _ps = results.get('pixel_size', 0.58)
+        self._sx = float(results.get('pixel_size_x') or _ps)
+        self._sy = float(results.get('pixel_size_y') or _ps)
+        self._px2 = self._sx * self._sy            # pixel area (µm²) → K_um = K_px / px2
         
         # also expose segmentation sub-attributes directly on self.c
         seg = results.get('segmentation')
@@ -967,7 +974,7 @@ class cornealia_plotter:
         Parameters
         ----------
         ax : matplotlib Axes
-        pixel_size : float – µm per pixel
+        pixel_size : float – µm per pixel along x (the bar is horizontal)
         bar_um : float – desired bar length in µm
         color : str – bar and text color
         loc : str – 'lower right' or 'lower left'
@@ -1186,16 +1193,15 @@ class cornealia_plotter:
         _panel_label(ax, labels[2])
 
         # Scale bars on image panels
-        pixel_size = getattr(c, 'pixel_size', 0.58)
-        self._add_scale_bar(axes[0, 0], pixel_size, bar_um=50, color='white')
-        self._add_scale_bar(axes[0, 1], pixel_size, bar_um=50, color='white')
-        self._add_scale_bar(axes[0, 2], pixel_size, bar_um=50, color='white')
+        # Horizontal bar: µm per pixel along x
+        self._add_scale_bar(axes[0, 0], self._sx, bar_um=50, color='white')
+        self._add_scale_bar(axes[0, 1], self._sx, bar_um=50, color='white')
+        self._add_scale_bar(axes[0, 2], self._sx, bar_um=50, color='white')
 
         # =====================================================================
         # ROW 2: Quality gate on g(r)
         # =====================================================================
-        pixel_size = getattr(c, 'pixel_size', 0.58)
-        px2 = pixel_size ** 2
+        px2 = self._px2
         signal_gr = c.g_r - 1.0
         popt_qc = getattr(c, 'popt_qc', None)
         _R2_val = getattr(c, 'R2_damped', np.nan)
@@ -1512,8 +1518,7 @@ class cornealia_plotter:
         g = c.g_r
         r_v = c.r_valid
         v = c.v_r_valid
-        pixel_size = getattr(c, 'pixel_size', 0.58)
-        px2 = pixel_size ** 2
+        px2 = self._px2
 
         img_name = Path(c.image_path).stem if hasattr(c, 'image_path') else 'Unknown'
 
@@ -1769,9 +1774,8 @@ class cornealia_plotter:
         # Try to show cell_area as background
         cell_area = getattr(self.c, 'cell_area', None)
         if cell_area is not None:
-            pixel_size = getattr(self.c, 'pixel_size', 0.58) if hasattr(self.c, 'pixel_size') else 0.58
             H_px, W_px = cell_area.shape[:2]
-            extent_um = [0, W_px * pixel_size, H_px * pixel_size, 0]
+            extent_um = [0, W_px * self._sx, H_px * self._sy, 0]   # matches pts_um = (x*sx, y*sy)
             ax_left.imshow(cell_area, extent=extent_um, aspect='auto',
                           cmap='gray' if cell_area.ndim == 2 else None,
                           alpha=0.5, zorder=0)

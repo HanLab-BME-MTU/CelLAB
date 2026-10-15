@@ -300,13 +300,33 @@ class cornealia_batch_plotter:
                         'r': r,
                         'bs_curves': curves[bs_idx],
                         'as_curves': curves[as_idx],
-                        'pixel_size': 0.58,
+                        'pixel_size': self._pixel_size_eff(),
                     }
                     print(f"  g(r) population data loaded: {len(bs_idx)} BS, {len(as_idx)} AS curves")
 
     # ------------------------------------------------------------------
     # INTERNAL HELPERS
     # ------------------------------------------------------------------
+
+    def _pixel_size_xy(self, image_name=None):
+        """(sx, sy) µm/px of one image (or the batch median) from the CSV; 0.58 if absent."""
+        df = self.df
+        if 'pixel_size_x' in df.columns and 'pixel_size_y' in df.columns:
+            sub = df
+            if image_name is not None and 'Image_Name' in df.columns:
+                m = df['Image_Name'] == image_name
+                if m.any():
+                    sub = df[m]
+            sx = float(sub['pixel_size_x'].astype(float).median())
+            sy = float(sub['pixel_size_y'].astype(float).median())
+            if np.isfinite(sx) and np.isfinite(sy):
+                return sx, sy
+        return 0.58, 0.58
+
+    def _pixel_size_eff(self, image_name=None):
+        """Effective pixel size s = sqrt(sx*sy) (g(r) r axis is in effective px)."""
+        sx, sy = self._pixel_size_xy(image_name)
+        return float(np.sqrt(sx * sy))
 
     def _save_fig(self, fig, filename):
         if self.save:
@@ -1440,7 +1460,7 @@ class cornealia_batch_plotter:
     # Row 2: (e) ΔF vs ΔCD       | (f) ΔK vs ΔF  | (g) K vs |F|    | (h) CD-K saddle
     # ==================================================================
 
-    def pub_mechanical_disequilibrium(self, image_folder=None, pixel_size=0.58, save=None):
+    def pub_mechanical_disequilibrium(self, image_folder=None, pixel_size=None, save=None):
         """
         Publication Figure 5 — Mechanical disequilibrium (2-row version).
 
@@ -1451,8 +1471,9 @@ class cornealia_batch_plotter:
         ----------
         image_folder : str or Path, optional
             Folder with images for Row 1. If None, uses self.image_folder.
-        pixel_size : float
-            µm/px calibration.
+        pixel_size : float or (sx, sy), optional
+            µm/px. If None, each image's pixel size is read from the CSV
+            (pixel_size_x/y), falling back to 0.58.
         """
         save = save if save is not None else self.save
         self._pub_style()
@@ -1510,12 +1531,13 @@ class cornealia_batch_plotter:
                 else:
                     low_name, high_name = None, None
 
-                engine = Cornealia(pixel_size=pixel_size,
-                                   is_input_image_machine_output=False, verbose=False)
-
                 for name, label in [(low_name, 'low'), (high_name, 'high')]:
                     if name is None:
                         continue
+                    ps = pixel_size if pixel_size is not None else self._pixel_size_xy(name)
+                    engine = Cornealia(pixel_size=ps,
+                                       is_input_image_machine_output=False, verbose=False)
+                    px2 = engine.pixel_size_xy[0] * engine.pixel_size_xy[1]
                     img_path = Path(img_folder) / (name if '.' in name else name + '.png')
                     if not img_path.exists():
                         for ext in ['.png', '.jpg', '.bmp', '.tif', '.tiff']:
@@ -1531,15 +1553,15 @@ class cornealia_batch_plotter:
                                 res_low = rf
                                 K_low = r.get('K_ds', r.get('K'))
                                 if K_low:
-                                    K_low = float(K_low) / (pixel_size ** 2)
+                                    K_low = float(K_low) / px2
                             else:
                                 res_high = rf
                                 K_high = r.get('K_ds', r.get('K'))
                                 if K_high:
-                                    K_high = float(K_high) / (pixel_size ** 2)
+                                    K_high = float(K_high) / px2
 
-                engine._ocr_reader = None
-                del engine
+                    engine._ocr_reader = None
+                    del engine
             except Exception as e:
                 print(f"  ⚠ Row 1 failed: {e}")
 

@@ -222,7 +222,9 @@ class PipelineReporter:
     def get_board(self):
         """Return full board state for GUI rendering."""
         completed = sum(1 for s in self.board.values() if s['status'] == self.DONE)
-        total = sum(1 for s in self.board.values() if not s['optional'])
+        # optional steps (e.g. preprocess) count only when they actually ran
+        total = sum(1 for s in self.board.values()
+                    if not s['optional'] or s['status'] == self.DONE)
         return {
             'steps': self.board,
             'completed': completed,
