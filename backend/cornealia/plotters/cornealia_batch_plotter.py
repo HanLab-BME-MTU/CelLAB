@@ -763,78 +763,6 @@ class cornealia_batch_plotter:
         pval = 2 * stats.t.sf(abs(T), df=n - 2)
         return dict(n=n, s1=s1, s2=s2, r=r, v=s2 / s1, T=T, p=pval)
 
-    @staticmethod
-    def _marginal_phase(base, change, edges, min_n=3):
-        """Bin change by baseline, return bin midpoints and medians."""
-        n_bins = len(edges) - 1
-        mids, meds = [], []
-        for i in range(n_bins):
-            m = (base >= edges[i]) & (base < edges[i + 1]) if i < n_bins - 1 \
-                else (base >= edges[i]) & (base <= edges[i + 1])
-            mids.append((edges[i] + edges[i + 1]) / 2)
-            meds.append(np.median(change[m]) if m.sum() >= min_n else np.nan)
-        return np.array(mids), np.array(meds)
-
-    @staticmethod
-    def _interp_safe(mids, meds):
-        """Safe 1D interpolation ignoring NaN bins."""
-        from scipy.interpolate import interp1d
-        ok = np.isfinite(meds)
-        if ok.sum() < 2:
-            return lambda x: np.full_like(np.atleast_1d(x), np.nan, dtype=float)
-        return interp1d(mids[ok], meds[ok], kind='linear', bounds_error=False,
-                        fill_value=(meds[ok][0], meds[ok][-1]))
-
-    @staticmethod
-    def _density_mask(X_g, Y_g, x_bs, y_bs, min_neighbors=3, radius_frac=0.15):
-        """Mask grid points with too few nearby donors."""
-        rx = radius_frac * (x_bs.max() - x_bs.min())
-        ry = radius_frac * (y_bs.max() - y_bs.min())
-        mask = np.ones(X_g.shape, dtype=bool)
-        for i in range(X_g.shape[0]):
-            for j in range(X_g.shape[1]):
-                dist = ((x_bs - X_g[i, j]) / rx) ** 2 + ((y_bs - Y_g[i, j]) / ry) ** 2
-                if np.sum(dist < 1) < min_neighbors:
-                    mask[i, j] = False
-        return mask
-
-    def _compute_phase_field(self, x_bs, y_bs, dx, dy,
-                             n_bins=None, n_grid=None, n_shuf=500, seed=123):
-        """Compute null-subtracted phase field from paired baseline/change data."""
-        n = len(x_bs)
-        if n_bins is None:
-            n_bins = max(4, min(10, n // 4))
-        if n_grid is None:
-            n_grid = max(8, min(15, n // 3))
-        x_sd, y_sd = x_bs.std(), y_bs.std()
-        dx_z, dy_z = dx / x_sd, dy / y_sd
-        x_edges = np.percentile(x_bs, np.linspace(0, 100, n_bins + 1))
-        y_edges = np.percentile(y_bs, np.linspace(0, 100, n_bins + 1))
-        x_mids, dy_med = self._marginal_phase(x_bs, dy_z, x_edges)
-        y_mids, dx_med = self._marginal_phase(y_bs, dx_z, y_edges)
-        np.random.seed(seed)
-        n = len(x_bs)
-        dy_null = np.zeros((n_shuf, len(x_mids)))
-        dx_null = np.zeros((n_shuf, len(y_mids)))
-        for s in range(n_shuf):
-            _, dy_null[s] = self._marginal_phase(
-                x_bs[np.random.permutation(n)], dy_z, x_edges)
-            _, dx_null[s] = self._marginal_phase(
-                y_bs[np.random.permutation(n)], dx_z, y_edges)
-        dy_ex = dy_med - np.nanmean(dy_null, 0)
-        dx_ex = dx_med - np.nanmean(dx_null, 0)
-        f_dy = self._interp_safe(x_mids, dy_ex)
-        f_dx = self._interp_safe(y_mids, dx_ex)
-        x_grid = np.linspace(x_mids[0], x_mids[-1], n_grid)
-        y_grid = np.linspace(y_mids[0], y_mids[-1], n_grid)
-        X_g, Y_g = np.meshgrid(x_grid, y_grid)
-        return dict(x_bs=x_bs, y_bs=y_bs, x_sd=x_sd, y_sd=y_sd,
-                    x_mids=x_mids, y_mids=y_mids,
-                    dy_ex=dy_ex, dx_ex=dx_ex,
-                    X_g=X_g, K_g=Y_g,
-                    U=f_dx(Y_g), V=f_dy(X_g),
-                    f_dy=f_dy, f_dx=f_dx)
-
     # ==================================================================
     # COLLECTIVE ORDER — PANEL PLOTTING HELPERS
     # ==================================================================
@@ -1124,151 +1052,6 @@ class cornealia_batch_plotter:
         ax.tick_params(axis='y', length=0)
         self._fig4_panel_label(ax, 'g')
 
-    def _fig4_boxplot_binned(self, ax, paired, col_K, bin_col_bs, change_col_bs,
-                             change_col_as, x_label, y_label, panel_label,
-                             n_bins=None):
-        """Panels h/i: ΔY boxplots binned by baseline X."""
-        from scipy.stats import wilcoxon as _wil
-
-        p = paired.dropna(subset=[f'{col_K}_BS', f'{col_K}_AS',
-                                  'CD_calc_BS', 'CD_calc_AS']).copy()
-        for col in [f'{col_K}_BS', f'{col_K}_AS']:
-            p1, p99 = np.percentile(p[col], [1, 99])
-            p = p[(p[col] >= p1) & (p[col] <= p99)]
-
-        if change_col_bs not in p.columns or change_col_as not in p.columns:
-            ax.text(0.5, 0.5, 'Data not available', transform=ax.transAxes,
-                    ha='center', fontsize=9, color='#999')
-            return
-
-        # Adaptive bin count: aim for ~5+ samples per bin, min 3 bins
-        if n_bins is None:
-            n_bins = max(3, min(8, len(p) // 5))
-
-        edges = np.percentile(p[bin_col_bs], np.linspace(0, 100, n_bins + 1))
-        data_list, labels, annotations = [], [], []
-
-        for i in range(n_bins):
-            mask = (p[bin_col_bs] >= edges[i])
-            if i < n_bins - 1:
-                mask &= (p[bin_col_bs] < edges[i + 1])
-            else:
-                mask &= (p[bin_col_bs] <= edges[i + 1])
-            sub = p[mask]
-            if len(sub) < 3:
-                continue
-            dy = sub[change_col_as].values - sub[change_col_bs].values
-            data_list.append(dy)
-            labels.append(f'{edges[i]:.3f}-{edges[i+1]:.3f}')
-            try:
-                _, p_wil = _wil(dy)
-            except ValueError:
-                p_wil = 1.0
-            annotations.append(p_wil)
-
-        if not data_list:
-            return
-
-        C_MAIN = '#663399'
-        x = np.arange(len(data_list))
-        bp = ax.boxplot(data_list, positions=x, widths=0.5, patch_artist=True,
-                        showfliers=False,
-                        medianprops=dict(color='#E65100', linewidth=1.2),
-                        whiskerprops=dict(color='#555', linewidth=0.8),
-                        capprops=dict(color='#555', linewidth=0.8))
-        for patch in bp['boxes']:
-            patch.set_facecolor(C_MAIN)
-            patch.set_alpha(0.6)
-            patch.set_edgecolor('#333')
-            patch.set_linewidth(0.8)
-
-        ax.axhline(0, color='black', ls=':', lw=0.8)
-        medians = [np.median(d) for d in data_list]
-        ax.plot(x, medians, 'o-', color='#E65100', markersize=4, linewidth=1.5, zorder=5, label='Median')
-
-        y_max = max(d.max() for d in data_list)
-        for i, p_w in enumerate(annotations):
-            sig = '*' if p_w < 0.05 else 'ns'
-            ax.text(i, y_max + abs(y_max) * 0.03, sig,
-                    ha='center', va='bottom', fontsize=7, fontweight='bold')
-
-        for i, d in enumerate(data_list):
-            ax.text(i, y_max + abs(y_max) * 0.08, f'n={len(d)}', ha='center',
-                    va='bottom', fontsize=9, color='#555', fontweight='bold', rotation=35)
-
-        ax.set_xticks(x)
-        display_labels = [lab if i % 2 == 0 else '' for i, lab in enumerate(labels)]
-        ax.set_xticklabels(display_labels, fontsize=9, rotation=30, ha='right')
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.legend(fontsize=8, loc='upper left',
-                  title='* p<0.05 Wilcoxon', title_fontsize=7,
-                  framealpha=0.9, edgecolor='none')
-        self._fig4_panel_label(ax, panel_label)
-
-    def _fig4_phase_panel(self, ax, R, xn, yn, x_label, y_label, x_fmt, label):
-        """Draw a phase portrait panel (j or k)."""
-        from scipy.optimize import brentq
-        C_BS, C_AS = '#4A90D9', '#E8833A'
-
-        ax.scatter(R['x_bs'], R['y_bs'], s=1, c='#bbb', alpha=0.15,
-                   edgecolors='none', zorder=1, rasterized=True)
-        U, V = R['U'].copy(), R['V'].copy()
-        dmask = self._density_mask(R['X_g'], R['K_g'], R['x_bs'], R['y_bs'])
-        U[~dmask] = np.nan
-        V[~dmask] = np.nan
-        mag = np.sqrt(np.nan_to_num(U) ** 2 + np.nan_to_num(V) ** 2)
-        ax.quiver(R['X_g'], R['K_g'], U * R['x_sd'], V * R['y_sd'], mag,
-                  cmap='RdPu', alpha=0.9, angles='xy', scale_units='xy', scale=1,
-                  width=0.004, headwidth=4, headlength=5, zorder=3)
-
-        x_null = y_null = None
-        try:
-            x_null = brentq(R['f_dy'], R['x_mids'][0], R['x_mids'][-1])
-            ax.axvline(x_null, color=C_AS, ls='--', lw=1.0, alpha=0.7,
-                       label=f'\u0394{yn}=0 ({xn}={x_null:.0f})')
-        except ValueError:
-            pass
-        try:
-            y_null = brentq(R['f_dx'], R['y_mids'][0], R['y_mids'][-1])
-            ax.axhline(y_null, color=C_BS, ls='--', lw=1.0, alpha=0.7,
-                       label=f'\u0394{xn}=0 ({yn}={y_null:.4f})')
-        except ValueError:
-            pass
-        if x_null is not None and y_null is not None:
-            fp_mask = self._density_mask(
-                np.array([[x_null]]), np.array([[y_null]]), R['x_bs'], R['y_bs'])
-            alpha = 1.0 if fp_mask[0, 0] else 0.3
-            ax.plot(x_null, y_null, '*', color='#E65100', markersize=12,
-                    markeredgecolor='white', markeredgewidth=0.8, zorder=10,
-                    alpha=alpha, label='fixed pt')
-
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        _arrow_key = Line2D([0], [0], color='#9B4A96', lw=1.4,
-                            marker='>', markersize=3, label='binned median shift')
-        _h, _l = ax.get_legend_handles_labels()
-        ax.legend([_arrow_key] + _h, ['binned median shift'] + _l,
-                  fontsize=9, loc='lower left', bbox_to_anchor=(0.0, 1.02),
-                  framealpha=0.9, edgecolor='none', ncol=2)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(x_fmt))
-        self._fig4_panel_label(ax, label)
-
-        if x_null is not None and y_null is not None:
-            xb, yb = R['x_bs'], R['y_bs']
-            for _xl, _yl, _tx, _ty in [
-                ('lo', 'hi', 0.25, 0.97), ('hi', 'hi', 0.75, 0.97),
-                ('lo', 'lo', 0.25, 0.42), ('hi', 'lo', 0.75, 0.42),
-            ]:
-                _qm = ((xb < x_null) if _xl == 'lo' else (xb >= x_null)) & \
-                      ((yb < y_null) if _yl == 'lo' else (yb >= y_null))
-                ax.text(_tx, _ty, f'n={int(_qm.sum())}', transform=ax.transAxes,
-                        fontsize=10, ha='center', va='top', color='#555', fontweight='bold')
-
     # ==================================================================
     # COLLECTIVE ORDER FIGURE (Fig 4)
     # ==================================================================
@@ -1277,11 +1060,9 @@ class cornealia_batch_plotter:
         """
         Publication Figure 4 — Collective order analysis.
 
-        4-row layout:
+        2-row layout:
           Row 1 (a-d): K orthogonality — K vs CD, K vs HEX, ΔK vs ΔCD, ΔK vs ΔHEX
           Row 2 (e-g): K increases — g(r), paired scatter, forest plot
-          Row 3 (h-i): Cross-variable — ΔK boxplots by CD, ΔCD boxplots by K
-          Row 4 (j-k): Phase portraits — CD-K, r₀-K
 
         Parameters
         ----------
@@ -1311,23 +1092,17 @@ class cornealia_batch_plotter:
             m = (x >= xlo) & (x <= xhi) & (y >= ylo) & (y <= yhi)
             return x[m], y[m], m
 
-        # ── Figure layout: 190mm × 340mm, 4 rows ──
+        # ── Figure layout: 190mm × 116mm, 2 rows (panel sizes as in the former 340 mm layout) ──
         fig_w = 190 / 25.4
-        fig_h = 340 / 25.4
+        fig_h = 116 / 25.4
         fig = plt.figure(figsize=(fig_w, fig_h))
 
         gs_row1 = fig.add_gridspec(1, 4,
-                                    left=0.09, right=0.97, top=0.97, bottom=0.859,
+                                    left=0.09, right=0.97, top=0.912, bottom=0.587,
                                     wspace=0.45)
         gs_row2 = fig.add_gridspec(1, 3,
-                                    left=0.20, right=0.86, top=0.795, bottom=0.693,
+                                    left=0.20, right=0.86, top=0.399, bottom=0.100,
                                     wspace=0.35)
-        gs_row3 = fig.add_gridspec(1, 2,
-                                    left=0.13, right=0.93, top=0.677, bottom=0.478,
-                                    wspace=0.05)
-        gs_row4 = fig.add_gridspec(1, 2,
-                                    left=0.13, right=0.93, top=0.453, bottom=0.254,
-                                    wspace=0.05)
 
         # ── Row 1: K orthogonality ──
         self._fig4_panel_a(fig, gs_row1[0, 0], paired, col_K)
@@ -1360,104 +1135,15 @@ class cornealia_batch_plotter:
         ax_g = fig.add_subplot(gs_row2[0, 2])
         self._fig4_forest(ax_g, paired, col_K)
 
-        # ── Row 3: Cross-variable boxplots (h, i) ──
-        ax_h = fig.add_subplot(gs_row3[0, 0])
-        self._fig4_boxplot_binned(ax_h, paired, col_K,
-                                  'CD_calc_BS', 'CD_calc_BS', 'CD_calc_AS',
-                                  'BS CD (cells/mm\u00b2)', '\u0394K$_{ds}$ (\u00b5m$^{-2}$)',
-                                  'h')
-        # Wait — this bins CD, measures ΔK. Fix the change columns:
-        # Actually the binned boxplot needs bin_col, then measures change_as - change_bs
-        # For panel h: bin on CD_calc_BS, measure K_AS - K_BS
-        # Let me fix the call — the helper subtracts change_col_as - change_col_bs
-        ax_h.clear()
-        self._fig4_boxplot_binned(ax_h, paired, col_K,
-                                  'CD_calc_BS', f'{col_K}_BS', f'{col_K}_AS',
-                                  'BS CD (cells/mm\u00b2)',
-                                  '\u0394K$_{ds}$ (\u00b5m$^{-2}$)', 'h')
-        ax_h.set_box_aspect(0.9)
-        _p = ax_h.get_position()
-        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
-        ax_h.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
-        # Move legend outside
-        _leg_h = ax_h.get_legend()
-        if _leg_h:
-            _leg_h.set_bbox_to_anchor((-0.70, 1.02), transform=ax_h.transAxes)
-            _leg_h._loc = 3
-
-        ax_i = fig.add_subplot(gs_row3[0, 1])
-        self._fig4_boxplot_binned(ax_i, paired, col_K,
-                                  f'{col_K}_BS', 'CD_calc_BS', 'CD_calc_AS',
-                                  'BS K$_{ds}$ (\u00b5m$^{-2}$)',
-                                  '\u0394CD (cells/mm\u00b2)', 'i')
-        ax_i.set_box_aspect(0.9)
-        _p = ax_i.get_position()
-        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
-        ax_i.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
-
-        # ── Row 4: Phase portraits (j, k) ──
-        # Prepare phase field data
-        p_phase = paired.dropna(subset=[f'{col_K}_BS', f'{col_K}_AS',
-                                        'CD_calc_BS', 'CD_calc_AS']).copy()
-        for col in [f'{col_K}_BS', f'{col_K}_AS']:
-            p1, p99 = np.percentile(p_phase[col], [1, 99])
-            p_phase = p_phase[(p_phase[col] >= p1) & (p_phase[col] <= p99)]
-
-        cd_bs = p_phase['CD_calc_BS'].values
-        k_bs = p_phase[f'{col_K}_BS'].values
-        dcd_ph = p_phase['CD_calc_AS'].values - cd_bs
-        dk_ph = p_phase[f'{col_K}_AS'].values - k_bs
-        mask_ph = np.isfinite(cd_bs) & np.isfinite(k_bs) & np.isfinite(dcd_ph) & np.isfinite(dk_ph)
-        R_cdk = self._compute_phase_field(cd_bs[mask_ph], k_bs[mask_ph],
-                                          dcd_ph[mask_ph], dk_ph[mask_ph], seed=123)
-
-        ax_j = fig.add_subplot(gs_row4[0, 0])
-        self._fig4_phase_panel(ax_j, R_cdk, 'CD', 'K',
-                               'Cell Density (cells/mm\u00b2)',
-                               'K$_{ds}$ (\u00b5m$^{-2}$)',
-                               lambda x, _: f'{x/1000:.1f}k', 'j')
-        ax_j.set_box_aspect(0.9)
-        _p = ax_j.get_position()
-        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
-        ax_j.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
-        _leg_j = ax_j.get_legend()
-        if _leg_j:
-            _leg_j.set_bbox_to_anchor((-0.30, 1.02), transform=ax_j.transAxes)
-
-        # r₀-K phase portrait (if r₀ available)
-        r0_col = 'r_0_um'
-        ax_k = fig.add_subplot(gs_row4[0, 1])
-        if f'{r0_col}_BS' in p_phase.columns and f'{r0_col}_AS' in p_phase.columns:
-            r0_bs = p_phase[f'{r0_col}_BS'].values
-            k_bs2 = p_phase[f'{col_K}_BS'].values
-            dr0 = p_phase[f'{r0_col}_AS'].values - r0_bs
-            dk2 = p_phase[f'{col_K}_AS'].values - k_bs2
-            mask_r0 = np.isfinite(r0_bs) & np.isfinite(k_bs2) & np.isfinite(dr0) & np.isfinite(dk2)
-            R_r0k = self._compute_phase_field(r0_bs[mask_r0], k_bs2[mask_r0],
-                                              dr0[mask_r0], dk2[mask_r0], seed=456)
-            self._fig4_phase_panel(ax_k, R_r0k, '$r_0$', 'K',
-                                   'r$_0$ (\u00b5m)',
-                                   'K$_{ds}$ (\u00b5m$^{-2}$)',
-                                   lambda x, _: f'{x:.0f}', 'k')
-        else:
-            ax_k.text(0.5, 0.5, 'r\u2080 data\nnot available',
-                      transform=ax_k.transAxes, ha='center', va='center',
-                      fontsize=9, color='#999')
-            self._fig4_panel_label(ax_k, 'k')
-        ax_k.set_box_aspect(0.9)
-        _p = ax_k.get_position()
-        _dw, _dh = _p.width * 0.35 / 2, _p.height * 0.35 / 2
-        ax_k.set_position([_p.x0 + _dw, _p.y0 + _dh, _p.width * 0.65, _p.height * 0.65])
-
         if save:
             self._pub_save(fig, 'fig4_collective_order')
         plt.show()
 
 
     # ==================================================================
-    # MECHANICAL DISEQUILIBRIUM (Fig 5) — Rows 1-2 only (a-h)
+    # MECHANICAL DISEQUILIBRIUM (Fig 5) — Rows 1-2 (a-g)
     # Row 1: (a) Truss schematic | (b) Low-stress | (c) High-stress | (d) |F| histogram
-    # Row 2: (e) ΔF vs ΔCD       | (f) ΔK vs ΔF  | (g) K vs |F|    | (h) CD-K saddle
+    # Row 2: (e) ΔF vs ΔCD       | (f) ΔK vs ΔF  | (g) K vs |F|
     # ==================================================================
 
     def pub_mechanical_disequilibrium(self, image_folder=None, pixel_size=None, save=None):
@@ -1507,7 +1193,7 @@ class cornealia_batch_plotter:
         gs_row1 = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1, 1],
                                     left=0.08, right=0.95, top=0.95, bottom=0.55,
                                     wspace=0.45)
-        gs_row2 = fig.add_gridspec(1, 4, width_ratios=[1, 1, 1, 1.3],
+        gs_row2 = fig.add_gridspec(1, 3,
                                     left=0.08, right=0.95, top=0.50, bottom=0.16,
                                     wspace=0.48)
 
@@ -1760,83 +1446,10 @@ class cornealia_batch_plotter:
         _dw, _dh = _pg.width * 0.20 / 2, _pg.height * 0.20 / 2
         ax_g.set_position([_pg.x0 + _dw, _pg.y0 + _dh, _pg.width * 0.80, _pg.height * 0.80])
 
-        # Panel h: CD-K saddle colored by baseline |F|
-        ax_h = fig.add_subplot(gs_row2[0, 3])
-        self._fig5_saddle_panel(ax_h, paired, col_K)
-        ax_h.set_box_aspect(1)
 
         if save:
             self._pub_save(fig, 'fig5_mechanical_disequilibrium')
         plt.show()
-
-    def _fig5_saddle_panel(self, ax, paired, col_K):
-        """CD-K phase portrait with donors colored by baseline mean|F|."""
-        from scipy.optimize import brentq
-
-        cd_bs = paired['CD_calc_BS'].values
-        k_bs = paired[f'{col_K}_BS'].values
-        cd_as = paired['CD_calc_AS'].values
-        k_as = paired[f'{col_K}_AS'].values
-        f_bs = paired['mean_F_BS'].values
-
-        valid = (np.isfinite(cd_bs) & np.isfinite(k_bs) &
-                 np.isfinite(cd_as) & np.isfinite(k_as) & np.isfinite(f_bs))
-        cd_bs, k_bs = cd_bs[valid], k_bs[valid]
-        cd_as, k_as = cd_as[valid], k_as[valid]
-        f_bs = f_bs[valid]
-        dcd = cd_as - cd_bs
-        dk = k_as - k_bs
-
-        lo, hi = np.percentile(k_bs, [1, 99])
-        trim = (k_bs >= lo) & (k_bs <= hi)
-        cd_bs, k_bs, dcd, dk, f_bs = (cd_bs[trim], k_bs[trim], dcd[trim],
-                                        dk[trim], f_bs[trim])
-
-        # Phase field
-        R = self._compute_phase_field(cd_bs, k_bs, dcd, dk, seed=999)
-
-        # Scatter colored by |F|
-        C_BS, C_AS = '#4A90D9', '#E8833A'
-        s_lim = np.percentile(f_bs, 95)
-        sc = ax.scatter(cd_bs, k_bs, c=f_bs, s=4, cmap='YlOrRd',
-                        vmin=0, vmax=s_lim, alpha=0.5, edgecolors='none',
-                        zorder=1, rasterized=True)
-        cb = plt.colorbar(sc, ax=ax, shrink=0.5, pad=0.02)
-        cb.set_label('mean |F| (µm$^{-1}$)', fontsize=6, fontweight='bold')
-        cb.ax.tick_params(labelsize=6)
-
-        # Quiver field
-        U, V = R['U'].copy(), R['V'].copy()
-        dmask = self._density_mask(R['X_g'], R['K_g'], R['x_bs'], R['y_bs'])
-        U[~dmask] = np.nan
-        V[~dmask] = np.nan
-        mag = np.sqrt(np.nan_to_num(U) ** 2 + np.nan_to_num(V) ** 2)
-        ax.quiver(R['X_g'], R['K_g'],
-                  U * R['x_sd'], V * R['y_sd'], mag,
-                  cmap='cool', alpha=0.7, angles='xy', scale_units='xy', scale=1,
-                  width=0.004, headwidth=4, headlength=5, zorder=3)
-
-        # Nullclines + fixed point
-        try:
-            cd_null = brentq(R['f_dy'], R['x_mids'][0], R['x_mids'][-1])
-            ax.axvline(cd_null, color=C_AS, ls='--', lw=1.0, alpha=0.7)
-        except ValueError:
-            cd_null = None
-        try:
-            k_null = brentq(R['f_dx'], R['y_mids'][0], R['y_mids'][-1])
-            ax.axhline(k_null, color=C_BS, ls='--', lw=1.0, alpha=0.7)
-        except ValueError:
-            k_null = None
-        if cd_null is not None and k_null is not None:
-            ax.plot(cd_null, k_null, '*', color='#E65100', markersize=12,
-                    markeredgecolor='white', markeredgewidth=0.8, zorder=10)
-
-        ax.set_xlabel('Cell Density (cells/mm²)')
-        ax.set_ylabel(r'K$_{ds}$ (µm$^{-2}$)')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x/1000:.1f}k'))
-        self._fig4_panel_label(ax, 'h')
 
 
     # ==================================================================
