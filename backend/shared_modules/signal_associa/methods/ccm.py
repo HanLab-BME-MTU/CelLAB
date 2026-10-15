@@ -29,7 +29,28 @@ From SimpleCCMAnalyzer (Rostami 2025), refactored for Associa.
 import numpy as np
 from typing import Dict, Optional
 from scipy.spatial import cKDTree
-from scipy.stats import pearsonr as _pearsonr
+from scipy.special import betainc as _betainc
+
+
+def _pearsonr(a, b):
+    """
+    Fast Pearson r and two-sided p (same values as scipy.stats.pearsonr,
+    without its per-call overhead, which dominated CPU run time).
+    """
+    a = a - a.mean()
+    b = b - b.mean()
+    den = np.sqrt(np.dot(a, a) * np.dot(b, b))
+    if not np.isfinite(den) or den == 0:
+        return np.nan, np.nan
+    r = float(np.dot(a, b) / den)
+    r = min(max(r, -1.0), 1.0)
+    df = len(a) - 2
+    if df <= 0:
+        return r, np.nan
+    if abs(r) >= 1.0:
+        return r, 0.0
+    p = float(_betainc(0.5 * df, 0.5, df / (df + r * r * df / (1.0 - r * r))))
+    return r, p
 
 
 # =================================================================
@@ -134,18 +155,8 @@ def ccm_test_surrogates_batch(surrogates: np.ndarray,
         except ImportError:
             pass
 
-    # CPU fallback: serial, full scan per surrogate
-    rhos = np.empty(n_surr, dtype=np.float64)
-    for i in range(n_surr):
-        rho_xy, _, _ = _scan_lags(surr[i], effect, E, tau, lags)
-        if bidir:
-            rho_yx, _, _ = _scan_lags(effect, surr[i], E, tau, lags)
-            best = max(rho_xy if np.isfinite(rho_xy) else -np.inf,
-                       rho_yx if np.isfinite(rho_yx) else -np.inf)
-        else:
-            best = rho_xy if np.isfinite(rho_xy) else -np.inf
-        rhos[i] = float(best) if np.isfinite(best) else np.nan
-    return rhos
+    # CPU path: vectorized across surrogates (same result as the serial scan)
+    return _batch_ccm_full_scan_cpu(surr, effect, lags, bidir, E, tau)
 
 
 # =================================================================
@@ -214,6 +225,77 @@ def _ccm_single(cause, effect, E, tau, lag):
     # Correlation (no clipping — allow negative, matching pyEDM)
     rho, p_fit = _pearsonr(y_hat, y_cause)
     return (float(rho), float(p_fit)) if np.isfinite(rho) else (np.nan, np.nan)
+
+
+# =================================================================
+# CPU VECTORIZED SURROGATE TESTING
+# =================================================================
+
+def _rowwise_corr(A, B):
+    A = A - A.mean(axis=1, keepdims=True)
+    B = B - B.mean(axis=1, keepdims=True)
+    den = np.sqrt((A * A).sum(axis=1) * (B * B).sum(axis=1))
+    with np.errstate(invalid='ignore', divide='ignore'):
+        r = (A * B).sum(axis=1) / den
+    r[~np.isfinite(r)] = np.nan
+    return r
+
+
+def _knn_weights(X, E):
+    """Leave-one-out kNN (k = E+1) with exponential weights, as in _ccm_single."""
+    k = E + 1
+    dd, nn = cKDTree(X).query(X, k=k + 1)
+    dd, nn = dd[:, 1:], nn[:, 1:]
+    w = np.exp(-dd / (dd[:, 0:1] + 1e-12))
+    w = w / (w.sum(axis=1, keepdims=True) + 1e-12)
+    return w, nn
+
+
+def _batch_ccm_full_scan_cpu(surr, effect, lags, bidir, E, tau):
+    """
+    Max cross-map rho over lags (and both directions) for every surrogate.
+    Identical to looping _scan_lags per surrogate:
+      forward  (surrogate -> effect): the effect embedding is shared, so its kNN and
+               weights are computed once per lag and applied to all surrogates;
+      reverse  (effect -> surrogate): each surrogate is embedded separately.
+    """
+    n_surr = surr.shape[0]
+    best = np.full(n_surr, -np.inf)
+    off = (E - 1) * tau
+    for lag in lags:
+        if lag > 0:
+            S, eff = surr[:, lag:], effect[:-lag]
+        elif lag < 0:
+            S, eff = surr[:, :lag], effect[-lag:]
+        else:
+            S, eff = surr, effect
+        n_embed = len(eff) - off
+        if n_embed <= E + 2:
+            continue
+
+        # forward: _ccm_single(cause=surrogate, effect=effect)
+        X = np.column_stack([eff[i * tau: i * tau + n_embed] for i in range(E)])
+        w, nn = _knn_weights(X, E)
+        Yc = S[:, off: off + n_embed]
+        rho = _rowwise_corr((w[None] * Yc[:, nn]).sum(axis=2), Yc)
+        best = np.fmax(best, rho)
+
+        # reverse: _ccm_single(cause=effect, effect=surrogate)
+        if bidir:
+            yc = eff[off: off + n_embed]
+            yc0 = yc - yc.mean()
+            yc_ss = np.dot(yc0, yc0)
+            for i in range(n_surr):
+                Xi = np.column_stack([S[i, j * tau: j * tau + n_embed] for j in range(E)])
+                wi, nni = _knn_weights(Xi, E)
+                yh = (wi * yc[nni]).sum(axis=1)
+                yh0 = yh - yh.mean()
+                den = np.sqrt(np.dot(yh0, yh0) * yc_ss)
+                if den > 0 and np.isfinite(den):
+                    best[i] = max(best[i], np.dot(yh0, yc0) / den)
+
+    best[~np.isfinite(best)] = np.nan
+    return best
 
 
 # =================================================================

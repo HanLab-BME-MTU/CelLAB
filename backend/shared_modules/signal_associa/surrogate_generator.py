@@ -99,8 +99,16 @@ class SurrogateGenerator:
         """
         y = np.asarray(signal, dtype=np.float64).ravel()
         T = len(y)
-        out = np.empty((n, T), dtype=np.float64)
 
+        # IAAFT: all surrogates iterated together (same algorithm and seeds as the loop)
+        if self.config['method'] == 'iaaft':
+            starts = np.empty((n, T), dtype=np.float64)
+            for i in range(n):
+                s = seed + i if seed is not None else None
+                starts[i] = np.random.RandomState(s).permutation(y)
+            return _iaaft_batch_cpu(y, starts, n_iter=self.config['n_iterations'])
+
+        out = np.empty((n, T), dtype=np.float64)
         for i in range(n):
             s = seed + i if seed is not None else None
             rng = np.random.RandomState(s)
@@ -202,6 +210,38 @@ def _iaaft_cpu(signal: np.ndarray, rng: np.random.RandomState,
                 break
 
     return surrogate
+
+
+def _iaaft_batch_cpu(signal: np.ndarray, starts: np.ndarray, n_iter: int = 100) -> np.ndarray:
+    """
+    IAAFT for many surrogates at once (rows of `starts` = initial permutations).
+    Same steps as _iaaft_cpu, vectorized across surrogates. A row stops updating
+    once it meets the same convergence test as _iaaft_cpu.
+    """
+    from scipy.fft import rfft, irfft
+
+    n = len(signal)
+    sorted_amplitudes = np.sort(signal)
+    original_power = np.abs(rfft(signal))
+    Y = np.array(starts, dtype=np.float64)
+    active = np.ones(len(Y), dtype=bool)
+
+    for iteration in range(n_iter):
+        A = Y[active]
+        ranks = np.argsort(np.argsort(A, axis=1), axis=1)
+        A = sorted_amplitudes[ranks]
+        F = rfft(A, axis=1)
+        A = irfft(original_power[None, :] * np.exp(1j * np.angle(F)), n=n, axis=1).real
+        Y[active] = A
+
+        if iteration > 10 and iteration % 10 == 0:
+            err = np.mean((np.sort(A, axis=1) - sorted_amplitudes[None, :]) ** 2, axis=1)
+            idx = np.flatnonzero(active)
+            active[idx[err < 1e-10]] = False
+            if not active.any():
+                break
+
+    return Y
 
 
 def _shuffle_cpu(signal: np.ndarray, rng: np.random.RandomState) -> np.ndarray:

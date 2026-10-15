@@ -119,15 +119,17 @@ class Associa:
         x = np.asarray(signal_x, dtype=np.float64).ravel()
         y = np.asarray(signal_y, dtype=np.float64).ravel()
 
-        # ── Step 1: Stationarize both signals ──
-        stat_x = self.stationarizer.transform(x)
-        stat_y = self.stationarizer.transform(y)
-
-        # Build signal lookup
-        signals = {
-            'raw': (x, y),
-            'stationary': (stat_x.signal_out, stat_y.signal_out),
-        }
+        # ── Step 1: Stationarize both signals (only if a method uses the stationary version) ──
+        needs_stationary = any(
+            {**METHOD_DEFAULTS.get(m, {}), **(c or {})}.get('signal_version', 'raw') == 'stationary'
+            for m, c in self.method_configs.items())
+        if needs_stationary:
+            stat_x = self.stationarizer.transform(x)
+            stat_y = self.stationarizer.transform(y)
+            signals = {'raw': (x, y), 'stationary': (stat_x.signal_out, stat_y.signal_out)}
+        else:
+            stat_x = stat_y = None
+            signals = {'raw': (x, y), 'stationary': (x, y)}
 
         # ── Step 2: Run each requested method ──
         results = {}
@@ -221,13 +223,18 @@ class Associa:
                     'effect_size': _effect_size(real_stat, null_stats),
                 }
 
-        # ── Standard path: generate surrogates, test serially ──
+        # ── Standard path: generate surrogates, test ──
         surrogates = self.surrogate_gen.generate_batch(sx, n_surrogates, seed)
-        null_stats = np.empty(n_surrogates, dtype=np.float64)
 
-        for i in range(n_surrogates):
-            surr_result = func(surrogates[i], sy, method_cfg if method_cfg else None)
-            null_stats[i] = surr_result.get('statistic', np.nan)
+        if method_name == 'ccm' and METHOD_FUNCTIONS.get('_ccm_batch_surr') is not None:
+            # CPU CCM: vectorized across surrogates (same statistic as the serial loop)
+            null_stats = np.asarray(METHOD_FUNCTIONS['_ccm_batch_surr'](
+                surrogates, sy, config=method_cfg), dtype=np.float64)
+        else:
+            null_stats = np.empty(n_surrogates, dtype=np.float64)
+            for i in range(n_surrogates):
+                surr_result = func(surrogates[i], sy, method_cfg if method_cfg else None)
+                null_stats[i] = surr_result.get('statistic', np.nan)
 
         # Clean NaN surrogates
         valid = null_stats[np.isfinite(null_stats)]
