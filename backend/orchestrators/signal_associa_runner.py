@@ -127,6 +127,8 @@ def _build_assoc_config(p: Dict, sampling_rate: float) -> Tuple[Dict, float, Lis
             'n_boot': int(float(p.get('ccm_n_boot', 20) or 20)),
             'signal_version': 'raw',
             'n_surrogates': n_surrogates,
+            # GPU for the CCM surrogate test (CuPy); falls back to the CPU path if unavailable
+            'gpu_enabled': _as_bool(p.get('ccm_gpu', False)),
         }
     if _as_bool(p.get('m_granger')):
         active['granger_causality'] = {
@@ -160,6 +162,14 @@ def _build_assoc_config(p: Dict, sampling_rate: float) -> Tuple[Dict, float, Lis
         'surrogate': {'method': surr_method, 'n_iterations': 100},
         'methods': active,
     }
+    # Sequential surrogate test (Besag & Clifford 1991): stop a pair once it can no longer be
+    # significant. Same decisions as the full test, fewer surrogates for non-coupled pairs.
+    if _as_bool(p.get('early_stop', False)):
+        assoc_config['early_stopping'] = {
+            'enabled': True,
+            'chunk': int(float(p.get('early_stop_chunk', 10) or 10)),
+            'alpha': alpha,
+        }
 
     stat_method = p.get('stat_method', p.get('method', 'auto'))
     if stat_method and stat_method not in ('none', 'None'):
@@ -334,7 +344,8 @@ def _run_one_pair_all_methods(a, b, x, y, assoc_config, alpha):
         }, False)]
 
 
-def _run_pairs_parallel(signals, pairs, assoc_config, alpha, n_jobs, progress_cb=None):
+def _run_pairs_parallel(signals, pairs, assoc_config, alpha, n_jobs, progress_cb=None,
+                        cancel_evt=None):
     """CPU-parallel path: joblib over pairs (each worker = one pair, all methods).
 
     Progress is reported per completed pair (worker processes can't stream
@@ -400,13 +411,26 @@ def _run_pairs_parallel(signals, pairs, assoc_config, alpha, n_jobs, progress_cb
                 n_significant += 1
         done += 1
         _emit(done)
+        if cancel_evt is not None and cancel_evt.is_set():
+            try:
+                gen.close()            # stop dispatching the remaining pairs
+            except Exception:
+                pass
+            raise _RunCancelled(done)
 
     _emit(total, is_done=True)
     return pair_results, n_significant
 
 
+class _RunCancelled(Exception):
+    """Raised when the user presses Stop (cancel_evt set)."""
+    def __init__(self, n_done: int):
+        super().__init__(f'cancelled after {n_done} pair(s)')
+        self.n_done = n_done
+
+
 def _run_pairs(signals: Dict, pairs: List[Tuple[str, str]], assoc_config: Dict,
-               alpha: float, progress_cb=None, n_jobs: int = 1):
+               alpha: float, progress_cb=None, n_jobs: int = 1, cancel_evt=None):
     """Run each pair method-by-method so progress can report the current method.
 
     Emits a live 'sa_board' payload via progress_cb for a fixed-template GUI board.
@@ -416,7 +440,10 @@ def _run_pairs(signals: Dict, pairs: List[Tuple[str, str]], assoc_config: Dict,
     if n_jobs and int(n_jobs) != 1 and len(pairs) > 1:
         try:
             return _run_pairs_parallel(signals, pairs, assoc_config, alpha,
-                                       int(n_jobs), progress_cb=progress_cb)
+                                       int(n_jobs), progress_cb=progress_cb,
+                                       cancel_evt=cancel_evt)
+        except _RunCancelled:
+            raise
         except ImportError:
             print("[Associa] joblib not available — falling back to serial CPU.")
         except Exception as e:
@@ -469,6 +496,8 @@ def _run_pairs(signals: Dict, pairs: List[Tuple[str, str]], assoc_config: Dict,
         x, y = signals[a], signals[b]
 
         for method_name in all_methods:
+            if cancel_evt is not None and cancel_evt.is_set():
+                raise _RunCancelled(len({(r['signal_x'], r['signal_y']) for r in pair_results}))
             status_map[method_name] = 'running'
             _emit(pair_label, method_name, status_map)
             try:
@@ -782,7 +811,7 @@ def _do_load(project, ws_id, pipeline_id, step_id, params, results_dir,
 
 
 def _do_analyze(project, ws_id, pipeline_id, step_id, params, results_dir,
-                mode: str, load_step: str, progress_cb=None):
+                mode: str, load_step: str, progress_cb=None, cancel_evt=None):
     """Shared analysis step for single (analysis) and batch (batch_run)."""
     if results_dir.exists():
         shutil.rmtree(str(results_dir))
@@ -822,6 +851,10 @@ def _do_analyze(project, ws_id, pipeline_id, step_id, params, results_dir,
         n_jobs = int(float(p.get('n_jobs', p.get('n_workers', 1)) or 1))
     except (TypeError, ValueError):
         n_jobs = 1
+    if _as_bool(p.get('ccm_gpu', False)) and n_jobs != 1:
+        print(f"[Associa] GPU enabled: running pairs in one process (CPU workers {n_jobs} -> 1) "
+              f"so worker processes do not compete for the GPU.")
+        n_jobs = 1
 
     if progress_cb:
         progress_cb(0, len(pairs), phase='analysis',
@@ -829,9 +862,14 @@ def _do_analyze(project, ws_id, pipeline_id, step_id, params, results_dir,
                             + (f' · {n_jobs} workers' if n_jobs != 1 else ''))
 
     t0 = time.time()
-    pair_results, n_significant = _run_pairs(signals, pairs, assoc_config,
-                                             alpha, progress_cb=progress_cb,
-                                             n_jobs=n_jobs)
+    try:
+        pair_results, n_significant = _run_pairs(signals, pairs, assoc_config,
+                                                 alpha, progress_cb=progress_cb,
+                                                 n_jobs=n_jobs, cancel_evt=cancel_evt)
+    except _RunCancelled as c:
+        return {"status": "cancelled",
+                "outputs": {"message": f"Stopped by user after {c.n_done}/{len(pairs)} pair(s); "
+                                       f"nothing saved — previous results kept."}}
     elapsed = round(time.time() - t0, 2)
 
     run_id = f'run_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
@@ -950,7 +988,7 @@ def _do_batch_results(project, ws_id, pipeline_id, results_dir, progress_cb=None
 # ── Public dispatch entry points (called from app.py) ───────────────────────
 
 def _run_signal_associa(project, ws_id, pipeline_id, step_id, params,
-                        results_dir, progress_cb=None):
+                        results_dir, progress_cb=None, cancel_evt=None):
     """Single-pair pipeline: import → analysis."""
     try:
         if step_id == 'import':
@@ -959,7 +997,7 @@ def _run_signal_associa(project, ws_id, pipeline_id, step_id, params,
         elif step_id == 'analysis':
             return _do_analyze(project, ws_id, pipeline_id, step_id, params,
                                results_dir, mode='single', load_step='import',
-                               progress_cb=progress_cb)
+                               progress_cb=progress_cb, cancel_evt=cancel_evt)
         return {"status": "error",
                 "error_msg": f"Unknown Signal Associa step: {step_id}"}
     except Exception as e:
@@ -969,7 +1007,7 @@ def _run_signal_associa(project, ws_id, pipeline_id, step_id, params,
 
 
 def _run_signal_associa_batch(project, ws_id, pipeline_id, step_id, params,
-                              results_dir, progress_cb=None):
+                              results_dir, progress_cb=None, cancel_evt=None):
     """Batch pipeline: batch_setup → batch_run → batch_results."""
     try:
         if step_id == 'batch_setup':
@@ -978,7 +1016,7 @@ def _run_signal_associa_batch(project, ws_id, pipeline_id, step_id, params,
         elif step_id == 'batch_run':
             return _do_analyze(project, ws_id, pipeline_id, step_id, params,
                                results_dir, mode='batch', load_step='batch_setup',
-                               progress_cb=progress_cb)
+                               progress_cb=progress_cb, cancel_evt=cancel_evt)
         elif step_id == 'batch_results':
             return _do_batch_results(project, ws_id, pipeline_id, results_dir,
                                      progress_cb=progress_cb)

@@ -1647,7 +1647,8 @@ def _run_cornealia_morphometry(project, results_dir, image_path, all_params, seg
     }
 
 
-def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir, progress_cb=None):
+def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir, progress_cb=None,
+                         cancel_evt=None):
     """
     Run Cornealia batch processing.
     
@@ -1769,7 +1770,9 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
                 folder_path=folder,
                 n_workers=n_workers,
                 progress_cb=_batch_progress,
+                cancel_evt=cancel_evt,
             )
+            _was_cancelled = getattr(engine, 'last_batch_cancelled', False)
 
             # Clean up engine
             engine._ocr_reader = None
@@ -1778,6 +1781,10 @@ def _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_d
             gc.collect()
 
             print(f"  [BATCH] Done, {len(batch_results)} results")
+            if _was_cancelled:
+                return {"status": "cancelled",
+                        "outputs": {"message": f"Stopped by user after {len(batch_results)}/{n_images} "
+                                               f"images; nothing saved — previous results kept."}}
 
             try:
                 # Separate successes and failures
@@ -5166,17 +5173,25 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
 
             # ── Build tracker config ──
             use_masks = str(all_params.get('use_masks', 'true')).lower() == 'true'
+            def _opt_num(key, cast):
+                v = all_params.get(key, '')
+                return cast(v) if str(v).strip() not in ('', 'None', 'none') else None
             tracker_config = {
                 'feature_detection': {
                     'diameter': 11,
                     'minmass': 100,
                     'separation': 8,
+                    'merge_distance': _opt_num('merge_distance', float),   # px; None = no merging
                 },
                 'linking': {
+                    'method': all_params.get('link_method', 'trackpy'),    # 'trackpy' or 'laptrack'
                     'search_range': int(all_params.get('search_range', 15)),
                     'memory': int(all_params.get('memory', 3)),
                     'adaptive_stop': int(all_params.get('adaptive_stop', 5)),
                     'adaptive_step': float(all_params.get('adaptive_step', 0.95)),
+                    # LapTrack only (None -> search_range / memory)
+                    'gap_closing_range': _opt_num('gap_closing_range', float),
+                    'gap_closing_max_frames': _opt_num('gap_closing_max_frames', int),
                 },
                 'filtering': {
                     'min_frames': int(all_params.get('min_frames', 10)),
@@ -5192,8 +5207,12 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 },
             }
 
-            print(f"[IMMUNIA] Tracking config: search_range={tracker_config['linking']['search_range']}, "
-                  f"memory={tracker_config['linking']['memory']}, min_frames={tracker_config['filtering']['min_frames']}")
+            print(f"[IMMUNIA] Tracking config: method={tracker_config['linking']['method']}, "
+                  f"search_range={tracker_config['linking']['search_range']}, "
+                  f"memory={tracker_config['linking']['memory']}, "
+                  f"gap_closing_range={tracker_config['linking']['gap_closing_range']}, "
+                  f"merge_distance={tracker_config['feature_detection']['merge_distance']}, "
+                  f"min_frames={tracker_config['filtering']['min_frames']}")
 
             # ── Run tracker ──
             if progress_cb:
@@ -6066,7 +6085,7 @@ def _run_step_async(task_key, project, ws_id, pipeline_id, step_id, p_type, para
                                         progress_cb=progress_cb)
         elif p_type == 'cornealia_batch':
             run_result = _run_cornealia_batch(project, ws_id, pipeline_id, step_id, params, results_dir,
-                                                progress_cb=progress_cb)
+                                                progress_cb=progress_cb, cancel_evt=cancel_evt)
         elif p_type == 'immunia':
             run_result = _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir,
                                       progress_cb=progress_cb, cancel_evt=cancel_evt)
@@ -6075,13 +6094,15 @@ def _run_step_async(task_key, project, ws_id, pipeline_id, step_id, p_type, para
                 run_result = {"status": "error", "error_msg": "Signal Associa runner not available"}
             else:
                 run_result = _run_signal_associa(project, ws_id, pipeline_id, step_id, params,
-                                                 results_dir, progress_cb=progress_cb)
+                                                 results_dir, progress_cb=progress_cb,
+                                                 cancel_evt=cancel_evt)
         elif p_type == 'signal_associa_batch':
             if _run_signal_associa_batch is None:
                 run_result = {"status": "error", "error_msg": "Signal Associa runner not available"}
             else:
                 run_result = _run_signal_associa_batch(project, ws_id, pipeline_id, step_id, params,
-                                                       results_dir, progress_cb=progress_cb)
+                                                       results_dir, progress_cb=progress_cb,
+                                                       cancel_evt=cancel_evt)
 
         # Update pipeline status
         pipeline = project.get_pipeline(ws_id, pipeline_id)

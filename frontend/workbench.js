@@ -765,6 +765,24 @@ function closeTabGroup(pipelineId, ev) {
     closeSubtabsForPipeline(pipelineId);
 }
 
+// Go to the workbench home (canvas) — shared by the workspace and pipeline radial menus
+function _goWorkbenchHome() {
+    const ws = getActiveWorkspace();
+    if (ws && ws.type !== 'codechat') {
+        const canvasTab = [...ws.subtabs.values()].find(s => s.type === 'canvas');
+        if (canvasTab) {
+            ws.activeSubtab = canvasTab.id;
+            renderSubtabs();
+            renderLeftPanel();
+            renderViewport();
+            updateOpenModulesList();
+        }
+    } else if (ws && ws.type === 'codechat') {
+        const mainWs = [...state.workspaces.values()].find(w => w.type === 'workspace' || w.type === undefined);
+        if (mainWs) switchWorkspace(mainWs.id);
+    }
+}
+
 function openWorkspaceRadialNav(ev, fromCodeChat = false) {
     const existing = document.querySelector('.radial-nav-overlay');
     if (existing) existing.remove();
@@ -925,23 +943,7 @@ function openWorkspaceRadialNav(ev, fromCodeChat = false) {
     center.className = 'radial-nav-center';
     center.style.borderColor = accent;
     center.innerHTML = 'Home';
-    center.onclick = () => {
-        overlay.remove();
-        const ws = getActiveWorkspace();
-        if (ws && ws.type !== 'codechat') {
-            const canvasTab = [...ws.subtabs.values()].find(s => s.type === 'canvas');
-            if (canvasTab) {
-                ws.activeSubtab = canvasTab.id;
-                renderSubtabs();
-                renderLeftPanel();
-                renderViewport();
-                updateOpenModulesList();
-            }
-        } else if (ws && ws.type === 'codechat') {
-            const mainWs = [...state.workspaces.values()].find(w => w.type === 'workspace' || w.type === undefined);
-            if (mainWs) switchWorkspace(mainWs.id);
-        }
-    };
+    center.onclick = () => { overlay.remove(); _goWorkbenchHome(); };
     nav.appendChild(center);
 
     overlay.appendChild(nav);
@@ -1141,8 +1143,9 @@ function openRadialNavigator(pipelineId, ev) {
     const center = document.createElement('div');
     center.className = 'radial-nav-center';
     center.style.borderColor = accent;
-    center.innerHTML = pipeline.shortName;
-    center.onclick = () => overlay.remove();
+    center.innerHTML = `${pipeline.shortName}<div style="font-size:9px;opacity:.75;margin-top:2px">⌂ Home</div>`;
+    center.title = 'Go to workbench home';
+    center.onclick = () => { overlay.remove(); _goWorkbenchHome(); };
     nav.appendChild(center);
 
     overlay.appendChild(nav);
@@ -2758,6 +2761,7 @@ function getModuleTreeItems(moduleType, stepId) {
             { id: 'sa-methods', icon: '⚙️', label: 'Methods & Settings', group: 'Configure' },
             { id: 'sa-stationarizer', icon: '〜', label: 'Stationarizer', group: 'Configure' },
             { id: 'sa-surrogate', icon: '🎲', label: 'Surrogate Test', group: 'Configure' },
+            { id: 'sa-compute', icon: '🖥', label: 'Compute', group: 'Configure' },
             { id: 'run-analysis', icon: '▶', label: 'Run Analysis', group: 'Execute' },
         ];
     }
@@ -3342,14 +3346,21 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <div class="form-row"><span class="form-label">Method</span><select class="form-select" data-param="surr_method"><option value="iaaft">IAAFT</option><option value="aaft">AAFT</option><option value="shuffle">Shuffle</option></select></div>
             <div class="form-row"><span class="form-label">N surrogates</span><input class="form-input" data-param="surr_n" type="number" value="100" style="width:90px"></div>
             <div class="form-row"><span class="form-label">Alpha</span><input class="form-input" data-param="surr_alpha" type="number" value="0.05" step="0.01" style="width:90px"></div>
-            ${_sahint('Empirical significance is estimated by comparing each statistic against a surrogate null distribution.')}`);
+            ${_sahint('Empirical significance is estimated by comparing each statistic against a surrogate null distribution.')}
+            ${_sahead('Early stopping')}
+            ${_sacheck('early_stop', 'Stop when a pair can no longer be significant')}
+            <div class="form-row"><span class="form-label">Chunk size</span><input class="form-input" data-param="early_stop_chunk" type="number" value="10" min="1" style="width:90px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">surrogates</span></div>
+            ${_sahint('Sequential test (Besag &amp; Clifford 1991): surrogates run in chunks; a pair stops once too many surrogates reach its statistic to ever reach alpha. Same significance decisions as the full test, fewer surrogates for uncoupled pairs.')}`);
 
         // 4. Compute / parallelization (batch)
         if (id === 'sa-compute') return wrap(`
             ${_sahead('CPU')}
             <div class="form-row"><span class="form-label">CPU Workers</span>
                 <input class="form-input" data-param="n_jobs" type="number" value="1" min="-1" step="1" style="width:90px"></div>
-            ${_sahint('Pairs are analysed in parallel across this many CPU cores (joblib). <b>1</b> = serial, with per-method live progress. <b>-1</b> = all cores. More workers help only when there are several pairs; each worker runs one full pair (all methods).')}`);
+            ${_sahint('Pairs are analysed in parallel across this many CPU cores (joblib). <b>1</b> = serial, with per-method live progress. <b>-1</b> = all cores. More workers help only when there are several pairs; each worker runs one full pair (all methods).')}
+            ${_sahead('GPU')}
+            ${_sacheck('ccm_gpu', 'Use GPU for the CCM surrogate test')}
+            ${_sahint('Requires an NVIDIA GPU with CuPy installed; otherwise CCM runs on the CPU path automatically. With GPU on, pairs run in one process (CPU workers is set to 1).')}`);
     }
 
     // ── FASTIA: DETECTION PARAMETERS ────────────

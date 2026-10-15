@@ -1553,9 +1553,13 @@ class cornealia :
 
     def collective_order_batch(self, folder_path, n_workers=1,
                            extensions=('.jpg', '.jpeg', '.png', '.tiff', '.bmp'),
-                           progress_cb=None, save_full=False):
+                           progress_cb=None, save_full=False, cancel_evt=None):
         """
         Batch process all images in a folder.
+
+        cancel_evt : threading.Event, optional
+            When set (GUI Stop), no further images are started; images already finished are
+            returned and ``self.last_batch_cancelled`` is True.
         
         Parameters
         ----------
@@ -1583,12 +1587,17 @@ class cornealia :
         n_failed = 0
         results = []
         total = len(image_paths)
+        self.last_batch_cancelled = False
+        _stop = lambda: cancel_evt is not None and cancel_evt.is_set()
         pbar = tqdm(total=total, desc="Processing", unit="img",
                     bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} "
                             "[{elapsed}<{remaining}, {rate_fmt}] {postfix}")
 
         if n_workers <= 1:
             for idx, img_path in enumerate(image_paths):
+                if _stop():
+                    self.last_batch_cancelled = True
+                    break
                 pbar.set_postfix_str(img_path.name, refresh=False)
                 r = self._collective_order_safe(img_path)
                 if 'error' in r:
@@ -1655,6 +1664,10 @@ class cornealia :
                                     phase=f"Image {idx}/{total}",
                                     message=Path(r['image_path']).name,
                                     n_failed=n_failed)
+                    if _stop():
+                        self.last_batch_cancelled = True
+                        pool.terminate()        # stop the workers; unfinished images are dropped
+                        break
 
         pbar.close()
         self.verbose = original_verbose

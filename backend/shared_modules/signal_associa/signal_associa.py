@@ -92,6 +92,10 @@ class Associa:
             surrogate     : dict — passed to SurrogateGenerator()
             methods       : dict — {method_name: {method_config + signal_version + n_surrogates}}
             seed          : int  — base random seed (default None)
+            early_stopping: dict — optional sequential surrogate test (Besag & Clifford 1991):
+                            {'enabled': False, 'chunk': 10, 'alpha': 0.05}. Surrogates are run in
+                            chunks; a pair stops as soon as enough surrogates reach the real statistic
+                            that it can no longer be significant at alpha with n_surrogates.
         """
         cfg = config or {}
 
@@ -99,6 +103,7 @@ class Associa:
         self.surrogate_gen = SurrogateGenerator(cfg.get('surrogate'))
         self.method_configs = cfg.get('methods', {'ccm': {}, 'granger_causality': {}})
         self.seed = cfg.get('seed', None)
+        self.early_stopping = cfg.get('early_stopping') or {}
 
         _load_methods()
 
@@ -205,6 +210,11 @@ class Associa:
         real_stat = real_result.get('statistic', np.nan)
         seed = self.seed
 
+        # ── Optional early stopping (same null statistics, computed chunk by chunk) ──
+        if self.early_stopping.get('enabled', False):
+            return self._run_surrogates_early(method_name, func, sx, sy, n_surrogates,
+                                              method_cfg, real_stat)
+
         # ── CCM special path: batch surrogate testing ──
         if method_name == 'ccm' and method_cfg.get('gpu_enabled', False):
             batch_func = METHOD_FUNCTIONS.get('_ccm_batch_surr')
@@ -258,6 +268,62 @@ class Associa:
             'effect_size': _effect_size(real_stat, valid),
         }
 
+    def _null_chunk(self, method_name: str, func, sx: np.ndarray, sy: np.ndarray,
+                    k: int, seed, method_cfg: Dict) -> np.ndarray:
+        """Null statistics for k surrogates of X (GPU or vectorized CPU CCM, else serial)."""
+        batch_func = METHOD_FUNCTIONS.get('_ccm_batch_surr') if method_name == 'ccm' else None
+        if batch_func is not None and method_cfg.get('gpu_enabled', False):
+            surr = self.surrogate_gen.generate_batch_gpu(sx, k, seed)
+            null = batch_func(surr if hasattr(surr, '__cuda_array_interface__') else np.asarray(surr),
+                              sy, config=method_cfg)
+        elif batch_func is not None:
+            null = batch_func(self.surrogate_gen.generate_batch(sx, k, seed), sy, config=method_cfg)
+        else:
+            surr = self.surrogate_gen.generate_batch(sx, k, seed)
+            null = [func(surr[i], sy, method_cfg if method_cfg else None).get('statistic', np.nan)
+                    for i in range(k)]
+        return np.asarray(null, dtype=np.float64)
+
+    def _run_surrogates_early(self, method_name: str, func, sx: np.ndarray, sy: np.ndarray,
+                              n_surrogates: int, method_cfg: Dict, real_stat: float) -> Dict:
+        """Sequential surrogate test (Besag & Clifford 1991). Stops once more than e_max
+        surrogates reach the real statistic, where e_max is the largest exceedance count that
+        would still be significant at alpha with n_surrogates; such pairs cannot become
+        significant, so further surrogates cannot change the decision."""
+        chunk = max(int(self.early_stopping.get('chunk', 10)), 1)
+        alpha = float(self.early_stopping.get('alpha', 0.05))
+        e_max = _max_significant_exceedances(n_surrogates, alpha)
+        if not np.isfinite(real_stat):
+            return {'null_distribution': [], 'p_empirical': 1.0, 'n_surrogates': 0,
+                    'stopped_early': False}
+        nulls, exceed, used, stopped = [], 0, 0, False
+        for c0 in range(0, n_surrogates, chunk):
+            k = min(chunk, n_surrogates - c0)
+            s_seed = None if self.seed is None else int(self.seed) + c0
+            null = self._null_chunk(method_name, func, sx, sy, k, s_seed, method_cfg)
+            null = null[np.isfinite(null)]
+            nulls.append(null)
+            exceed += int(np.sum(null >= real_stat))
+            used += len(null)
+            if exceed > e_max:
+                stopped = True
+                break
+        if used == 0:
+            return {'null_distribution': [], 'p_empirical': 1.0, 'n_surrogates': 0,
+                    'stopped_early': stopped}
+        valid = np.concatenate(nulls)
+        p_emp = exceed / used if stopped else (exceed + 1) / (used + 1)
+        return {
+            'null_distribution': valid.tolist(),
+            'p_empirical': float(p_emp),
+            'n_surrogates': int(used),
+            'n_surrogates_max': int(n_surrogates),
+            'stopped_early': bool(stopped),
+            'surrogate_mean': float(np.mean(valid)),
+            'surrogate_std': float(np.std(valid)),
+            'effect_size': _effect_size(real_stat, valid),
+        }
+
     def _build_summary(self, results: Dict) -> List[Dict]:
         """
         Build a quick-look summary table from all method results.
@@ -291,6 +357,14 @@ class Associa:
 # ═════════════════════════════════════════════════════════════
 # UTILITIES
 # ═════════════════════════════════════════════════════════════
+
+def _max_significant_exceedances(n_max: int, alpha: float) -> int:
+    """Largest number of surrogates >= real that is still significant with n_max surrogates."""
+    e = -1
+    while (e + 2) / (n_max + 1) < alpha:
+        e += 1
+    return e
+
 
 def _empirical_pvalue(real_stat: float, null_distribution: np.ndarray) -> float:
     """
