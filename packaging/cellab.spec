@@ -15,12 +15,16 @@ import sys
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_all
 
 block_cipher = None
+
+# Platform tag for self-labeling artifact names
+_PLAT = {'win32': 'Win64', 'linux': 'Linux64', 'darwin': 'MacOS_ARM64'}.get(sys.platform, sys.platform)
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(SPEC)))  # parent of packaging/
 
 # Nuclear option: collect everything from packages with deep submodules
 skimage_datas, skimage_binaries, skimage_imports = collect_all('skimage')
 sm_datas, sm_binaries, sm_imports = collect_all('statsmodels')
-llama_datas, llama_binaries, llama_imports = collect_all('llama_cpp')
+arch_datas, arch_binaries, arch_imports = collect_all('arch')            # signal_associa
+pyinform_datas, pyinform_binaries, pyinform_imports = collect_all('pyinform')  # ships native lib
 
 a = Analysis(
     [os.path.join(base_dir, 'packaging', 'cellab_launcher.py')],
@@ -28,25 +32,21 @@ a = Analysis(
     binaries=[
         *skimage_binaries,
         *sm_binaries,
-        *llama_binaries,
-		# VC++ runtime DLLs for llama.cpp portability
-	    (r'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Redist\MSVC\14.51.36231\x64\Microsoft.VC145.CRT\msvcp140.dll', '.'),
-		(r'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Redist\MSVC\14.51.36231\x64\Microsoft.VC145.CRT\vcruntime140.dll', '.'),
-		(r'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Redist\MSVC\14.51.36231\x64\Microsoft.VC145.CRT\vcruntime140_1.dll', '.'),
-		(r'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Redist\MSVC\14.51.36231\x64\Microsoft.VC145.OpenMP\vcomp140.dll', '.'),
-	],
+        *arch_binaries,
+        *pyinform_binaries,
+    ],
     datas=[
         *skimage_datas,
         *sm_datas,
-        *llama_datas,
+        *arch_datas,
+        *pyinform_datas,
         # Frontend
         (os.path.join(base_dir, 'frontend'), 'frontend'),
         # Backend modules (released only)
         (os.path.join(base_dir, 'backend', 'cornealia'), os.path.join('backend', 'cornealia')),
         (os.path.join(base_dir, 'backend', 'shared_modules'), os.path.join('backend', 'shared_modules')),
         (os.path.join(base_dir, 'backend', 'orchestrators'), os.path.join('backend', 'orchestrators')),
-        (os.path.join(base_dir, 'backend', 'cellintella'), os.path.join('backend', 'cellintella')),
-        (os.path.join(base_dir, 'docs'), 'docs'),
+        (os.path.join(base_dir, 'backend', 'cellintella', '*.py'), os.path.join('backend', 'cellintella')),
         # Root files
         (os.path.join(base_dir, 'cellab.py'), '.'),
         (os.path.join(base_dir, 'backend', 'project_manager.py'), '.'),
@@ -57,7 +57,8 @@ a = Analysis(
     hiddenimports=[
         *skimage_imports,
         *sm_imports,
-        *llama_imports,
+        *arch_imports,
+        *pyinform_imports,
         # Web/GUI
         'flask',
         'webview',
@@ -106,8 +107,6 @@ a = Analysis(
         # OCR
         'easyocr',
         'torch',
-        # AI assistant
-        'llama_cpp',
         # Standard lib that PyInstaller may miss
         'tkinter',
         'tkinter.filedialog',
@@ -124,7 +123,8 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # Heavy packages not needed
+        # Heavy packages not needed for standard version
+        'llama_cpp',
         'sentence_transformers',
         'chromadb',
         'trackpy',
@@ -148,7 +148,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='CelLAB_AI_Win64',
+    name='CelLAB_' + _PLAT,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -166,5 +166,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='CelLAB_AI_Win64',
+    name='CelLAB_' + _PLAT,
 )
