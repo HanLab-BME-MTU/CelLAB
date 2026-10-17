@@ -1668,7 +1668,7 @@ function _buildAssociationRunsSection(sub, inserted) {
 
             runsHtml += `
             <div class="mtree-run-folder" data-run-id="${runId}">
-                <div class="mtree-item" onclick="toggleRunFolder(this.parentElement);selectMTreeItem('${sub.id}','${run.plotType}',this)" oncontextmenu="event.preventDefault();event.stopPropagation();${sub.moduleType === 'immunia' ? 'showIMMUNIAAssocRunMenu' : 'showAssocRunContextMenu'}(event,'${sub.id}','${runId}')" style="font-weight:600">
+                <div class="mtree-item" onclick="toggleRunFolder(this.parentElement);selectMTreeItem('${sub.id}','${run.plotType}',this)" oncontextmenu="event.preventDefault();event.stopPropagation();${sub.moduleType === 'immunia' ? (sub.stepId === 'graph_theory' ? 'showGTRunMenu' : 'showIMMUNIAAssocRunMenu') : 'showAssocRunContextMenu'}(event,'${sub.id}','${runId}')" style="font-weight:600">
                     <span class="run-folder-arrow" style="font-size:10px;width:14px;text-align:center;display:inline-block;flex-shrink:0">${arrowChar}</span>
                     <span class="mtree-item-icon" style="margin-left:0">📁</span>
                     <span style="flex:1;font-size:11px">${run.label}</span>
@@ -1778,6 +1778,10 @@ function renderModuleView(vp, sub, ws) {
                    (sub.moduleType === 'immunia' && sub.stepId === 'signal_association') ||
                    (sub.moduleType === 'immunia' && sub.stepId === 'graph_theory')) {
             initResultsHtml += _buildAssociationRunsSection(sub, inserted);
+        } else if (sub.moduleType === 'immunia' && sub.stepId === 'particle_tracking') {
+            const isTr = r => (r.plotType || '').startsWith('traffic_');
+            initResultsHtml += _buildResultsSection(sub, 'Kinematics Results', inserted.filter(r => !isTr(r)), statusIcons, 'kinematics');
+            initResultsHtml += _buildResultsSection(sub, 'Trafficking & Killing Results', inserted.filter(isTr), statusIcons, 'trafficking');
         } else {
             const isSignalAssocia = sub.moduleType === 'signal_associa_single' || sub.moduleType === 'signal_associa_batch';
             const resultsTitle = (isCellADE_init || isCellFADE_init) ? '3. Results' : (isSignalAssocia ? 'Results & Plots' : 'Results');
@@ -1982,6 +1986,10 @@ function renderModuleTree(sub) {
                    (sub.moduleType === 'immunia' && sub.stepId === 'signal_association') ||
                    (sub.moduleType === 'immunia' && sub.stepId === 'graph_theory')) {
             resultsHtml += _buildAssociationRunsSection(sub, inserted);
+        } else if (sub.moduleType === 'immunia' && sub.stepId === 'particle_tracking') {
+            const isTr = r => (r.plotType || '').startsWith('traffic_');
+            resultsHtml += _buildResultsSection(sub, 'Kinematics Results', inserted.filter(r => !isTr(r)), statusIcons, 'kinematics');
+            resultsHtml += _buildResultsSection(sub, 'Trafficking & Killing Results', inserted.filter(isTr), statusIcons, 'trafficking');
         } else {
             const resultsTitle = (isCellADE || isCellFADE) ? '3. Results' : 'Results';
             resultsHtml += _buildResultsSection(sub, resultsTitle, inserted, statusIcons, 'all');
@@ -2861,6 +2869,7 @@ function getModuleTreeItems(moduleType, stepId) {
         if (stepId === 'particle_tracking') return [
             { id: 'pt-motion', icon: '🏃', label: 'Motion Classification', group: 'Configure' },
             { id: 'pt-spatial', icon: '🗺', label: 'Spatial Analysis', group: 'Configure' },
+            { id: 'pt-trafficking', icon: '🚦', label: 'Trafficking & Killing', group: 'Configure' },
             { id: 'pt-advanced', icon: '⚙️', label: 'Advanced Settings', group: 'Configure' },
             { id: 'run-pt', icon: '▶', label: 'Run Analysis', group: 'Execute' },
         ];
@@ -3703,13 +3712,16 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
 
     if (id.startsWith('run_meta_') && moduleType === 'immunia') {
         const ws0 = getActiveWorkspace();
-        const sub0 = ws0?.subtabs.get(ws0?.activeSubtab);
+        // Use the subtab of THIS step (the active one may be another step with its own runs)
+        const _act = ws0?.subtabs.get(ws0?.activeSubtab);
+        const sub0 = (_act && _act.stepId === stepId) ? _act
+            : ([...(ws0?.subtabs.values() || [])].find(s => s.stepId === stepId && s.insertedResults?.some(r => r.plotType === id)) || _act);
         const runItem = sub0?.insertedResults?.find(r => r.plotType === id);
         const meta = runItem?._runMeta || {};
         const runId = runItem?._runId || '';
 
         // ── GRAPH THEORY RUN INFO ──
-        if (sub0?.stepId === 'graph_theory') {
+        if (stepId === 'graph_theory' || sub0?.stepId === 'graph_theory') {
             const nets = (meta.network_types || []).join(', ');
             const modes = (meta.analysis_modes || []).join(', ');
             const methods = (meta.available_methods || []).join(', ');
@@ -3720,6 +3732,8 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
                     <div><span style="color:var(--text-tertiary)">Networks:</span> <b>${nets || '—'}</b></div>
                     <div><span style="color:var(--text-tertiary)">Methods:</span> ${methods || '—'}</div>
                     <div><span style="color:var(--text-tertiary)">Tracks:</span> ${meta.n_tracks || 0}</div>
+                    <div><span style="color:var(--text-tertiary)">Edges:</span> ${meta.edge_rule === 'threshold' ? 'ρ > threshold' : (meta.edge_rule ? 'p < ' + (meta.alpha ?? 0.05) : '—')}</div>
+                    <div><span style="color:var(--text-tertiary)">Jitter exclusion:</span> ${meta.min_extent_um ? 'extent ≥ ' + meta.min_extent_um + ' µm' : 'off'}</div>
                     <div><span style="color:var(--text-tertiary)">Analyses:</span> ${modes || '—'}</div>
                     <div><span style="color:var(--text-tertiary)">Source Runs:</span> ${Array.isArray(meta.source_runs) ? meta.source_runs.length + ' selected' : 'all'}</div>
                     <div><span style="color:var(--text-tertiary)">Date:</span> ${meta.timestamp ? new Date(meta.timestamp).toLocaleString() : '—'}</div>
@@ -3734,6 +3748,20 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
                     <button class="btn btn-default" onclick="insertGTRunPlot('${runId}','node_distributions')" style="text-align:left;font-size:var(--fs-xs)">📉 Node Distributions</button>
                     <button class="btn btn-default" onclick="insertGTRunPlot('${runId}','comparative_summary')" style="text-align:left;font-size:var(--fs-xs)">⚖ Comparative Summary</button>
                 </div>
+                <div style="padding:4px 0;margin:8px 0 4px;border-bottom:1px solid var(--chrome-border);font-size:var(--fs-xs);font-weight:700;color:var(--brand-accent);text-transform:uppercase;letter-spacing:.5px">Network Video</div>
+                <div class="form-row"><span class="form-label">Glow by</span><select class="form-select" id="gtVidMetric">
+                    <option value="eigenvector_sqrtN" selected>Eigenvector × √N</option>
+                    <option value="degree">Degree (coupled cells)</option>
+                    <option value="betweenness">Betweenness (relay)</option>
+                    <option value="clustering">Clustering (local grouping)</option>
+                    <option value="pagerank">PageRank</option>
+                </select></div>
+                <div class="form-row"><span class="form-label">Background</span><select class="form-select" id="gtVidBg">
+                    ${ANIM_BACKGROUNDS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
+                </select></div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);cursor:pointer"><input type="checkbox" id="gtVidEdges" checked> Show coupling edges</label>
+                <button class="btn btn-primary" onclick="insertGTNetworkVideo('${runId}')" style="font-size:var(--fs-xs)">🎬 Render video</button>
+                <p style="font-size:var(--fs-xs);color:var(--text-tertiary)">Each combination is saved as its own video in this run's folder.</p>
                 <div style="padding:4px 0;margin:8px 0 4px;border-bottom:1px solid var(--chrome-border);font-size:var(--fs-xs);font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px">Actions</div>
                 <button class="btn btn-default" onclick="deleteGTRun('${sub0?.id}','${runId}')" style="color:var(--status-error);font-size:var(--fs-xs)">🗑 Delete This Run</button>
             </div>`;
@@ -4599,6 +4627,26 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
         <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:10px">Movie File</p>
         <div style="display:flex;gap:4px;align-items:center;margin-bottom:8px"><input class="form-input" data-param="input_file" id="movieFileInput" placeholder="Select file..." readonly style="flex:1;min-width:0;font-size:var(--fs-xs)"><button class="btn btn-default" onclick="selectInputFile(this)" style="flex-shrink:0;white-space:nowrap">Browse</button></div>
         <div class="form-row"><span class="form-label">Format</span><select class="form-select" data-param="format"><option>TIFF Stack</option><option>ND2</option><option>CZI</option><option>PNG Sequence</option></select></div>
+        <div style="margin-top:10px;font-size:var(--fs-xs);font-weight:700;color:var(--brand-accent);text-transform:uppercase;letter-spacing:.5px">Stack layout</div>
+        <div class="form-row"><span class="form-label">Axis order</span><select class="form-select" data-param="axis_order">
+            <option value="auto" selected>Auto (from file)</option>
+            <option value="TZCYX">T Z C Y X (ImageJ)</option>
+            <option value="TCZYX">T C Z Y X (OME)</option>
+            <option value="ZTCYX">Z T C Y X</option>
+            <option value="CTZYX">C T Z Y X</option>
+            <option value="TCYX">T C Y X (2-D)</option>
+            <option value="CTYX">C T Y X</option>
+            <option value="TZYX">T Z Y X (1 channel)</option>
+            <option value="ZCYX">Z C Y X (1 time point)</option>
+            <option value="TYX">T Y X (1 channel)</option>
+        </select></div>
+        <div class="form-row"><span class="form-label">Z projection</span><select class="form-select" data-param="z_projection">
+            <option value="max" selected>Maximum intensity</option>
+            <option value="mean">Mean intensity</option>
+            <option value="middle">Middle slice only</option>
+            <option value="first">First slice only</option>
+        </select></div>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary)">Z-stacks are projected to 2-D: this version of IMMUNIA analyzes 2-D movies.</p>
         <div style="margin-top:12px;display:flex;gap:8px">
             <button class="btn btn-primary" onclick="doImportMovie()">📥 Import Movie</button>
         </div>
@@ -4672,7 +4720,9 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             const sub0 = ws0?.subtabs.get(ws0?.activeSubtab);
             const importSub = [...(ws0?.subtabs.values() || [])].find(s => s.stepId === 'import' && s.pipelineId === sub0?.pipelineId);
             const chParams = importSub?._localParams?.['channel-setup'] || {};
-            const chIdx = chParams[`${role.key}_channel_idx`] || '?';
+            const _dflt = { dead: 0, tumor: 1, tissue: 2, nk: 3 }[role.key];
+            const _ci = chParams[`${role.key}_channel_idx`];
+            const chIdx = (_ci !== undefined && _ci !== '') ? _ci : `${_dflt} (default)`;
             const chName = chParams[`${role.key}_channel_name`] || role.label;
 
             const _segHtml = wrap(`
@@ -4680,6 +4730,15 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <p style="font-size:10px;color:var(--text-tertiary);margin-bottom:8px">${role.desc}</p>
             <div style="font-size:var(--fs-xs);color:${role.color};margin-bottom:10px;padding:4px 8px;background:${role.color}10;border:1px solid ${role.color}30;border-radius:var(--r-sm)">Channel ${chIdx}: <strong>${chName}</strong></div>
 
+            <div class="form-row"><span class="form-label">Output</span><select class="form-select" data-param="${role.key}_separate_objects" onchange="immuniaSegOutputChanged('${role.key}', this.value)">
+                <option value="true"${role.separate ? ' selected' : ''}>Individual objects</option>
+                <option value="false"${!role.separate ? ' selected' : ''}>Area mask</option>
+            </select></div>
+            <div class="form-row"><span class="form-label">Temporal</span><select class="form-select" data-param="${role.key}_temporal_mode">
+                <option value="all"${role.key !== 'tumor' ? ' selected' : ''}>Dynamic (every frame)</option>
+                <option value="union5"${role.key === 'tumor' ? ' selected' : ''}>Static (one mask)</option>
+            </select></div>
+            <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin:-4px 0 8px">Individual objects = labelled cells for tracking/counting; area mask = presence only. Static = one mask from the start, middle and end frames.</p>
             <div class="form-row"><span class="form-label">Threshold Factor</span><input class="form-input" data-param="${role.key}_threshold_factor" type="number" step="0.05" value="${role.threshFactor}" style="width:70px" id="tf_${role.key}"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">× Otsu</span></div>
             <div class="form-row"><span class="form-label">Min Object Size</span><input class="form-input" data-param="${role.key}_min_size" type="number" step="1" value="${role.minSize}" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
             <div class="form-row"><span class="form-label">Gaussian Sigma</span><input class="form-input" data-param="${role.key}_gaussian_sigma" type="number" step="0.5" value="2.0" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
@@ -4690,6 +4749,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
                 <option value="clahe_global">CLAHE + Otsu</option>
                 <option value="manual">Manual Threshold</option>
                 <option value="min_max">Min/Max Clip + Otsu</option>
+                <option value="cellade">CellADE</option>
             </select></div>
             <div id="segManualFields_${role.key}" style="display:none">
                 <div class="form-row"><span class="form-label">Threshold Value</span><input class="form-input" data-param="${role.key}_manual_threshold" type="number" step="1" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">raw intensity</span></div>
@@ -4698,8 +4758,40 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
                 <div class="form-row"><span class="form-label">Intensity Min</span><input class="form-input" data-param="${role.key}_intensity_min" type="number" step="1" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">remove below</span></div>
                 <div class="form-row"><span class="form-label">Intensity Max</span><input class="form-input" data-param="${role.key}_intensity_max" type="number" step="1" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">clip above</span></div>
             </div>
-            <div class="form-row"><span class="form-label">Output</span><span style="font-size:var(--fs-xs);color:${role.separate ? '#66bb6a' : 'var(--text-tertiary)'};font-weight:600">${role.output}</span></div>
-            <input type="hidden" data-param="${role.key}_separate_objects" value="${role.separate}">
+            ${(() => {
+                const cd = { nk: { fcm: 0.4, smin: 2,  smax: 8,  lt: 0.02, ms: 2,  tm: 'all' },
+                             tumor: { fcm: 0.2, smin: 10, smax: 20, lt: 0.01, ms: 10, tm: 'union5' },
+                             dead: { fcm: 0.4, ms: 3, tm: 'union5' }, tissue: { fcm: 0.8, ms: 10, tm: 'all' } }[role.key];
+                const k = role.key;
+                return `<div id="segCelladeFields_${k}" style="display:none;margin:6px 0;padding:6px 8px;border:1px dashed var(--chrome-border);border-radius:4px">
+                <div style="font-size:var(--fs-xs);color:var(--text-tertiary);font-weight:700;margin-bottom:4px">CellADE settings (defaults = paper)</div>
+                <div class="form-row"><span class="form-label">FCM threshold</span><input class="form-input" data-param="${k}_cellade_fcm_threshold" type="number" step="0.05" value="${cd.fcm}" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">foreground membership</span></div>
+                <div class="form-row"><span class="form-label">CLAHE clip</span><input class="form-input" data-param="${k}_cellade_clahe_clip" type="number" step="0.01" value="0.03" style="width:70px"></div>
+                <div class="form-row"><span class="form-label">Min area</span><input class="form-input" data-param="${k}_cellade_min_size" type="number" step="1" value="${cd.ms}" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
+                <div id="segCelladeMode_${k}" style="display:${role.separate ? 'none' : ''}">
+                <div class="form-row"><span class="form-label">Mode</span><select class="form-select" data-param="${k}_cellade_mode" onchange="immuniaCelladeModeChanged('${k}', this.value)">
+                    <option value="standard" selected>Standard (FCM)</option>
+                    <option value="holes">Substrate holes</option>
+                </select></div>
+                <div id="segCelladeHoles_${k}" style="display:none">
+                    <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin:0 0 6px">Finds large empty holes (dark after smoothing) and keeps everything else as substrate — for holes filled with noise as bright as real tissue.</p>
+                    <div class="form-row"><span class="form-label">Hole shape</span><select class="form-select" data-param="${k}_cellade_hole_shape">
+                        <option value="free" selected>Free form (local split per seed)</option>
+                        <option value="circle">Circles</option>
+                    </select></div>
+                    <div class="form-row"><span class="form-label">Smoothing</span><input class="form-input" data-param="${k}_cellade_hole_smooth_px" type="number" step="1" value="15" style="width:60px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px mean filter (fills small gaps)</span></div>
+                    <div class="form-row"><span class="form-label">Hole radius</span><input class="form-input" data-param="${k}_cellade_hole_min_radius" type="number" step="5" value="20" style="width:55px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">to</span><input class="form-input" data-param="${k}_cellade_hole_max_radius" type="number" step="5" value="120" style="width:60px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
+                    <div class="form-row"><span class="form-label">LoG threshold</span><input class="form-input" data-param="${k}_cellade_hole_log_threshold" type="number" step="0.01" value="0.05" style="width:60px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">lower = more holes</span></div>
+                    <div class="form-row"><span class="form-label">Radius scale</span><input class="form-input" data-param="${k}_cellade_hole_radius_scale" type="number" step="0.05" value="1.0" style="width:60px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">&gt;1 grows, &lt;1 shrinks each hole</span></div>
+                </div>
+                </div>
+                <div id="segCelladeObj_${k}" style="display:${role.separate ? '' : 'none'}">
+                <div class="form-row"><span class="form-label">LoG σ range</span><input class="form-input" data-param="${k}_cellade_log_min_sigma" type="number" step="1" value="${cd.smin}" style="width:50px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">to</span><input class="form-input" data-param="${k}_cellade_log_max_sigma" type="number" step="1" value="${cd.smax}" style="width:50px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px (cell radius ≈ σ√2)</span></div>
+                <div class="form-row"><span class="form-label">LoG threshold</span><input class="form-input" data-param="${k}_cellade_log_threshold" type="number" step="0.005" value="${cd.lt}" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">seed sensitivity</span></div>
+                <div class="form-row"><span class="form-label">Remove meshes</span><select class="form-select" data-param="${k}_cellade_remove_spaghetti"><option value="true" selected>Yes (spaghetti ratio &gt; 3)</option><option value="false">No</option></select></div>
+                </div>
+                </div>`;
+            })()}
 
             <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);box-shadow:inset 0 1px 0 rgba(255,255,255,.03);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px">Preview</div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
@@ -4712,6 +4804,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
                 Set parameters, select a frame, then click Preview.
             </div>
             `);
+            _immuniaSegSyncVisibility(role.key);
             return _segHtml;
         }
     }
@@ -4741,8 +4834,8 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
         <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Linking Parameters</p>
         <p style="${_u};margin-bottom:10px">Controls how detections are linked across frames into trajectories.</p>
         <div class="form-row"><span class="form-label">Linking Method</span><select class="form-select" data-param="link_method">
-            <option value="laptrack" selected>LapTrack — global assignment + gap closing (recommended)</option>
-            <option value="trackpy">trackpy — frame-to-frame</option>
+            <option value="laptrack" selected>LapTrack (recommended)</option>
+            <option value="trackpy">trackpy</option>
         </select></div>
         <div class="form-row"><span class="form-label">Search Range</span><input class="form-input" data-param="search_range" type="number" step="1" value="25" style="width:70px"><span style="${_u}">px max displacement per frame</span></div>
         <p style="${_u};margin:8px 0 2px;font-weight:600">LapTrack</p>
@@ -4892,10 +4985,22 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
         <div class="form-row"><span class="form-label">Temporal Networks</span><select class="form-select" data-param="gt_use_temporal"><option value="true">Yes</option><option value="false" selected>No</option></select><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">co-occurrence (slow)</span></div>
 
         <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Thresholds</div>
+        <div class="form-row"><span class="form-label">Edges</span><select class="form-select" data-param="gt_edge_rule">
+            <option value="significant" selected>Significant pairs (p &lt; α)</option>
+            <option value="threshold">Strength above threshold</option>
+        </select></div>
+        <div class="form-row"><span class="form-label">α</span><input class="form-input" data-param="gt_alpha" type="number" step="0.01" value="0.05" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">for significant pairs</span></div>
+        <div class="form-row"><span class="form-label">Min track extent</span><input class="form-input" data-param="gt_min_extent_um" type="number" step="10" value="100" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">µm · excludes jittering cells (0 = keep all)</span></div>
+        <div class="form-row"><span class="form-label">Pixel size</span><input class="form-input" data-param="gt_pixel_to_um" type="number" step="0.01" value="2.4748" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">µm/px</span></div>
         <div class="form-row"><span class="form-label">CCM Threshold</span><input class="form-input" data-param="ccm_threshold" type="number" step="0.05" value="0.3" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">ρ min edge weight</span></div>
         <div class="form-row"><span class="form-label">GC p-value</span><input class="form-input" data-param="gc_threshold" type="number" step="0.01" value="0.05" style="width:70px"></div>
         <div class="form-row"><span class="form-label">Spatial Radius</span><input class="form-input" data-param="spatial_radius" type="number" step="10" value="100" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
         <div class="form-row"><span class="form-label">Temporal Window</span><input class="form-input" data-param="temporal_window" type="number" step="1" value="10" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">frames</span></div>
+
+        <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Clustering null model</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);cursor:pointer"><input type="checkbox" data-param="gt_null_model"> Compare clustering with degree-preserving random networks</label>
+        <div class="form-row"><span class="form-label">Randomisations</span><input class="form-input" data-param="gt_null_reps" type="number" step="1" value="20" style="width:70px"></div>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary)">Reports clustering ÷ null (and ÷ the random-graph expectation, the edge density). Slower for dense networks. Node metrics also include <b>degree</b> (distinct coupled cells) and <b>eigenvector × √N</b>, comparable across movies.</p>
         `);
     }
 
@@ -4984,6 +5089,17 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
         `);
     }
 
+    if (moduleType === 'immunia' && id === 'pt-trafficking') {
+        return wrap(`
+        <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Trafficking &amp; Killing</p>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Each track position is placed in a tumor region, the substrate (vessel) or the ECM; uses the pixel size and time interval from Spatial Analysis.</p>
+        <div class="form-row"><span class="form-label">Run</span><select class="form-select" data-param="pt_trafficking"><option value="true" selected>Yes</option><option value="false">No</option></select></div>
+        <div class="form-row"><span class="form-label">Tumor region</span><input class="form-input" data-param="pt_tumor_region_scale" type="number" step="0.05" value="1.3" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">× tumor radius (1.3 = 30 % margin)</span></div>
+        <div class="form-row"><span class="form-label">Arrest speed</span><input class="form-input" data-param="pt_arrest_speed" type="number" step="0.5" value="2.0" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">µm/min (slower = arrested)</span></div>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary)">Regions per frame: tumor region &gt; substrate (vessel) &gt; ECM. Gives tortuosity, persistence time, arrest, chemotactic index toward the nearest tumor, time to reach a tumor, a substrate → ECM → tumor funnel, and NK presence + cytotoxicity (Sytox area) per tumor region over time. Saved as CSV/JSON in the results folder.</p>
+        `);
+    }
+
     if (moduleType === 'immunia' && id === 'pt-spatial') {
         return wrap(`
         <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Spatial Analysis</p>
@@ -5014,59 +5130,51 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
     if (moduleType === 'immunia' && id === 'ks-source') {
         return wrap(`
         <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Chemoattractant Source</p>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Define where the chemoattractant signal originates — the tumor-tissue interface or entire tumor bulk.</p>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Where the tumor-derived signal is released.</p>
         <div class="form-row"><span class="form-label">Source Type</span><select class="form-select" data-param="source_type">
-            <option value="interface" selected>Interface (tumor boundary)</option>
-            <option value="tumor">Tumor (entire region)</option>
+            <option value="tumor" selected>Tumor (entire region)</option>
+            <option value="interface">Interface (tumor boundary)</option>
         </select></div>
-        <div class="form-row"><span class="form-label">Source Strength</span><input class="form-input" data-param="source_strength" type="number" step="1" value="10" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">intensity multiplier</span></div>
-        <div class="form-row"><span class="form-label">Tumor Expansion</span><input class="form-input" data-param="tumor_expansion_percent" type="number" step="1" value="10" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">% radius expansion</span></div>
+        <div class="form-row"><span class="form-label">Source Strength</span><input class="form-input" data-param="source_strength" type="number" step="0.1" value="1" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">multiplier on S(x)</span></div>
+        <div class="form-row"><span class="form-label">Tumor Expansion</span><input class="form-input" data-param="tumor_expansion_percent" type="number" step="1" value="10" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">% of radius (validation regions)</span></div>
         <div class="form-row"><span class="form-label">Enforce Tissue Mask</span><select class="form-select" data-param="enforce_tissue_mask">
-            <option value="true" selected>Yes</option>
-            <option value="false">No</option>
+            <option value="false" selected>No (whole field, fast)</option>
+            <option value="true">Yes (within tissue)</option>
         </select></div>
-        <div class="form-row"><span class="form-label">Analysis Modes</span><select class="form-select" data-param="analysis_modes">
-            <option value="steady_state" selected>Steady State only</option>
-            <option value="both">Steady State + Transient</option>
-        </select></div>
-        <div class="form-row"><span class="form-label">Initial Condition N₀</span><select class="form-select" data-param="n0_source">
-            <option value="cumulative" selected>Cumulative Presence (all frames)</option>
-            <option value="first_frames">First N Frames</option>
-            <option value="uniform">Uniform (tissue-wide)</option>
-        </select></div>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px"><strong>Interface:</strong> chemoattractant released at tumor-tissue boundary. <strong>Tumor:</strong> entire tumor region as source. Expansion grows the integration region around each tumor for validation.</p>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px"><strong>Tumor:</strong> the whole tumor area secretes (as in the paper). <strong>Interface:</strong> only the tumor boundary. Without a tissue mask the field is solved exactly in ~0.1 s; with it, a sparse solver takes longer.</p>
         `);
     }
 
     if (moduleType === 'immunia' && id === 'ks-pde') {
         return wrap(`
-        <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">PDE Parameters</p>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Keller-Segel model: D<sub>C</sub>∇²C + S − μC = 0 (chemoattractant) and N = N₀·exp(χ/D<sub>N</sub>·C) (cell density).</p>
-
-        <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:8px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Chemoattractant</div>
-        <div class="form-row"><span class="form-label">D<sub>C</sub> (diffusion)</span><input class="form-input" data-param="D_C" type="number" step="10" value="100" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px²/step</span></div>
-        <div class="form-row"><span class="form-label">μ (degradation)</span><input class="form-input" data-param="mu" type="number" step="0.01" value="0.1" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">1/step</span></div>
-
+        <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Model Parameters</p>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Steady state of D<sub>C</sub>∇²C + S − μC = 0, then NK cells move by Langevin dynamics: dx = χ∇C dt + √(2D<sub>N</sub>dt) ξ.</p>
+        <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Chemoattractant</div>
+        <div class="form-row"><span class="form-label">D<sub>C</sub> (diffusion)</span><input class="form-input" data-param="D_C" type="number" step="10" value="100" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px²</span></div>
+        <div class="form-row"><span class="form-label">μ (degradation)</span><input class="form-input" data-param="mu" type="number" step="0.01" value="0.1" style="width:80px"></div>
         <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#ffa726;text-transform:uppercase;letter-spacing:1px">Cell Response</div>
-        <div class="form-row"><span class="form-label">χ (chemotaxis)</span><input class="form-input" data-param="chi" type="number" step="0.5" value="5.0" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">sensitivity</span></div>
-        <div class="form-row"><span class="form-label">D<sub>N</sub> (cell diffusion)</span><input class="form-input" data-param="D_N" type="number" step="0.1" value="1.0" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px²/step</span></div>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">χ/D<sub>N</sub> ratio controls accumulation strength. Higher χ = stronger chemotaxis. Higher D<sub>N</sub> = more diffuse cells.</p>
+        <div class="form-row"><span class="form-label">χ (chemotaxis)</span><input class="form-input" data-param="chi" type="number" step="0.5" value="5.0" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">µm²/(min·conc)</span></div>
+        <div class="form-row"><span class="form-label">D<sub>N</sub> (cell diffusion)</span><input class="form-input" data-param="D_N" type="number" step="0.1" value="1.0" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">µm²/min</span></div>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">χ/D<sub>N</sub> sets how strongly cells accumulate near tumors.</p>
         `);
     }
 
     if (moduleType === 'immunia' && id === 'ks-solver') {
         return wrap(`
-        <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Solver Settings</p>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Numerical solver parameters for the PDE solution.</p>
-        <div class="form-row"><span class="form-label">dx (spatial step)</span><input class="form-input" data-param="dx" type="number" step="0.1" value="1.0" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
-        <div class="form-row"><span class="form-label">dt (time step)</span><input class="form-input" data-param="ks_dt" type="number" step="0.001" value="0.01" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">stability: dt < dx²/4D</span></div>
-        <div class="form-row"><span class="form-label">Max Iterations</span><input class="form-input" data-param="max_iter" type="number" step="1000" value="10000" style="width:80px"></div>
-        <div class="form-row"><span class="form-label">Tolerance</span><input class="form-input" data-param="tolerance" type="number" step="0.0000001" value="0.000001" style="width:80px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">convergence</span></div>
-
-        <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Transient (if enabled)</div>
-        <div class="form-row"><span class="form-label">T<sub>max</sub></span><input class="form-input" data-param="T_max" type="number" step="10" value="100" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">time steps</span></div>
-        <div class="form-row"><span class="form-label">dt (transient)</span><input class="form-input" data-param="transient_dt" type="number" step="0.001" value="0.01" style="width:70px"></div>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Stability: dt must be < dx²/(4·D<sub>C</sub>). With defaults: 0.01 < 1/(4·100) = 0.0025 — adjust dt or D<sub>C</sub> if solver diverges.</p>
+        <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Simulation Settings</p>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Grid, units and the Langevin simulation that predicts NK presence per tumor.</p>
+        <div class="form-row"><span class="form-label">dx (grid step)</span><input class="form-input" data-param="dx" type="number" step="0.1" value="1.0" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px</span></div>
+        <div class="form-row"><span class="form-label">Pixel size</span><input class="form-input" data-param="ks_pixel_to_um" type="number" step="0.01" value="2.4748" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">µm/px</span></div>
+        <div class="form-row"><span class="form-label">Frame interval</span><input class="form-input" data-param="ks_frame_to_min" type="number" step="0.5" value="5" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">min/frame</span></div>
+        <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Langevin</div>
+        <div class="form-row"><span class="form-label">Steps</span><input class="form-input" data-param="n_steps" type="number" step="1" placeholder="all frames" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">blank = movie length</span></div>
+        <div class="form-row"><span class="form-label">Replicates</span><input class="form-input" data-param="n_replicates" type="number" step="1" value="3" style="width:70px"></div>
+        <div class="form-row"><span class="form-label">Initial frames</span><input class="form-input" data-param="n_initial_frames" type="number" step="1" value="5" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">only if tracks are missing</span></div>
+        <div class="form-row"><span class="form-label">Tumor interior</span><select class="form-select" data-param="exclude_tumor_interior">
+            <option value="false" selected>Allowed</option>
+            <option value="true">Excluded</option>
+        </select></div>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Each tracked cell enters at its first position and frame and leaves at its last; the simulated presence per tumor is compared with the measured presence (Spearman r).</p>
         `);
     }
 
@@ -6334,11 +6442,12 @@ const PLOT_FILENAME_MAP = {
     'pt_gr_fields':      'pt_gr_fields',
     'pt_gr_heatmap':     'pt_gr_heatmap',
     // IMMUNIA — keller-segel
-    'ks_fields':        'ks_fields',
-    'ks_correlation':   'ks_correlation',
-    'ks_density':       'ks_density',
-    'ks_presence':      'ks_presence',
-    'ks_overlay':       'ks_overlay',
+    'ks_fields':             'ks_fields',
+    'traffic_funnel': 'traffic_funnel', 'traffic_regions_map': 'traffic_regions_map',
+    'traffic_motility': 'traffic_motility', 'traffic_chemotaxis': 'traffic_chemotaxis',
+    'traffic_dwell': 'traffic_dwell', 'traffic_killing': 'traffic_killing',
+    'traffic_presence_killing': 'traffic_presence_killing',
+    'enrichment_validation': 'enrichment_validation',
     // IMMUNIA — graph theory
     'gt_comprehensive':     'gt_comprehensive',
     'gt_metrics':           'gt_metrics',
@@ -6583,13 +6692,13 @@ function renderStageBoard(b) {
         if (s < 3600) return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
         return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
     };
-    const icon = { done: '✓', running: '⏳', pending: '○', failed: '✗' };
-    const color = { done: 'var(--status-ok)', running: 'var(--brand-accent)', pending: 'var(--text-tertiary)', failed: 'var(--status-error)' };
+    const icon = { done: '✓', running: '⏳', pending: '○', failed: '✗', skipped: '–' };
+    const color = { done: 'var(--status-ok)', running: 'var(--brand-accent)', pending: 'var(--text-tertiary)', failed: 'var(--status-error)', skipped: 'var(--text-tertiary)' };
     const cell = (label, val) => `<div style="flex:1;min-width:80px">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-tertiary)">${label}</div>
         <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text-secondary);font-family:var(--font-mono)">${val}</div></div>`;
     const stats = b.stats || {};
-    const nDone = (b.stages || []).filter(s => s.status === 'done').length;
+    const nDone = (b.stages || []).filter(s => s.status === 'done' || s.status === 'skipped').length;
     let html = `<div style="border:1px solid var(--chrome-border);border-radius:6px;overflow:hidden">`;
     html += `<div style="padding:6px 10px;background:var(--surface-3);font-weight:700;font-size:var(--fs-xs);color:var(--text-secondary);display:flex;justify-content:space-between">
         <span>${isDone ? `✅ ${b.title || 'Run'} — complete` : `⏳ ${b.title || 'Run'}`}</span>
@@ -11253,12 +11362,20 @@ async function doImportMovie() {
                 ? `${shape[0]} frames × ${shape[1]}×${shape[2]} px (single channel)`
                 : shape.join(' × ');
 
+            const si = data.stack_info || {};
+            const zWarn = si.projected
+                ? `<div style="margin-top:6px;padding:6px 8px;border:1px solid var(--status-warn, #ffa726);border-radius:4px;color:var(--status-warn, #ffa726)">
+                     ⚠ Z-stack detected (${si.z} slices, axes ${si.axes}). Projected to 2-D by <b>${si.z_projection}</b> intensity —
+                     this version of IMMUNIA analyzes 2-D movies. Change the projection under Stack layout if needed.</div>`
+                : '';
             _setStatusBox('importStatus', `
                 <span style="color:var(--status-ok)">✓ Movie loaded successfully</span><br>
                 <span style="opacity:.7">File:</span> ${filePath.split(/[/\\]/).pop()}<br>
+                ${si.raw_shape ? `<span style="opacity:.7">File shape:</span> ${si.raw_shape.join(' × ')} (${si.axes || '?'})<br>` : ''}
                 <span style="opacity:.7">Shape:</span> ${dims}<br>
                 <span style="opacity:.7">Frames:</span> ${data.n_frames}<br>
                 <span style="opacity:.7">Channels:</span> ${data.n_channels}
+                ${zWarn}
             `);
 
             // ── Persist file path so it survives tree item switches ──
@@ -11495,16 +11612,20 @@ function getAvailablePlots(moduleType, stepId) {
             { id: 'pt_gr_fields',     icon: '📡', label: 'g(r) Radial Distribution' },
             { id: 'pt_gr_heatmap',    icon: '🧱', label: 'g(r) Per-Tumor Heatmap' },
             { id: 'pt_motion_classes', icon: '🏃', label: 'Motion Classification' },
+            { id: 'traffic_funnel',           icon: '🚦', label: 'Trafficking Funnel' },
+            { id: 'traffic_regions_map',      icon: '🗺', label: 'Regions & Tracks Map' },
+            { id: 'traffic_motility',         icon: '🏃', label: 'Motility by Outcome' },
+            { id: 'traffic_chemotaxis',       icon: '🧭', label: 'Tumor-Directed Migration' },
+            { id: 'traffic_dwell',            icon: '⏱', label: 'Time per Region' },
+            { id: 'traffic_killing',          icon: '💀', label: 'Killing over Time' },
+            { id: 'traffic_presence_killing', icon: '🔗', label: 'NK Presence vs Killing' },
             { id: 'pt_msd',            icon: '📉', label: 'MSD Analysis' },
             { id: 'pt_speed_dist',     icon: '⚡', label: 'Speed Distribution' },
             { id: 'pt_spatial',        icon: '🎯', label: 'Spatial Context' },
         ];
         if (stepId === 'keller_segel') return [
-            { id: 'ks_fields',         icon: '🗺', label: 'KS Model Fields (5-panel)' },
-            { id: 'ks_correlation',    icon: '📈', label: 'Theory vs Measured Correlation' },
-            { id: 'ks_density',        icon: '🧫', label: 'Cell Density N(x)' },
-            { id: 'ks_presence',       icon: '👁', label: 'Cumulative NK Presence' },
-            { id: 'ks_overlay',        icon: '🎨', label: 'Theory vs Measured Overlay' },
+            { id: 'ks_fields',             icon: '🗺', label: 'Model Fields' },
+            { id: 'enrichment_validation', icon: '📈', label: 'Predicted vs Measured Presence' },
         ];
         if (stepId === 'graph_theory') return [
             { id: 'gt_comprehensive',     icon: '📊', label: 'Comprehensive Overview' },
@@ -11571,17 +11692,19 @@ function initContextMenu() {
         // Individual results are added via Track Inspector, not right-click
         if (section === 'individual') return;
 
-        showContextMenu(e.clientX, e.clientY, subId, moduleType, stepId);
+        showContextMenu(e.clientX, e.clientY, subId, moduleType, stepId, section);
     });
 
     // Close on click anywhere
     document.addEventListener('click', hideContextMenu);
 }
 
-function showContextMenu(x, y, subId, moduleType, stepId) {
+function showContextMenu(x, y, subId, moduleType, stepId, section) {
     hideContextMenu();
 
-    const plots = getAvailablePlots(moduleType, stepId);
+    let plots = getAvailablePlots(moduleType, stepId);
+    if (section === 'trafficking') plots = plots.filter(p => p.id.startsWith('traffic_'));
+    else if (section === 'kinematics') plots = plots.filter(p => !p.id.startsWith('traffic_'));
     if (plots.length === 0) return;
 
     // Check which are already inserted
@@ -11666,7 +11789,7 @@ function ctxInsertPlot(moduleType, stepId, plotType) {
             .map(r => parseInt((r.plotType.split('__')[1]) || '0') || 0));
         const inst = `${plotType}__${n}`;
         sub.insertedResults.push({ plotType: inst, label: `${_pdef.label} #${n}`, icon: _pdef.icon,
-                                   status: 'pending', url: null, params: { background: 'none' } });
+                                   status: 'pending', url: null, params: { background: 'none', tail_length: 20 } });
         renderModuleTree(sub);
         selectInsertedResultInTree(sub.id, inst);
         _showAnimSettings(sub, inst);
@@ -11683,6 +11806,17 @@ function ctxInsertPlot(moduleType, stepId, plotType) {
         } else {
             doInsertPlot(sub, moduleType, stepId, plotType);
         }
+        if (_isSegFramePlot(moduleType, stepId, plotType)) _showSegFrameSettings(sub, plotType);
+        return;
+    }
+    if (_isSegFramePlot(moduleType, stepId, plotType)) {
+        const def = getAvailablePlots(moduleType, stepId).find(p => p.id === plotType);
+        sub.insertedResults.push({ plotType, label: def ? def.label : plotType, icon: def ? def.icon : '📊',
+                                   status: 'pending', url: null, params: { frame: 0 } });
+        renderModuleTree(sub);
+        selectInsertedResultInTree(sub.id, plotType);
+        _showSegFrameSettings(sub, plotType);
+        doInsertPlot(sub, moduleType, stepId, plotType);
         return;
     }
 
@@ -11795,6 +11929,9 @@ function _showAnimSettings(sub, plotType) {
             <select class="form-select" id="animBg-${sub.id}">
                 ${ANIM_BACKGROUNDS.map(([v, l]) => `<option value="${v}" ${v === bg ? 'selected' : ''}>${l}</option>`).join('')}
             </select></div>
+        <div class="form-row"><span class="form-label">Tail length</span>
+            <input class="form-input" id="animTail-${sub.id}" type="number" min="0" step="5" value="${entry.params.tail_length ?? 20}" style="width:70px">
+            <span style="font-size:var(--fs-xs);color:var(--text-tertiary)">frames · 0 = whole track</span></div>
         <button class="btn btn-primary" style="margin-top:8px" onclick="_rerenderAnim('${sub.id}','${plotType}')">▶ Render</button>
         <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:10px">Tracks are drawn over the segmentation masks of the chosen channel, frame by frame.
         Insert <b>Trajectory Animation</b> again from the right-click menu to compare several backgrounds side by side.</p>
@@ -11806,12 +11943,64 @@ function _rerenderAnim(subId, plotType) {
     const entry = sub?.insertedResults?.find(r => r.plotType === plotType);
     if (!entry) return;
     const bg = document.getElementById(`animBg-${subId}`)?.value || 'none';
-    entry.params = { ...(entry.params || {}), background: bg };
+    const tailRaw = document.getElementById(`animTail-${subId}`)?.value;
+    const tail = Math.max(0, parseInt(tailRaw === undefined || tailRaw === '' ? '20' : tailRaw) || 0);
+    entry.params = { ...(entry.params || {}), background: bg, tail_length: tail };
     const n = plotType.split('__')[1];
     const bgLabel = (ANIM_BACKGROUNDS.find(b => b[0] === bg) || [bg, bg])[1];
-    entry.label = `Trajectory Animation${n ? ' #' + n : ''}${bg !== 'none' ? ' — ' + bgLabel : ''}`;
+    entry.label = `Trajectory Animation${n ? ' #' + n : ''}${bg !== 'none' ? ' — ' + bgLabel : ''}${tail ? ' · tail ' + tail : ''}`;
     entry.url = null;
     _showAnimSettings(sub, plotType);
+    doInsertPlot(sub, sub.moduleType, sub.stepId, plotType);
+}
+
+// Segmentation plots that show one frame: settings panel with a frame selector
+const SEG_FRAME_PLOTS = ['seg_overview', 'seg_masks_frame', 'seg_composite'];
+function _isSegFramePlot(moduleType, stepId, plotType) {
+    return moduleType === 'immunia' && stepId === 'segment' && SEG_FRAME_PLOTS.includes(plotType);
+}
+async function _showSegFrameSettings(sub, plotType) {
+    const entry = sub.insertedResults?.find(r => r.plotType === plotType);
+    const body = document.getElementById(`settingsBody-${sub.id}`);
+    const title = document.getElementById(`settingsTitle-${sub.id}`);
+    if (!entry || !body) return;
+    entry.params = entry.params || { frame: 0 };
+    if (title) title.textContent = entry.label;
+    let nFrames = sub._segNFrames || sub._movieInfo?.n_frames || 0;
+    if (!nFrames) {
+        try {
+            const ws = getActiveWorkspace();
+            const r = await fetch(`/api/step/${ws.id}/${sub.pipelineId}/segment/results/segmentation_summary.json?t=${Date.now()}`);
+            if (r.ok) { nFrames = (await r.json()).n_frames || 0; sub._segNFrames = nFrames; }
+        } catch (e) {}
+    }
+    const maxF = Math.max(0, (nFrames || 1) - 1);
+    const f = Math.min(entry.params.frame || 0, maxF);
+    body.innerHTML = `<div class="settings-form" style="padding:10px">
+        <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">🖼 Frame</p>
+        <div class="form-row"><span class="form-label">Frame</span>
+            <input class="form-input" id="segPlotFrame-${sub.id}" type="number" min="0" max="${maxF}" value="${f}" style="width:70px"
+                   onchange="document.getElementById('segPlotFrameR-${sub.id}').value=this.value">
+            <span style="font-size:var(--fs-xs);color:var(--text-tertiary)">of 0–${maxF}</span></div>
+        <input type="range" id="segPlotFrameR-${sub.id}" min="0" max="${maxF}" value="${f}" style="width:100%;accent-color:var(--brand-accent)"
+               oninput="document.getElementById('segPlotFrame-${sub.id}').value=this.value"
+               onchange="_rerenderSegFrame('${sub.id}','${plotType}')">
+        <button class="btn btn-primary" style="margin-top:8px" onclick="_rerenderSegFrame('${sub.id}','${plotType}')">▶ Render frame</button>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Releasing the slider renders that frame too.</p>
+    </div>`;
+}
+function _rerenderSegFrame(subId, plotType) {
+    const ws = getActiveWorkspace();
+    const sub = ws?.subtabs.get(subId);
+    const entry = sub?.insertedResults?.find(r => r.plotType === plotType);
+    if (!entry) return;
+    const f = parseInt(document.getElementById(`segPlotFrame-${subId}`)?.value || '0') || 0;
+    entry.params = { ...(entry.params || {}), frame: f };
+    const base = (getAvailablePlots(sub.moduleType, sub.stepId).find(p => p.id === plotType) || {}).label || plotType;
+    entry.label = `${base} — frame ${f}`;
+    entry.url = null;
+    const title = document.getElementById(`settingsTitle-${subId}`);
+    if (title) title.textContent = entry.label;
     doInsertPlot(sub, sub.moduleType, sub.stepId, plotType);
 }
 
@@ -11850,6 +12039,10 @@ function onInsertedResultClick(subId, plotType) {
     // Trajectory animation instances: show their settings (background) next to the video
     if (plotType.startsWith('trajectory_animation')) {
         _showAnimSettings(sub, plotType);
+    }
+    // Frame-based segmentation plots: frame selector next to the image
+    if (_isSegFramePlot(sub.moduleType, sub.stepId, plotType)) {
+        _showSegFrameSettings(sub, plotType);
     }
 
     // Stale results auto-regenerate on click
@@ -12661,6 +12854,27 @@ function showIMMUNIAAssocRunMenu(event, subId, runId) {
     setTimeout(() => document.addEventListener('click', hideContextMenu, { once: true }), 30);
 }
 
+// Right-click menu for a graph-theory run folder (its own plots and delete — not the association ones)
+function showGTRunMenu(event, subId, runId) {
+    event.preventDefault();
+    event.stopPropagation();
+    hideContextMenu();
+    const items = [['comprehensive', '📊', 'Comprehensive Overview'], ['metrics', '📈', 'Network Metrics'],
+                   ['regions', '🗺', 'Regional Analysis'], ['boundary', '🔀', 'Boundary Analysis'],
+                   ['metric_fields', '🌡', 'Metric Fields'], ['node_distributions', '📉', 'Node Distributions'],
+                   ['comparative_summary', '⚖', 'Comparative Summary']];
+    const menu = document.createElement('div');
+    menu.id = 'cellabContextMenu';
+    menu.className = 'cellab-ctx-menu';
+    menu.innerHTML = items.map(([t, ic, lb]) =>
+        `<div class="ctx-item" onclick="insertGTRunPlot('${runId}','${t}');hideContextMenu()"><span class="ctx-icon">${ic}</span><span>${lb}</span></div>`).join('')
+        + `<div class="ctx-sep"></div>
+        <div class="ctx-item ctx-danger" onclick="deleteGTRun('${subId}','${runId}');hideContextMenu()"><span class="ctx-icon">🗑</span><span>Delete This Run</span></div>`;
+    menu.style.cssText = `position:fixed;left:${event.clientX}px;top:${event.clientY}px;z-index:10000`;
+    document.body.appendChild(menu);
+    setTimeout(() => document.addEventListener('click', hideContextMenu, { once: true }), 30);
+}
+
 // ═════════════════════════════════════════════
 // GRAPH THEORY — Run Management
 // ═════════════════════════════════════════════
@@ -12722,11 +12936,42 @@ async function discoverGTRuns(sub) {
         const runId = run.run_id || run.run_dir;
         sub.insertedResults.push({ plotType: `run_meta_${runId}`, label: run.label || runId, icon: '📁', group: 'Runs', _isRun: true, _runId: runId, _runMeta: run, status: 'done', url: null });
         for (const pf of (run.plot_files || [])) {
-            const bn = pf.replace(/\.(png|jpg)$/i, '');
-            sub.insertedResults.push({ plotType: `${runId}_${bn}`, label: bn.replace(/_/g, ' '), icon: '📊', _runId: runId, url: `/api/step/${ws.id}/${sub.pipelineId}/graph_theory/results/runs/${runId}/plots/${pf}`, status: 'done' });
+            const bn = pf.replace(/\.(png|jpg|mp4|gif)$/i, '');
+            let label = bn.replace(/_/g, ' '), icon = '📊';
+            if (bn.startsWith('network_video_')) {
+                icon = '🎬';
+                const m = { eigenvector_sqrtN: 'eigenvector×√N', degree: 'degree', betweenness: 'betweenness',
+                            clustering: 'clustering', pagerank: 'PageRank' };
+                const parts = bn.replace(/^network_video_[a-z]+_/, '');
+                const key = Object.keys(m).find(k => parts.startsWith(k)) || '';
+                const rest = parts.slice(key.length).replace(/^_/, '').replace(/_edges$/, ' + edges').replace(/_/g, ' ');
+                label = `Video — ${m[key] || parts}${rest && !rest.startsWith('none') ? ' · ' + rest : (rest.includes('edges') ? ' · edges' : '')}`;
+            }
+            sub.insertedResults.push({ plotType: `${runId}_${bn}`, label, icon, _runId: runId, url: `/api/step/${ws.id}/${sub.pipelineId}/graph_theory/results/runs/${runId}/plots/${pf}`, status: 'done' });
         }
     }
     renderModuleTree(sub);
+}
+
+async function insertGTNetworkVideo(runId) {
+    const ws = getActiveWorkspace();
+    const sub = ws?.subtabs.get(ws?.activeSubtab);
+    if (!sub) return;
+    const params = {
+        metric: document.getElementById('gtVidMetric')?.value || 'eigenvector_sqrtN',
+        background: document.getElementById('gtVidBg')?.value || 'none',
+        show_edges: document.getElementById('gtVidEdges')?.checked !== false,
+    };
+    updateStatus(`Rendering network video (${params.metric}, ${params.background})...`);
+    const res = await api(`step/${ws.id}/${sub.pipelineId}/graph_theory/runs/${runId}/plot`, 'POST',
+                          { plot_type: 'network_video', params });
+    if (res.success) {
+        showResultImage(res.data.url, res.data.filename);
+        updateStatus(`Network video ready: ${res.data.filename}`);
+        setTimeout(() => discoverGTRuns(sub), 500);
+    } else {
+        updateStatus(`Video error: ${res.error}`);
+    }
 }
 
 async function insertGTRunPlot(runId, plotType) {
@@ -15542,10 +15787,52 @@ function immuniaAssocMethodChanged(method) {
 function immuniaSegMethodChanged(roleKey, method) {
     const manualFields = document.getElementById(`segManualFields_${roleKey}`);
     const minMaxFields = document.getElementById(`segMinMaxFields_${roleKey}`);
+    const celladeFields = document.getElementById(`segCelladeFields_${roleKey}`);
     const factorRow = document.getElementById(`tf_${roleKey}`)?.closest('.form-row');
+    const rowOf = (p) => document.querySelector(`[data-param="${roleKey}_${p}"]`)?.closest('.form-row');
+    const isCellade = method === 'cellade';
     if (manualFields) manualFields.style.display = method === 'manual' ? '' : 'none';
     if (minMaxFields) minMaxFields.style.display = method === 'min_max' ? '' : 'none';
-    if (factorRow) factorRow.style.display = method === 'manual' ? 'none' : '';
+    if (celladeFields) celladeFields.style.display = isCellade ? '' : 'none';
+    // threshold-only settings are not used by CellADE (it has its own min area)
+    if (factorRow) factorRow.style.display = (method === 'manual' || isCellade) ? 'none' : '';
+    for (const p of ['gaussian_sigma', 'min_size']) {
+        const r = rowOf(p);
+        if (r) r.style.display = isCellade ? 'none' : '';
+    }
+}
+
+// CellADE seed settings (LoG, mesh removal) only matter for individual objects;
+// the substrate-holes mode only for area masks
+function immuniaSegOutputChanged(roleKey, value) {
+    const isObj = String(value) === 'true';
+    const box = document.getElementById(`segCelladeObj_${roleKey}`);
+    if (box) box.style.display = isObj ? '' : 'none';
+    const modeBox = document.getElementById(`segCelladeMode_${roleKey}`);
+    if (modeBox) modeBox.style.display = isObj ? 'none' : '';
+    const modeSel = document.querySelector(`[data-param="${roleKey}_cellade_mode"]`);
+    immuniaCelladeModeChanged(roleKey, isObj ? 'standard' : (modeSel ? modeSel.value : 'standard'));
+}
+function immuniaCelladeModeChanged(roleKey, mode) {
+    const holes = mode === 'holes';
+    const hb = document.getElementById(`segCelladeHoles_${roleKey}`);
+    if (hb) hb.style.display = holes ? '' : 'none';
+    for (const p of ['cellade_fcm_threshold', 'cellade_clahe_clip']) {       // not used by the hole mode
+        const r = document.querySelector(`[data-param="${roleKey}_${p}"]`)?.closest('.form-row');
+        if (r) r.style.display = holes ? 'none' : '';
+    }
+}
+
+// Apply the method/output-dependent visibility once saved settings are restored into a panel
+function _immuniaSegSyncVisibility(roleKey) {
+    for (const ms of [30, 200, 600]) {
+        setTimeout(() => {
+            const sel = document.querySelector(`[data-param="${roleKey}_threshold_method"]`);
+            if (sel) immuniaSegMethodChanged(roleKey, sel.value);
+            const out = document.querySelector(`[data-param="${roleKey}_separate_objects"]`);
+            if (out) immuniaSegOutputChanged(roleKey, out.value);
+        }, ms);
+    }
 }
 
 async function doImmuniaSegPreview(roleKey) {
@@ -15579,7 +15866,15 @@ async function doImmuniaSegPreview(roleKey) {
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: roleKey, frame: frame })
+            // send the settings exactly as they are on screen (saved params can lag behind a change)
+            body: JSON.stringify({ role: roleKey, frame: frame, params: (() => {
+                const f = document.querySelector(`.settings-form[data-section="seg-${roleKey}"]`);
+                const p = {};
+                f?.querySelectorAll('[data-param]').forEach(el => {
+                    p[el.dataset.param] = el.type === 'checkbox' ? el.checked : el.value;
+                });
+                return p;
+            })() })
         });
         const data = await res.json();
         console.log('[SegPreview] Response:', data.success, data.error || '');

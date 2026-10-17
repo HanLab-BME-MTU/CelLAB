@@ -928,3 +928,14 @@ body.light-theme .status-bar .status-info{color:rgba(255,255,255,.5)}
 .bb-current{padding:4px 10px 8px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bb-summary{display:flex;gap:12px;padding:6px 10px;border-top:1px solid var(--chrome-border);background:var(--surface-1)}
 .bb-summary-item{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);font-weight:600}
+
+/* ── Settings rows: wrap instead of cutting long content ──
+   The label stays on its line; a select/field that does not fit moves to the next line at full
+   width, and unit/hint texts wrap onto extra lines. */
+.form-row{flex-wrap:wrap;row-gap:4px}
+.form-row>.form-select{flex:1 1 180px;max-width:100%;min-width:0}
+.form-row>.form-input{min-width:64px}
+/* number boxes with an explicit width keep it (never squeezed by the hint next to them) */
+.form-row>.form-input[style*="width"]{flex:0 0 auto}
+.form-row>span:not(.form-label){white-space:normal;flex:1 1 90px;min-width:0;line-height:1.3;overflow-wrap:anywhere}
+.form-label{white-space:normal;overflow-wrap:anywhere}

@@ -2039,7 +2039,7 @@ def _run_fastia(project, ws_id, pipeline_id, step_id, params, results_dir, progr
                 if not hasattr(app, '_tiff_cache'):
                     app._tiff_cache = {}
                 if cache_key not in app._tiff_cache:
-                    app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+                    app._tiff_cache[cache_key] = _read_movie(resolved)
                 stack = app._tiff_cache[cache_key]
 
                 # Extract the FA detection channel
@@ -2318,7 +2318,7 @@ def _run_fastia(project, ws_id, pipeline_id, step_id, params, results_dir, progr
                         if not hasattr(app, '_tiff_cache'):
                             app._tiff_cache = {}
                         if cache_key not in app._tiff_cache:
-                            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+                            app._tiff_cache[cache_key] = _read_movie(resolved)
                         raw = app._tiff_cache[cache_key]
                         det_ch = all_params.get('detection_channel', 'vinculin')
                         c_idx = 0
@@ -2862,7 +2862,7 @@ def fastia_detection_preview(ws_id, pipeline_id):
         if not hasattr(app, '_tiff_cache'):
             app._tiff_cache = {}
         if cache_key not in app._tiff_cache:
-            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+            app._tiff_cache[cache_key] = _read_movie(resolved)
         stack = app._tiff_cache[cache_key]
 
         # Extract frame
@@ -3111,7 +3111,7 @@ def fastia_cell_seg_preview(ws_id, pipeline_id):
         if not hasattr(app, '_tiff_cache'):
             app._tiff_cache = {}
         if cache_key not in app._tiff_cache:
-            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+            app._tiff_cache[cache_key] = _read_movie(resolved)
         stack = app._tiff_cache[cache_key]
 
         # Extract frame and channel stack (for global threshold)
@@ -3282,7 +3282,7 @@ def fastia_detection_results_frame(ws_id, pipeline_id):
         if not hasattr(app, '_tiff_cache'):
             app._tiff_cache = {}
         if cache_key not in app._tiff_cache:
-            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+            app._tiff_cache[cache_key] = _read_movie(resolved)
         stack = app._tiff_cache[cache_key]
 
         if stack.ndim == 4:
@@ -3485,7 +3485,7 @@ def fastia_tracking_results_frame(ws_id, pipeline_id):
         if not hasattr(app, '_tiff_cache'):
             app._tiff_cache = {}
         if cache_key not in app._tiff_cache:
-            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+            app._tiff_cache[cache_key] = _read_movie(resolved)
         stack = app._tiff_cache[cache_key]
 
         if stack.ndim == 4:
@@ -3605,6 +3605,86 @@ def fastia_tracking_results_frame(ws_id, pipeline_id):
         return jsonify({'success': False, 'error': str(e)})
 
 
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Movie layout: axis order (T / Z / C / Y / X) and z projection
+# ═════════════════════════════════════════════════════════════════════════════
+_STACK_LAYOUT = {}   # resolved path -> {'axes': 'auto' | 'TZCYX' | ..., 'z_projection': 'max' | 'mean' | 'first' | 'middle'}
+_STACK_INFO = {}     # resolved path -> what was detected / done (shown in the import panel)
+_DEFAULT_AXES = {5: 'TZCYX', 4: 'TCYX', 3: 'TYX', 2: 'YX'}
+
+
+def _detect_stack_axes(path, ndim):
+    """Axis order from the TIFF metadata (ImageJ / OME), else the common default for ndim."""
+    try:
+        import tifffile
+        with tifffile.TiffFile(str(path)) as tf:
+            ax = tf.series[0].axes.upper()
+        ax = ax.replace('I', 'Z' if 'Z' not in ax else 'T')
+        if len(ax) == ndim and ax.endswith('YX') and set(ax) <= set('TZCYX') and len(set(ax)) == ndim:
+            return ax
+    except Exception:
+        pass
+    return _DEFAULT_AXES.get(ndim)
+
+
+def _apply_stack_layout(path, params):
+    """Register the user's layout choice (from flat import params); drop a cached stack if it changed."""
+    key = str(path)
+    new = {'axes': str(params.get('axis_order', 'auto') or 'auto'),
+           'z_projection': str(params.get('z_projection', 'max') or 'max')}
+    if _STACK_LAYOUT.get(key) != new:
+        _STACK_LAYOUT[key] = new
+        if hasattr(app, '_tiff_cache'):
+            app._tiff_cache.pop(key, None)
+
+
+def _read_movie(path):
+    """tifffile.imread + layout handling. 5-D (or user-specified) stacks are reordered to (T, C, Y, X)
+    and z-stacks are projected to 2-D; 2-D/3-D/4-D files without a user choice are returned unchanged."""
+    import tifffile
+    import numpy as np
+    key = str(path)
+    arr = tifffile.imread(key)
+    raw_shape = list(arr.shape)
+    lay = _STACK_LAYOUT.get(key, {})
+    user_axes = lay.get('axes', 'auto')
+    if user_axes in (None, '', 'auto') and arr.ndim < 5:
+        _STACK_INFO[key] = {'raw_shape': raw_shape, 'axes': _DEFAULT_AXES.get(arr.ndim), 'z': 1,
+                            'projected': False, 'shape': raw_shape}
+        return arr
+    axes = user_axes if user_axes not in (None, '', 'auto') else _detect_stack_axes(key, arr.ndim)
+    if not axes or len(axes) != arr.ndim:
+        raise ValueError(f"Axis order '{axes}' does not match the file's {arr.ndim} dimensions {tuple(raw_shape)}. "
+                         f"Choose the axis order in the import settings.")
+    order = [a for a in 'TZCYX' if a in axes]
+    arr = np.transpose(arr, [axes.index(a) for a in order])
+    info = {'raw_shape': raw_shape, 'axes': axes, 'z': 1, 'projected': False}
+    if 'Z' in order:
+        zi = order.index('Z')
+        nz = arr.shape[zi]
+        how = lay.get('z_projection', 'max')
+        if how == 'mean':
+            arr = arr.mean(axis=zi).astype(arr.dtype)
+        elif how == 'first':
+            arr = np.take(arr, 0, axis=zi)
+        elif how == 'middle':
+            arr = np.take(arr, nz // 2, axis=zi)
+        else:
+            how = 'max'
+            arr = arr.max(axis=zi)
+        order.remove('Z')
+        info.update({'z': int(nz), 'projected': True, 'z_projection': how})
+    if 'T' not in order:
+        arr = arr[np.newaxis]
+        order.insert(0, 'T')
+    info['shape'] = list(arr.shape)
+    _STACK_INFO[key] = info
+    print(f"[movie] {key}: axes {axes} -> {''.join(order)} {arr.shape}"
+          + (f" (z={info['z']} slices, {info['z_projection']} projection)" if info['projected'] else ''))
+    return arr
+
+
 @app.route('/api/step/<ws_id>/<pipeline_id>/<step_id>/preview_frame', methods=['GET'])
 def step_preview_frame(ws_id, pipeline_id, step_id):
     """
@@ -3644,6 +3724,11 @@ def step_preview_frame(ws_id, pipeline_id, step_id):
         # Resolve relative path against project root (same as Cornealia)
         resolved = project.resolve_data_path(file_path)
         print(f"[preview_frame] resolved: {resolved}")
+        if resolved is not None:
+            _flat = {}
+            for _k, _v in params.items():
+                _flat.update(_v) if isinstance(_v, dict) else _flat.__setitem__(_k, _v)
+            _apply_stack_layout(resolved, _flat)
         if resolved is None:
             return jsonify({'success': False, 'error': f'File not found: {file_path}'})
 
@@ -3669,7 +3754,7 @@ def step_preview_frame(ws_id, pipeline_id, step_id):
             app._tiff_cache = {}
         if cache_key not in app._tiff_cache:
             print(f"[preview_frame] Loading TIFF into cache: {resolved}")
-            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+            app._tiff_cache[cache_key] = _read_movie(resolved)
         stack = app._tiff_cache[cache_key]
         # Handle shapes: [T,H,W], [T,C,H,W], [C,T,H,W]
         if stack.ndim == 3:
@@ -3767,6 +3852,7 @@ def step_preview_frame(ws_id, pipeline_id, step_id):
             'n_channels': n_channels,
             'shape': list(stack.shape),
             'stats': stats_data,
+            'stack_info': _STACK_INFO.get(str(resolved), {}),
         })
 
     except Exception as e:
@@ -4005,7 +4091,7 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                         if not hasattr(app, '_tiff_cache'):
                             app._tiff_cache = {}
                         if cache_key not in app._tiff_cache:
-                            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+                            app._tiff_cache[cache_key] = _read_movie(resolved)
                         raw = app._tiff_cache[cache_key]
 
                         # Determine FA channel
@@ -4300,7 +4386,7 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                         elif file_path:
                             resolved = project.resolve_data_path(file_path)
                             if resolved:
-                                tiff_stack = tifffile.imread(str(resolved))
+                                tiff_stack = _read_movie(resolved)
                                 if tiff_stack.ndim == 3:
                                     tiff_stack = tiff_stack[:, np.newaxis, :, :]
                                 app._tiff_cache[cache_key_tiff] = tiff_stack
@@ -4471,8 +4557,8 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
             if step_id == 'segment':
                 from plotters.segmentation_plotter import SegmentationPlotter
                 plotter = SegmentationPlotter()
-                frame_idx = int(body.get('frame', 0))
-                fig = plotter.plot(results_dir, plot_type=plot_type, frame=frame_idx)
+                frame_idx = int(body.get('frame', (body.get('params') or {}).get('frame', 0)) or 0)
+                fig = plotter.plot(results_dir, plot_type=plot_type.split('__')[0], frame=frame_idx)
                 filename = f'{plot_type}.png'
 
             elif step_id == 'track':
@@ -4490,6 +4576,7 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                     _anim_kw = {
                         'out_name': _inst,
                         'background': _aparams.get('background', 'none'),
+                        'tail_length': _aparams.get('tail_length', 20),
                         'seg_dir': str(project.get_results_dir(ws_id, pipeline_id, 'segment')),
                     }
                 fig = plotter.plot(results_dir, plot_type=plot_type, plots_dir=str(immunia_plots_dir), **_anim_kw)
@@ -4527,6 +4614,12 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                 # Force fresh import every time
                 for mod_name in [k for k in sys.modules if 'pt_plotter' in k]:
                     importlib.reload(sys.modules[mod_name])
+                if plot_type.startswith('traffic_'):
+                    for mod_name in [k for k in sys.modules if 'trafficking_plotter' in k]:
+                        importlib.reload(sys.modules[mod_name])
+                    from plotters.trafficking_plotter import TraffickingPlotter
+                    fig = TraffickingPlotter().plot(results_dir, plot_type=plot_type)
+                    filename = f'{plot_type}.png'
                 from plotters.pt_plotter import ParticleTrackingPlotter
                 plotter = ParticleTrackingPlotter()
                 # Parse track IDs for MSD curves
@@ -4536,8 +4629,9 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                     try:
                         pt_kwargs['track_ids'] = [int(x.strip()) for x in msd_ids_str.split(',') if x.strip()]
                     except: pass
-                fig = plotter.plot(results_dir, plot_type=plot_type, **pt_kwargs)
-                filename = f'{plot_type}.png'
+                if not plot_type.startswith('traffic_'):
+                    fig = plotter.plot(results_dir, plot_type=plot_type, **pt_kwargs)
+                    filename = f'{plot_type}.png'
 
             elif step_id == 'keller_segel':
                 import importlib
@@ -5000,11 +5094,53 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
             if progress_cb:
                 progress_cb(0, 5, 'loading', 'Loading movie...')
             print(f"[IMMUNIA] Loading movie: {resolved}")
-            stack = tifffile.imread(str(resolved))
+            _flat_imp = {}
+            for _k, _v in import_params.items():
+                _flat_imp.update(_v) if isinstance(_v, dict) else _flat_imp.__setitem__(_k, _v)
+            _apply_stack_layout(resolved, _flat_imp)
+            stack = _read_movie(resolved)
+            if stack.ndim == 5:
+                print(f"[IMMUNIA] 3D movie {stack.shape}: max projection over z")
+                stack = stack.max(axis=1)           # (T, Z, C, Y, X) -> (T, C, Y, X)
             if stack.ndim == 3:
                 stack = stack[:, np.newaxis, :, :]  # add channel dim
             n_frames, n_channels = stack.shape[0], stack.shape[1]
             print(f"[IMMUNIA] Movie shape: {stack.shape} — {n_frames} frames, {n_channels} channels")
+
+            # ── Live board (same template as tracking / Keller–Segel) ──
+            import time as _t_sg
+            _sg_t0 = _t_sg.time()
+            _sg_labels = {'dead': 'Cytotoxicity', 'tumor': 'Target cells', 'tissue': 'Substrate', 'nk': 'Effector cells'}
+            _sg = {
+                'title': 'Segmentation', 'status': 'running', 'pct': 0.0,
+                'stats': {'Frames': n_frames, 'Channels': n_channels, 'Now': '—', 'Elapsed': 0, 'ETA': None},
+                'stages': ([{'id': 'load', 'label': 'Load movie', 'status': 'done',
+                             'detail': f"{n_frames} frames × {n_channels} channels × {stack.shape[2]}×{stack.shape[3]} px"
+                                       + (f" (z-projected)" if _STACK_INFO.get(str(resolved), {}).get('projected') else '')}]
+                           + [{'id': k, 'label': v, 'status': 'pending', 'detail': ''} for k, v in _sg_labels.items()]
+                           + [{'id': 'save', 'label': 'Save masks', 'status': 'pending', 'detail': ''}]),
+            }
+            _sg_w = {'load': 4, 'dead': 22, 'tumor': 22, 'tissue': 22, 'nk': 22, 'save': 8}
+
+            def _sg_stage(sid, status=None, detail=None, frac=None, msg=''):
+                for st in _sg['stages']:
+                    if st['id'] == sid:
+                        if status: st['status'] = status
+                        if detail is not None: st['detail'] = detail
+                pct = 0.0
+                for st in _sg['stages']:
+                    if st['status'] in ('done', 'skipped'):
+                        pct += _sg_w[st['id']]
+                    elif st['id'] == sid and frac is not None:
+                        pct += _sg_w[st['id']] * max(0.0, min(1.0, frac))
+                _sg['pct'] = round(pct, 1)
+                el = _t_sg.time() - _sg_t0
+                _sg['stats']['Elapsed'] = round(el, 1)
+                _sg['stats']['ETA'] = round(el / (pct / 100.0) * (1 - pct / 100.0), 1) if 3 < pct < 100 else None
+                if progress_cb:
+                    progress_cb(_sg['pct'], 100, 'segmentation', msg or sid, stage_board=_sg)
+
+            _sg_stage('load', msg='Movie loaded')
 
             # ── Try actual Preprocessor_Segmentor ──
             segmentor = None
@@ -5034,7 +5170,8 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                     return {"status": "cancelled", "outputs": {"message": "Cancelled by user"}}
 
                 rk = role['key']
-                ch_idx = int(ch_setup.get(f'{rk}_channel_idx', role['default_idx']))
+                _ci = str(ch_setup.get(f'{rk}_channel_idx', '')).strip()
+                ch_idx = int(float(_ci)) if _ci not in ('', 'None', '?') else role['default_idx']
                 ch_name = ch_setup.get(f'{rk}_channel_name', role['label'])
 
                 # Get per-role segmentation params
@@ -5042,7 +5179,14 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 min_size = int(all_params.get(f'{rk}_min_size', role['default_min']))
                 sigma = float(all_params.get(f'{rk}_gaussian_sigma', 2.0))
                 method = all_params.get(f'{rk}_threshold_method', role['default_method'])
-                separate = role['separate']  # Fixed per role, not user-configurable
+                # Output type and temporal resolution: user settings (defaults per role)
+                _sep_v = all_params.get(f'{rk}_separate_objects', None)
+                separate = role['separate'] if _sep_v in (None, '') else str(_sep_v).lower() == 'true'
+                _static_default = 'union5' if rk == 'tumor' else 'all'
+                temporal_mode = (all_params.get(f'{rk}_temporal_mode') or all_params.get(f'{rk}_cellade_temporal_mode')
+                                 or _static_default)
+                _static = temporal_mode == 'union5'
+                _uframes = sorted(set([0, min(1, n_frames - 1), n_frames // 2, max(n_frames - 2, 0), n_frames - 1]))
                 manual_thresh_str = all_params.get(f'{rk}_manual_threshold', '')
                 manual_threshold = float(manual_thresh_str) if manual_thresh_str else None
                 imin_str = all_params.get(f'{rk}_intensity_min', '')
@@ -5052,21 +5196,65 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
 
                 if ch_idx >= n_channels:
                     print(f"[IMMUNIA] ⚠ Skipping {rk}: channel {ch_idx} out of range (max {n_channels-1})")
+                    _sg_stage(rk, 'skipped', f"channel {ch_idx} not in the movie (0–{n_channels - 1})")
                     continue
 
                 phase = f'{role["label"]} ({rk})'
                 print(f"\n[IMMUNIA] ═══ {phase} — channel {ch_idx} ({ch_name}) ═══")
                 print(f"[IMMUNIA]   method={method} factor={threshold_factor} min_size={min_size} σ={sigma} separate={separate}")
 
-                if progress_cb:
-                    progress_cb(role_i, 4, phase, f'Segmenting {ch_name} (channel {ch_idx})...')
+                _sg['stats']['Now'] = _sg_labels.get(rk, rk)
+                _sg_stage(rk, 'running',
+                          f"channel {ch_idx} ({ch_name}) · {'CellADE' if method == 'cellade' else method} · "
+                          f"{'objects' if separate else 'area'} · {'static' if _static else 'dynamic'}",
+                          frac=0.0, msg=f'Segmenting {ch_name} (channel {ch_idx})...')
+                _sg_base = _sg['stages'][[st['id'] for st in _sg['stages']].index(rk)]['detail']
 
                 channel_data = stack[:, ch_idx, :, :]
                 # Use uint16 for labeled channels (separate=True), uint8 for binary
                 mask_dtype = np.uint16 if separate else np.uint8
                 masks = np.zeros((n_frames, channel_data.shape[1], channel_data.shape[2]), dtype=mask_dtype)
 
-                for f_idx in range(n_frames):
+                # ── CellADE (LoG seeds -> local FCM -> watershed), as in the paper ──
+                _use_cellade = (method == 'cellade')
+                if _use_cellade:
+                    from components.immunia_preprocessor_segmentor import (
+                        cellade_config_from_params, cellade_segment_frame, cellade_union_frames)
+                    _ccfg = cellade_config_from_params(rk, all_params, separate)
+                    _frames = (cellade_union_frames(n_frames) if _ccfg['temporal_mode'] == 'union5'
+                               else list(range(n_frames)))
+                    _root = os.path.dirname(os.path.abspath(__file__))
+                    _nj = int(float(all_params.get('cellade_n_jobs', -1) or -1))
+                    print(f"[IMMUNIA]   CellADE {_ccfg['cellade_params']} min_size={_ccfg['min_size']} "
+                          f"frames={'union of ' + str(_frames) if _ccfg['temporal_mode'] == 'union5' else 'all'}")
+                    try:
+                        from joblib import Parallel, delayed
+                        _gen = Parallel(n_jobs=_nj, backend='loky', return_as='generator')(
+                            delayed(cellade_segment_frame)(channel_data[t], _ccfg, _root) for t in _frames)
+                    except TypeError:          # older joblib: no generator output
+                        _gen = iter(Parallel(n_jobs=_nj, backend='loky')(
+                            delayed(cellade_segment_frame)(channel_data[t], _ccfg, _root) for t in _frames))
+                    _out = []
+                    for _k, _m in enumerate(_gen):
+                        if cancel_evt and cancel_evt.is_set():
+                            return {"status": "cancelled", "outputs": {"message": "Cancelled by user"}}
+                        _out.append(_m)
+                        if _k % 3 == 0 or _k == len(_frames) - 1:
+                            _sg_stage(rk, 'running', f"{_sg_base} · frame {_k + 1}/{len(_frames)}",
+                                      frac=(_k + 1) / len(_frames), msg=f'{ch_name}: CellADE frame {_k + 1}/{len(_frames)}')
+                    if _ccfg['temporal_mode'] == 'union5':
+                        # static structure: union of start/middle/end frames, same mask for every frame
+                        _u = binary_fill_holes(np.any(np.stack(_out) > 0, axis=0)) if not separate else np.any(np.stack(_out) > 0, axis=0)
+                        from scipy.ndimage import binary_closing as _bclose
+                        _u = _bclose(_u, iterations=2)
+                        _u = ndlabel(_u)[0].astype(mask_dtype) if separate else _u.astype(mask_dtype)
+                        masks[:] = _u
+                    else:
+                        for _k, _t in enumerate(_frames):
+                            masks[_t] = _out[_k].astype(mask_dtype)
+                    del _out
+
+                for f_idx in ([] if _use_cellade else (_uframes if _static else range(n_frames))):
                     if cancel_evt and cancel_evt.is_set():
                         return {"status": "cancelled", "outputs": {"message": "Cancelled by user"}}
 
@@ -5114,19 +5302,25 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                         masks[f_idx] = mask.astype(np.uint8)
 
                     # Progress per frame
-                    if progress_cb and f_idx % 10 == 0:
-                        pct_within_role = f_idx / max(n_frames, 1)
-                        overall = (role_i + pct_within_role) / 4
-                        progress_cb(
-                            int(overall * 100), 100,
-                            phase,
-                            f'{ch_name}: frame {f_idx}/{n_frames}'
-                        )
+                    if f_idx % 10 == 0:
+                        _nf = len(_uframes) if _static else n_frames
+                        _done = (_uframes.index(f_idx) + 1) if _static else f_idx + 1
+                        _sg_stage(rk, 'running', f"{_sg_base} · frame {_done}/{_nf}", frac=_done / _nf,
+                                  msg=f'{ch_name}: frame {_done}/{_nf}')
 
                     # Label connected components for channels with separate=True
                     if separate and masks[f_idx].max() <= 1:
                         from skimage.measure import label as sklabel
                         masks[f_idx] = sklabel(masks[f_idx].astype(bool), connectivity=2).astype(np.uint16)
+
+                # Static mask (threshold methods): union of start/middle/end frames, same for every frame
+                if _static and not _use_cellade:
+                    from scipy.ndimage import binary_closing as _bclose2
+                    _u = np.any(np.stack([masks[t] > 0 for t in _uframes]), axis=0)
+                    _u = _bclose2(_u, iterations=2)
+                    masks[:] = ndlabel(_u)[0].astype(mask_dtype) if separate else _u.astype(mask_dtype)
+                print(f"[IMMUNIA]   output={'labelled objects' if separate else 'area mask'}, "
+                      f"temporal={'static (union of frames ' + str(_uframes) + ')' if _static else 'every frame'}")
 
                 # Count objects in last frame
                 _, n_obj = ndlabel(masks[-1] > 0)
@@ -5150,10 +5344,10 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 np.save(results_dir / f'{rk}_masks.npy', masks)
                 np.save(results_dir / f'{rk}_avg_mask.npy', avg_mask)
                 all_masks[rk] = {'n_frames': n_frames, 'n_objects': n_obj, 'area_pct': area_pct}
+                _sg_stage(rk, 'done', f"{_sg_base} · {n_obj} {'objects' if separate else 'regions'}, {area_pct}% area")
 
             # ── Save summary ──
-            if progress_cb:
-                progress_cb(100, 100, 'saving', 'Saving results...')
+            _sg_stage('save', 'running', 'segmentation_summary.json', frac=0.0, msg='Saving results...')
 
             summary = {
                 'n_frames': n_frames,
@@ -5172,8 +5366,11 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 msg_parts.append(f"{rk}: {info['n_objects']} obj, {info['area_pct']}%")
             msg = f"Segmentation complete — {n_frames} frames | " + " | ".join(msg_parts)
             print(f"\n[IMMUNIA] ✅ {msg}")
+            _sg['stats']['Now'] = '—'
+            _sg_stage('save', 'done', '<role>_masks.npy, <role>_avg_mask.npy, summary', msg=msg)
+            _sg['status'], _sg['pct'], _sg['stats']['ETA'] = 'done', 100.0, None
 
-            return {"status": "done", "outputs": {"message": msg}}
+            return {"status": "done", "outputs": {"message": msg, "stage_board": _sg}}
 
         elif step_id == 'track':
             import tifffile
@@ -5192,11 +5389,11 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
             _tb_t0 = _t_board.time()
             _tb = {
                 'title': 'Tracking', 'status': 'running', 'pct': 0.0,
-                'stats': {'Frames': '—', 'Detections': '—', 'Tracks': '—', 'Kept': '—',
+                'stats': {'Frames': '—', 'Objects': '—', 'Tracks': '—', 'Kept': '—',
                           'Elapsed': 0, 'ETA': None},
                 'stages': [
                     {'id': 'load',   'label': 'Load masks',        'status': 'running', 'detail': ''},
-                    {'id': 'detect', 'label': 'Detect cells',      'status': 'pending', 'detail': ''},
+                    {'id': 'detect', 'label': 'Read segmented objects', 'status': 'pending', 'detail': ''},
                     {'id': 'link',   'label': 'Link trajectories', 'status': 'pending', 'detail': ''},
                     {'id': 'filter', 'label': 'Filter tracks',     'status': 'pending', 'detail': ''},
                     {'id': 'stats',  'label': 'Track statistics',  'status': 'pending', 'detail': ''},
@@ -5283,16 +5480,16 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
             def _tracker_progress(stage, **info):
                 if stage == 'detect':
                     done, total = info.get('done', 0), max(info.get('total', 1), 1)
-                    _tb['stats']['Detections'] = info.get('detections', '—')
+                    _tb['stats']['Objects'] = info.get('detections', '—')
                     if info.get('finished'):
-                        _tb_stage('detect', 'done', f"{info.get('detections', 0)} detections in {total} frames")
+                        _tb_stage('detect', 'done', f"{info.get('detections', 0)} object positions (centroids) in {total} frames")
                         _tb['stats']['ETA'] = None
                         _tb_emit('Detection done')
                     else:
                         el = _t_board.time() - _tb_t0
                         _tb['stats']['ETA'] = round(el / max(done, 1) * (total - done), 1) if done else None
                         _tb_stage('detect', 'running', f'frame {done}/{total}', frac=done / total)
-                        _tb_emit(f'Detecting cells: frame {done}/{total}')
+                        _tb_emit(f'Reading segmented objects: frame {done}/{total}')
                 elif stage == 'link':
                     if info.get('finished'):
                         _tb['stats']['Tracks'] = info.get('n_tracks', '—')
@@ -5556,10 +5753,11 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
 
             trajectories = []
             track_ids = []
+            _groups = {pid: g.sort_values('frame') for pid, g in tracks_df.groupby('particle', sort=False)}
             for pid in tracks_df['particle'].unique():
-                t = tracks_df[tracks_df['particle'] == pid].sort_values('frame')
-                trajectories.append(t[['x', 'y']].values)
+                trajectories.append(_groups[pid][['x', 'y']].values)
                 track_ids.append(int(pid))
+            del _groups
 
             results_input = {
                 'tracks_df': tracks_df,
@@ -5611,8 +5809,70 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
             analysis_mode = all_params.get('pt_analysis_mode', 'auto')
             print(f"[IMMUNIA] Particle Tracking — {len(track_ids)} tracks, mode={analysis_mode}")
 
-            if progress_cb:
-                progress_cb(10, 100, 'analyzing', f'Analyzing {len(track_ids)} tracks...')
+            # ── Live board ──
+            import time as _t_pt
+            _pb_t0 = _t_pt.time()
+            _has_masks = 'tumor_mask' in results_input
+            _pb = {
+                'title': 'Particle Tracking Analysis', 'status': 'running', 'pct': 0.0,
+                'stats': {'Tracks': len(track_ids), 'Analyzed': '—', 'Mode': analysis_mode,
+                          'Masks': 'yes' if _has_masks else 'no', 'Elapsed': 0, 'ETA': None},
+                'stages': [
+                    {'id': 'load',     'label': 'Load tracks + masks',      'status': 'done',
+                     'detail': f"{len(track_ids)} tracks" + (', tumor/tissue masks' if _has_masks else '')},
+                    {'id': 'tracks',   'label': 'Per-track metrics',        'status': 'pending', 'detail': 'speed, MSD, persistence, tumor contacts'},
+                    {'id': 'classify', 'label': 'Motion classes',           'status': 'pending', 'detail': ''},
+                    {'id': 'boundary', 'label': 'Boundary interactions',    'status': 'pending', 'detail': ''},
+                    {'id': 'contacts', 'label': 'Tumor contact statistics', 'status': 'pending', 'detail': ''},
+                    {'id': 'traffic',  'label': 'Trafficking + killing',    'status': 'pending', 'detail': ''},
+                    {'id': 'save',     'label': 'Save results',             'status': 'pending', 'detail': ''},
+                ],
+            }
+            _pb_w = {'load': 5, 'tracks': 45, 'classify': 5, 'boundary': 15, 'contacts': 5, 'traffic': 15, 'save': 10}
+
+            def _pb_stage(sid, status=None, detail=None, frac=None):
+                for st in _pb['stages']:
+                    if st['id'] == sid:
+                        if status: st['status'] = status
+                        if detail is not None: st['detail'] = detail
+                pct = 0.0
+                for st in _pb['stages']:
+                    if st['status'] in ('done', 'skipped'):
+                        pct += _pb_w[st['id']]
+                    elif st['id'] == sid and frac is not None:
+                        pct += _pb_w[st['id']] * max(0.0, min(1.0, frac))
+                _pb['pct'] = round(pct, 1)
+                _pb['stats']['Elapsed'] = round(_t_pt.time() - _pb_t0, 1)
+
+            def _pb_emit(msg=''):
+                if progress_cb:
+                    progress_cb(_pb['pct'], 100, 'particle_tracking', msg, stage_board=_pb)
+
+            def _pt_progress(stage, **i):
+                if stage in ('tracks', 'boundary'):
+                    done, total = i.get('done', 0), max(i.get('total', 1), 1)
+                    if i.get('finished'):
+                        det = (f"{i.get('analyzed', 0)} of {total} tracks analyzed" if stage == 'tracks'
+                               else f"{i.get('n', 0)} tracks")
+                        if stage == 'tracks':
+                            _pb['stats']['Analyzed'] = i.get('analyzed', '—')
+                        _pb['stats']['ETA'] = None
+                        _pb_stage(stage, 'done', det)
+                    else:
+                        el = _t_pt.time() - _pb_t0
+                        _pb['stats']['ETA'] = round(el / max(done, 1) * (total - done), 1) if done else None
+                        _pb_stage(stage, 'running', f"track {done}/{total}", frac=done / total)
+                elif stage == 'classify':
+                    dist = i.get('distribution') or {}
+                    pcts = dist.get('percentages', dist) if isinstance(dist, dict) else {}
+                    det = ', '.join(f"{k} {v:.0f}%" for k, v in list(pcts.items())[:4]
+                                    if isinstance(v, (int, float))) if isinstance(pcts, dict) else ''
+                    _pb_stage('classify', 'done', det or 'done')
+                elif stage == 'contacts':
+                    _pb_stage('contacts', 'done', 'done')
+                _pb_emit(stage)
+
+            _pb_emit(f'Analyzing {len(track_ids)} tracks...')
 
             try:
                 IMMUNIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'immunia')
@@ -5621,15 +5881,85 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 from components.particle_tracking_analyzer import ParticleTrackingAnalyzer
 
                 analyzer = ParticleTrackingAnalyzer()
-                pt_results = analyzer.run_analysis(
-                    dataset_name='immunia_run',
-                    results=results_input,
-                    analysis_mode=analysis_mode,
-                    params=pt_params,
-                )
+                try:
+                    pt_results = analyzer.run_analysis(
+                        dataset_name='immunia_run',
+                        results=results_input,
+                        analysis_mode=analysis_mode,
+                        params=pt_params,
+                        progress=_pt_progress,
+                        cancel_evt=cancel_evt,
+                    )
+                except Exception as _pt_err:
+                    if type(_pt_err).__name__ == 'PTCancelled':
+                        return {"status": "cancelled",
+                                "outputs": {"message": "Particle tracking analysis stopped by user; nothing saved — previous results kept."}}
+                    raise
 
                 if 'error' in pt_results:
                     return {"status": "error", "error_msg": pt_results['error']}
+
+                # ── Trafficking: regions (substrate / ECM / tumor), tumor-directed migration, killing ──
+                if str(all_params.get('pt_trafficking', 'true')).lower() == 'true':
+                    try:
+                        from components.trafficking_analyzer import analyze_trafficking
+                        def _seg_load(name):
+                            pth = seg_dir / f'{name}_masks.npy'
+                            return np.load(pth, mmap_mode='r') if pth.exists() else None
+                        _tum = _seg_load('tumor')
+                        _tis = _seg_load('tissue')
+                        _dead = _seg_load('dead')
+                        _tum2 = np.asarray(_tum[_tum.shape[0] // 2]) if _tum is not None and _tum.ndim == 3 else _tum
+                        _sub2 = (np.asarray(_tis[_tis.shape[0] // 2]) > 0) if _tis is not None and _tis.ndim == 3 else _tis
+                        def _tr_prog(stage, **i):
+                            if stage == 'tracks' and not i.get('finished'):
+                                _pb_stage('traffic', 'running', f"regions, chemotaxis — track {i.get('done')}/{i.get('total')}",
+                                          frac=0.6 * i.get('done', 0) / max(i.get('total', 1), 1))
+                            elif stage == 'killing' and not i.get('finished'):
+                                _pb_stage('traffic', 'running', f"NK presence + cytotoxicity per tumor — frame {i.get('done')}/{i.get('total')}",
+                                          frac=0.6 + 0.4 * i.get('done', 0) / max(i.get('total', 1), 1))
+                            _pb_emit(stage)
+                        _traffic = analyze_trafficking(
+                            tracks_df, tumor_mask=_tum2, substrate_mask=_sub2, dead_masks=_dead,
+                            pixel_to_um=pt_params['pixel_to_um'], frame_to_min=pt_params['frame_to_min'],
+                            tumor_region_scale=float(all_params.get('pt_tumor_region_scale', 1.3) or 1.3),
+                            arrest_speed=float(all_params.get('pt_arrest_speed', 2.0) or 2.0),
+                            min_track_length=pt_params.get('min_track_length', 4),
+                            progress=_tr_prog, cancel_evt=cancel_evt)
+                        os.makedirs(results_dir, exist_ok=True)
+                        _traffic['per_frame'].to_csv(results_dir / 'trafficking_per_frame.csv', index=False)
+                        _traffic['per_track'].to_csv(results_dir / 'trafficking_per_track.csv', index=False)
+                        _traffic['tumor_timecourse'].to_csv(results_dir / 'tumor_timecourse.csv', index=False)
+                        np.savez_compressed(results_dir / 'trafficking_regions.npz',
+                                            regions=_traffic['tumor_regions'].astype(np.int32),
+                                            substrate=(np.asarray(_sub2) > 0) if _sub2 is not None
+                                            else np.zeros_like(_traffic['tumor_regions'], dtype=bool))
+                        import json as _json_tr
+                        with open(results_dir / 'trafficking_funnel.json', 'w') as _f:
+                            _json_tr.dump({**_traffic['funnel'], 'params': _traffic['params']}, _f, indent=2, default=str)
+                        pt_results['trafficking'] = {k: _traffic[k] for k in ('per_track', 'tumor_timecourse', 'funnel', 'params')}
+                        fu = _traffic['funnel']
+                        _pb_stage('traffic', 'done',
+                                  f"substrate {fu.get('seen_in_substrate', 0)} → ECM {fu.get('left_substrate_to_ecm', 0)} → "
+                                  f"tumor {fu.get('reached_tumor_region', 0)} of {fu.get('tracks', 0)} tracks · "
+                                  f"{int(_traffic['tumor_regions'].max())} tumor regions"
+                                  + ('' if _dead is not None else ' · no cytotoxicity masks'))
+                    except Exception as _tr_err:
+                        if type(_tr_err).__name__ == 'TraffickingCancelled':
+                            return {"status": "cancelled",
+                                    "outputs": {"message": "Particle tracking analysis stopped by user; nothing saved — previous results kept."}}
+                        import traceback as _tb_tr
+                        _tb_tr.print_exc()
+                        _pb_stage('traffic', 'failed', str(_tr_err)[:120])
+                else:
+                    _pb_stage('traffic', 'skipped', 'switched off')
+
+                for st in _pb['stages']:             # stages the chosen mode did not run
+                    if st['status'] == 'pending' and st['id'] != 'save':
+                        st['status'], st['detail'] = 'skipped', f"not run in '{pt_results.get('analysis_mode', analysis_mode)}' mode"
+                _pb['stats']['Mode'] = pt_results.get('analysis_mode', analysis_mode)
+                _pb_stage('save', 'running', 'particle_tracking_results.pkl', frac=0.0)
+                _pb_emit('Saving')
 
                 os.makedirs(results_dir, exist_ok=True)
                 with open(results_dir / 'particle_tracking_results.pkl', 'wb') as f:
@@ -5640,13 +5970,15 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 with open(results_dir / 'particle_tracking_summary.json', 'w') as f:
                     _json4.dump(summary, f, indent=2, default=str)
 
-                if progress_cb:
-                    progress_cb(100, 100, 'done', 'Analysis complete')
-
                 n_analyzed = summary.get('n_tracks_analyzed', len(track_ids))
                 msg = f"PT analysis complete — {n_analyzed} tracks analyzed"
                 print(f"\n[IMMUNIA] ✅ {msg}")
-                return {"status": "done", "outputs": {"message": msg}}
+                _pb_stage('save', 'done', 'results.pkl, summary.json'
+                          + (', trafficking_per_frame/per_track.csv, tumor_timecourse.csv, funnel.json'
+                             if 'trafficking' in pt_results else ''))
+                _pb['status'], _pb['pct'], _pb['stats']['ETA'] = 'done', 100.0, None
+                _pb_emit(msg)
+                return {"status": "done", "outputs": {"message": msg, "stage_board": _pb}}
 
             except Exception as e:
                 import traceback
@@ -5701,6 +6033,7 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
 
             if sa_runs.exists():
                 all_matrices = {}
+                all_pvals = {}
                 all_pairwise = {}
                 sa_track_ids = []
                 
@@ -5722,6 +6055,8 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                     for method, matrix in sa_data.get('influence_matrices', {}).items():
                         all_matrices[method] = matrix
                         print(f"[IMMUNIA] GT: loaded {method} matrix ({matrix.shape}) from {run_id}")
+                    for method, pm in (sa_data.get('p_matrices', {}) or {}).items():
+                        all_pvals[method] = pm             # surrogate p-values: edges = significant pairs
                     
                     for method, pw in sa_data.get('pairwise_results', {}).items():
                         all_pairwise[method] = pw
@@ -5732,6 +6067,7 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 if all_matrices:
                     sa_results = {
                         'influence_matrices': all_matrices,
+                        'p_matrices': all_pvals,
                         'pairwise_results': all_pairwise,
                         'track_ids': sa_track_ids,
                     }
@@ -5817,8 +6153,62 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
 
             print(f"[IMMUNIA] Graph Theory — {len(track_ids)} tracks, networks={network_types}, modes={analysis_modes}")
 
-            if progress_cb:
-                progress_cb(10, 100, 'building', f'Building {len(network_types)} network types...')
+            # ── Live board ──
+            import time as _t_gt
+            _gb_t0 = _t_gt.time()
+            _edge_rule = all_params.get('gt_edge_rule', 'significant')
+            _null_on = str(all_params.get('gt_null_model', 'false')).lower() == 'true'
+            _mode_labels = {'metrics': 'Network metrics', 'regions': 'Regional analysis', 'boundary': 'Boundary interactions',
+                            'distance_pairs': 'Distance pairs', 'dynamics': 'Dynamics', 'comparative': 'Comparative'}
+            _gb = {
+                'title': 'Graph Theory', 'status': 'running', 'pct': 0.0,
+                'stats': {'Tracks': len(track_ids), 'Nodes': '—', 'Edges': '—',
+                          'Edges by': 'p < α' if _edge_rule == 'significant' else 'ρ > threshold',
+                          'Clustering': '—', 'Elapsed': 0},
+                'stages': ([{'id': 'load', 'label': 'Load tracks + association runs', 'status': 'done',
+                             'detail': f"{len(track_ids)} tracks · networks: {', '.join(network_types)}"},
+                            {'id': 'networks', 'label': 'Build networks', 'status': 'running',
+                             'detail': 'node + graph metrics' + (' + null model' if _null_on else '')}]
+                           + [{'id': m, 'label': _mode_labels.get(m, m), 'status': 'pending', 'detail': ''}
+                              for m in analysis_modes if m != 'comparative']
+                           + [{'id': 'save', 'label': 'Save run', 'status': 'pending', 'detail': ''}]),
+            }
+
+            def _gb_refresh(msg=''):
+                done = sum(1 for st in _gb['stages'] if st['status'] == 'done')
+                _gb['pct'] = round(100.0 * done / max(len(_gb['stages']), 1), 1)
+                _gb['stats']['Elapsed'] = round(_t_gt.time() - _gb_t0, 1)
+                if progress_cb:
+                    progress_cb(_gb['pct'], 100, 'graph_theory', msg, stage_board=_gb)
+
+            def _gb_set(sid, status=None, detail=None):
+                for st in _gb['stages']:
+                    if st['id'] == sid:
+                        if status: st['status'] = status
+                        if detail is not None: st['detail'] = detail
+
+            def _gt_progress(stage, **i):
+                if stage == 'networks' and not i.get('finished'):
+                    _gb['stats']['Nodes'], _gb['stats']['Edges'] = i.get('nodes', '—'), i.get('edges', '—')
+                    c, ratio = i.get('clustering'), i.get('clustering_ratio')
+                    if isinstance(c, (int, float)):
+                        _gb['stats']['Clustering'] = f"{c:.3f}" + (f" ({ratio:.2f}× null)" if isinstance(ratio, (int, float)) else '')
+                    _gb_set('networks', detail=f"{i.get('network')}: {i.get('nodes')} nodes, {i.get('edges')} edges "
+                                               f"(edges by {'p < α' if i.get('edge_rule') == 'significant' else 'ρ > threshold'})")
+                elif stage == 'networks':
+                    _gb_set('networks', 'done')
+                elif stage == 'jitter':
+                    _gb['stats']['Migrating'] = f"{i.get('kept')}/{i.get('total')}"
+                    _gb_set('load', detail=f"{len(track_ids)} tracks · migrating (extent ≥ {i.get('min_extent_um'):.0f} µm): "
+                                           f"{i.get('kept')}/{i.get('total')} · networks: {', '.join(network_types)}")
+                elif stage == 'null':
+                    _gb_set('networks', detail=f"null model: randomisation {i.get('rep')}/{i.get('n_reps')}")
+                elif stage == 'mode':
+                    _gb_set(i.get('mode'), 'done' if i.get('finished') else 'running',
+                            'done' if i.get('finished') else 'running')
+                _gb_refresh(stage)
+
+            _gb_refresh(f'Building {len(network_types)} network types...')
 
             try:
                 IMMUNIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'immunia')
@@ -5889,11 +6279,23 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 analyzer._build_temporal_cooccurrence_graphs = _fast_temporal
                 print(f"[IMMUNIA] GT: using vectorized network builders (cdist)")
 
-                gt_results = analyzer.run_analysis(
+                _gt_kw = dict(
+                    min_extent_um=float(all_params.get('gt_min_extent_um', 100) or 0),
+                    pixel_to_um=float(all_params.get('gt_pixel_to_um', 2.4748) or 2.4748),
+                    edge_rule=_edge_rule,
+                    alpha=float(all_params.get('gt_alpha', 0.05) or 0.05),
+                    null_model=_null_on,
+                    null_reps=int(float(all_params.get('gt_null_reps', 20) or 20)),
+                    progress=_gt_progress,
+                    cancel_evt=cancel_evt,
+                )
+                try:
+                  gt_results = analyzer.run_analysis(
                     prepared_data=prepared_data,
                     dataset_name='immunia_run',
                     network_types=network_types,
                     analysis_modes=analysis_modes,
+                    **_gt_kw,
                     ccm_threshold=float(all_params.get('ccm_threshold', 0.3)),
                     gc_threshold=float(all_params.get('gc_threshold', 0.05)),
                     correlation_threshold=float(all_params.get('correlation_threshold', 0.5)),
@@ -5904,7 +6306,12 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                     min_distance=float(all_params.get('gt_min_distance', 250)),
                     max_distance=float(all_params.get('gt_max_distance', 100)),
                     max_pairs=int(all_params.get('gt_max_pairs', 10)),
-                )
+                  )
+                except Exception as _gt_err:
+                    if type(_gt_err).__name__ == 'GTCancelled':
+                        return {"status": "cancelled",
+                                "outputs": {"message": "Graph theory stopped by user; nothing saved — previous runs kept."}}
+                    raise
 
                 if 'error' in gt_results:
                     return {"status": "error", "error_msg": gt_results['error']}
@@ -5926,6 +6333,10 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                     'analysis_modes': analysis_modes,
                     'n_tracks': len(track_ids),
                     'source_runs': list(selected_run_ids) if selected_run_ids else 'all',
+                    'edge_rule': _edge_rule,
+                    'alpha': _gt_kw['alpha'],
+                    'min_extent_um': _gt_kw['min_extent_um'],
+                    'null_model': _null_on,
                     'available_methods': list(sa_results.get('influence_matrices', {}).keys()),
                     'timestamp': datetime.now().isoformat(),
                 }
@@ -5940,14 +6351,15 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 with open(results_dir / 'graph_theory_results.pkl', 'wb') as f:
                     pickle.dump(gt_results, f)
 
-                if progress_cb:
-                    progress_cb(100, 100, 'done', 'Graph theory analysis complete')
-
                 n_nets = len(gt_results.get('networks', {}))
                 n_tracks = gt_results.get('n_trajectories', 0)
                 msg = f"Graph theory complete — {n_tracks} tracks, {n_nets} network types"
                 print(f"\n[IMMUNIA] ✅ {msg}")
-                return {"status": "done", "outputs": {"message": msg}}
+                _gb_set('save', 'done', f"runs/{run_id}")
+                _gb['status'] = 'done'
+                _gb_refresh(msg)
+                _gb['pct'] = 100.0
+                return {"status": "done", "outputs": {"message": msg, "stage_board": _gb}}
 
             except Exception as e:
                 import traceback
@@ -6010,39 +6422,106 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
             tracking_data = {'trajectories': trajectories}
             print(f"[IMMUNIA] Keller-Segel — {len(trajectories)} tracks, tumor: {seg_data['tumor_mask'].shape}")
 
-            source_type = all_params.get('source_type', 'interface')
-            analysis_modes = ['steady_state']
-            if all_params.get('analysis_modes', 'steady_state') == 'both':
-                analysis_modes = ['steady_state', 'transient']
-
+            # ── Config for the current KellerSegelAnalyzer (field + Langevin simulation) ──
+            def _ks_f(key, default):
+                v = all_params.get(key, '')
+                return float(v) if str(v).strip() not in ('', 'None') else default
+            def _ks_b(key, default):
+                v = all_params.get(key, None)
+                return default if v is None else str(v).lower() == 'true'
+            n_movie_frames = int(tracks_df['frame'].max()) + 1 if len(tracks_df) else 273
             ks_config = {
-                'source_type': source_type,
-                'steady': {
-                    'D_C': float(all_params.get('D_C', 100)),
-                    'mu': float(all_params.get('mu', 0.1)),
-                    'chi': float(all_params.get('chi', 5.0)),
-                    'D_N': float(all_params.get('D_N', 1.0)),
-                    'dx': float(all_params.get('dx', 1.0)),
-                    'dt': float(all_params.get('ks_dt', 0.01)),
-                    'max_iter': int(all_params.get('max_iter', 50000)),
-                    'tolerance': float(all_params.get('tolerance', 1e-6)),
-                    'source_strength': float(all_params.get('source_strength', 10)),
-                    'enforce_tissue_mask': str(all_params.get('enforce_tissue_mask', 'true')).lower() == 'true',
-                    'tumor_expansion_percent': float(all_params.get('tumor_expansion_percent', 10)),
+                'source_type': all_params.get('source_type', 'tumor'),
+                'analysis_modes': ['langevin'],
+                'langevin': {
+                    'D_C': _ks_f('D_C', 100.0),
+                    'mu': _ks_f('mu', 0.1),
+                    'dx': _ks_f('dx', 1.0),
+                    'source_strength': _ks_f('source_strength', 1.0),
+                    'enforce_tissue_mask': _ks_b('enforce_tissue_mask', False),
+                    'tumor_expansion_percent': _ks_f('tumor_expansion_percent', 10.0),
+                    'D_N': _ks_f('D_N', 1.0),
+                    'chi': _ks_f('chi', 5.0),
+                    'pixel_to_um': _ks_f('ks_pixel_to_um', 2.4748),
+                    'frame_to_min': _ks_f('ks_frame_to_min', 5.0),
+                    'n_steps': int(_ks_f('n_steps', n_movie_frames)),
+                    'n_replicates': int(_ks_f('n_replicates', 3)),
+                    'n_initial_frames': int(_ks_f('n_initial_frames', 5)),
+                    'exclude_tumor_interior': _ks_b('exclude_tumor_interior', False),
                 },
-                'transient': {
-                    'T_max': int(all_params.get('T_max', 100)),
-                    'dt': float(all_params.get('transient_dt', 0.01)),
-                },
-                'analysis_modes': analysis_modes,
                 'save_plots': False,
             }
+            lc = ks_config['langevin']
+            print(f"[IMMUNIA] KS: source={ks_config['source_type']}, D_C={lc['D_C']}, mu={lc['mu']}, "
+                  f"chi={lc['chi']}, D_N={lc['D_N']}, steps={lc['n_steps']} x {lc['n_replicates']} replicates")
 
-            print(f"[IMMUNIA] KS: source={source_type}, D_C={ks_config['steady']['D_C']}, "
-                  f"chi={ks_config['steady']['chi']}, mu={ks_config['steady']['mu']}")
+            # ── Live board ──
+            import time as _t_ks
+            _kb_t0 = _t_ks.time()
+            _kb = {
+                'title': 'Keller–Segel', 'status': 'running', 'pct': 0.0,
+                'stats': {'Tracks': len(trajectories), 'Tumors': n_tumors, 'Field': '—', 'Particles': '—',
+                          'Spearman r': '—', 'Elapsed': 0, 'ETA': None},
+                'stages': [
+                    {'id': 'load',     'label': 'Load data',              'status': 'done',
+                     'detail': f"{len(trajectories)} tracks, {n_tumors} tumors"},
+                    {'id': 'measure',  'label': 'Measured NK presence',   'status': 'pending', 'detail': ''},
+                    {'id': 'source',   'label': 'Source field',           'status': 'pending', 'detail': ''},
+                    {'id': 'solve',    'label': 'Solve C(x)',             'status': 'pending', 'detail': ''},
+                    {'id': 'langevin', 'label': 'Langevin simulation',    'status': 'pending', 'detail': ''},
+                    {'id': 'validate', 'label': 'Validate vs measured',   'status': 'pending', 'detail': ''},
+                    {'id': 'save',     'label': 'Save results',           'status': 'pending', 'detail': ''},
+                ],
+            }
+            _kb_w = {'load': 5, 'measure': 5, 'source': 3, 'solve': 12, 'langevin': 65, 'validate': 3, 'save': 7}
 
-            if progress_cb:
-                progress_cb(10, 100, 'solving', 'Solving Keller-Segel PDE...')
+            def _kb_stage(sid, status=None, detail=None, frac=None):
+                for st in _kb['stages']:
+                    if st['id'] == sid:
+                        if status: st['status'] = status
+                        if detail is not None: st['detail'] = detail
+                pct = 0.0
+                for st in _kb['stages']:
+                    if st['status'] == 'done':
+                        pct += _kb_w[st['id']]
+                    elif st['id'] == sid and frac is not None:
+                        pct += _kb_w[st['id']] * max(0.0, min(1.0, frac))
+                _kb['pct'] = round(pct, 1)
+                _kb['stats']['Elapsed'] = round(_t_ks.time() - _kb_t0, 1)
+
+            def _kb_emit(msg=''):
+                if progress_cb:
+                    progress_cb(_kb['pct'], 100, 'keller_segel', msg, stage_board=_kb)
+
+            def _ks_progress(stage, **i):
+                if stage == 'measure':
+                    _kb_stage('measure', 'done', f"{i.get('n_tumors', 0)} tumor regions, {i.get('n_frames', 0)} frames")
+                elif stage == 'source':
+                    _kb_stage('source', 'done', f"{ks_config['source_type']} · {i.get('active_px', 0)} source px")
+                    _kb_stage('solve', 'running', 'solving', frac=0.0)
+                elif stage == 'solve' and i.get('finished'):
+                    _kb['stats']['Field'] = f"C_max {i.get('c_max', 0):.2e}"
+                    _kb_stage('solve', 'done', f"{i.get('seconds', 0)} s")
+                elif stage == 'solve':
+                    _kb_stage('solve', 'running', f"{i.get('method', '')} solver", frac=0.0)
+                elif stage == 'langevin':
+                    rep, nr, st, ns = i.get('rep', 1), i.get('n_reps', 1), i.get('step', 0), max(i.get('n_steps', 1), 1)
+                    _kb['stats']['Particles'] = i.get('particles', '—')
+                    frac = ((rep - 1) + st / ns) / max(nr, 1)
+                    el = _t_ks.time() - _kb_t0
+                    _kb['stats']['ETA'] = round(el / max(frac, 1e-3) * (1 - frac), 1) if frac > 0.02 else None
+                    _kb_stage('langevin', 'running', f"replicate {rep}/{nr} · step {st}/{ns}", frac=frac)
+                elif stage == 'validate':
+                    _kb_stage('langevin', 'done', f"{lc['n_replicates']} replicates × {lc['n_steps']} steps")
+                    r, pv, n = i.get('r'), i.get('p'), i.get('n')
+                    if r is not None and r == r:
+                        _kb['stats']['Spearman r'] = f"{r:.3f}"
+                        _kb_stage('validate', 'done', f"Spearman r = {r:.3f} (p = {pv:.3g}, {n} tumors)")
+                    else:
+                        _kb_stage('validate', 'done', f"not enough tumors ({n})")
+                _kb_emit(stage)
+
+            _kb_emit('Starting Keller–Segel')
 
             try:
                 IMMUNIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'immunia')
@@ -6051,102 +6530,53 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 from components.keller_segel_analyzer import KellerSegelAnalyzer
 
                 analyzer = KellerSegelAnalyzer()
+                tracking_data['tracks_df'] = tracks_df          # birth/death/start position per cell
+                try:
+                    results = analyzer.run_analysis(
+                        dataset_name='immunia_run',
+                        tracking_data=tracking_data,
+                        segmentation_data=seg_data,
+                        config=ks_config,
+                        progress=_ks_progress,
+                        cancel_evt=cancel_evt,
+                    )
+                except Exception as _ks_err:
+                    if type(_ks_err).__name__ == 'KSCancelled':
+                        return {"status": "cancelled",
+                                "outputs": {"message": "Keller–Segel stopped by user; nothing saved — previous results kept."}}
+                    raise
 
-                # Override _create_initial_distribution based on user's N0 choice
-                n0_source = all_params.get('n0_source', 'cumulative')
-                _original_create_N0 = analyzer._create_initial_distribution
-                def _custom_N0(measurements, params):
-                    if n0_source == 'cumulative':
-                        N0 = measurements.get('cumulative_presence', np.zeros((10,10))).astype(np.float32)
-                        if N0.max() > 0:
-                            N0 = N0 / N0.max()
-                        print(f"[IMMUNIA] KS N₀: cumulative presence, nonzero={np.sum(N0>0)} px")
-                        return N0
-                    elif n0_source == 'uniform':
-                        tissue = seg_data.get('tissue_mask', np.ones((10,10)))
-                        N0 = (tissue > 0).astype(np.float32)
-                        print(f"[IMMUNIA] KS N₀: uniform over tissue, area={np.sum(N0>0)} px")
-                        return N0
-                    else:
-                        return _original_create_N0(measurements, params)
-                analyzer._create_initial_distribution = _custom_N0
-
-                # Monkey-patch the solver to add progress + cancellation
-                _original_solve = analyzer._solve_chemoattractant_pde
-                def _solve_with_progress(source, tissue_mask, params):
-                    import numpy as _np
-                    D_C = params['D_C']
-                    mu = params['mu']
-                    dx = params['dx']
-                    source_strength = params.get('source_strength', 10.0)
-                    enforce_tissue_mask = params.get('enforce_tissue_mask', True)
-                    S = source.astype(_np.float32) * source_strength
-                    dt_max = 0.25 * dx**2 / D_C
-                    dt = min(params['dt'], dt_max)
-                    print(f"[IMMUNIA] KS solver: dt={dt:.6f} (max={dt_max:.6f}), {params['max_iter']} iterations")
-                    C = _np.zeros_like(source, dtype=_np.float32)
-                    update_mask = (tissue_mask > 0).astype(_np.float32) if enforce_tissue_mask else _np.ones_like(tissue_mask, dtype=_np.float32)
-                    try:
-                        from components.keller_segel_analyzer import compute_laplacian_numba
-                        compute_lap = compute_laplacian_numba
-                        print("[IMMUNIA] KS solver: using numba-parallel Laplacian")
-                    except:
-                        def compute_lap(C_arr, dx_val):
-                            lap = _np.zeros_like(C_arr)
-                            lap[1:-1,1:-1] = (C_arr[2:,1:-1]+C_arr[:-2,1:-1]+C_arr[1:-1,2:]+C_arr[1:-1,:-2]-4*C_arr[1:-1,1:-1])/(dx_val**2)
-                            return lap
-                        print("[IMMUNIA] KS solver: using numpy vectorized Laplacian (numba unavailable)")
-                    max_iter = params['max_iter']
-                    for iteration in range(max_iter):
-                        if cancel_evt and cancel_evt.is_set():
-                            print(f"[IMMUNIA] KS solver cancelled at iteration {iteration}")
-                            return C
-                        lap = compute_lap(C, dx)
-                        update = dt * (D_C * lap + S - mu * C)
-                        C_new = C + update * update_mask
-                        residual = _np.max(_np.abs(C_new - C))
-                        if iteration % 500 == 0:
-                            if progress_cb:
-                                pct = 10 + int(80 * iteration / max_iter)
-                                progress_cb(pct, 100, 'solving', f'PDE iteration {iteration}/{max_iter} · residual={residual:.2e}')
-                            print(f"[IMMUNIA] KS iter {iteration}, residual={residual:.2e}, C_max={C.max():.2e}")
-                        if residual < params['tolerance']:
-                            print(f"[IMMUNIA] KS converged at iteration {iteration} (residual={residual:.2e})")
-                            break
-                        C = C_new
-                    return C
-                analyzer._solve_chemoattractant_pde = _solve_with_progress
-
-                results = analyzer.run_analysis(
-                    dataset_name='immunia_run',
-                    tracking_data=tracking_data,
-                    segmentation_data=seg_data,
-                    config=ks_config,
-                )
-
+                _kb_stage('save', 'running', 'keller_segel_results.pkl', frac=0.0)
+                _kb_emit('Saving')
                 os.makedirs(results_dir, exist_ok=True)
+                results['tissue_mask'] = seg_data.get('tissue_mask')     # for the Model Fields plot
                 with open(results_dir / 'keller_segel_results.pkl', 'wb') as f:
                     pickle.dump(results, f)
 
-                validation = results.get('validation', {})
+                validation = results.get('langevin_validation', {}) or {}
                 import json as _json3
                 summary = {
                     'config': ks_config,
                     'n_tracks': len(trajectories),
-                    'validation': {k: float(v) if isinstance(v, (float, int)) else v
-                                   for k, v in validation.items() if not isinstance(v, np.ndarray)},
+                    'n_tumors': int(n_tumors),
+                    'validation': {k: (float(v) if isinstance(v, (float, int, np.floating, np.integer)) else v)
+                                   for k, v in validation.items()
+                                   if not isinstance(v, (np.ndarray, pd.DataFrame))},
                 }
                 with open(results_dir / 'keller_segel_summary.json', 'w') as f:
                     _json3.dump(summary, f, indent=2, default=str)
+                if isinstance(validation.get('comparison_df'), pd.DataFrame):
+                    validation['comparison_df'].to_csv(results_dir / 'presence_per_tumor.csv', index=False)
 
-                if progress_cb:
-                    progress_cb(100, 100, 'done', 'Keller-Segel analysis complete')
-
-                r2 = validation.get('r_squared', 0)
-                corr = validation.get('correlation', 0)
-                msg = f"Keller-Segel complete — R²={r2:.3f}, corr={corr:.3f}"
+                corr = validation.get('correlation', float('nan'))
+                pval = validation.get('p_value', float('nan'))
+                msg = (f"Keller–Segel complete — predicted vs measured NK presence: Spearman r={corr:.3f} "
+                       f"(p={pval:.3g}, {validation.get('n_tumors', 0)} tumors)")
                 print(f"\n[IMMUNIA] ✅ {msg}")
-                return {"status": "done", "outputs": {"message": msg}}
+                _kb_stage('save', 'done', 'results.pkl, summary.json, presence_per_tumor.csv')
+                _kb['status'], _kb['pct'], _kb['stats']['ETA'] = 'done', 100.0, None
+                _kb_emit(msg)
+                return {"status": "done", "outputs": {"message": msg, "stage_board": _kb}}
 
             except Exception as e:
                 import traceback
@@ -6393,7 +6823,7 @@ def association_edge_plot(ws_id, pipeline_id):
             elif file_path:
                 resolved = project.resolve_data_path(file_path)
                 if resolved:
-                    tiff_stack = tifffile.imread(str(resolved))
+                    tiff_stack = _read_movie(resolved)
                     if tiff_stack.ndim == 3:
                         tiff_stack = tiff_stack[:, np.newaxis, :, :]
                     app._tiff_cache[cache_key_tiff] = tiff_stack
@@ -6663,7 +7093,7 @@ def association_run_plot(ws_id, pipeline_id, run_id):
             elif file_path:
                 resolved = project.resolve_data_path(file_path)
                 if resolved:
-                    tiff_stack = tifffile.imread(str(resolved))
+                    tiff_stack = _read_movie(resolved)
                     if tiff_stack.ndim == 3:
                         tiff_stack = tiff_stack[:, np.newaxis, :, :]
                     app._tiff_cache[cache_key_tiff] = tiff_stack
@@ -6742,7 +7172,7 @@ def association_run_plot(ws_id, pipeline_id, run_id):
                 elif file_path:
                     resolved = project.resolve_data_path(file_path)
                     if resolved:
-                        tiff_stack = tifffile.imread(str(resolved))
+                        tiff_stack = _read_movie(resolved)
                         if tiff_stack.ndim == 3:
                             tiff_stack = tiff_stack[:, np.newaxis, :, :]
                         app._tiff_cache[cache_key_tiff] = tiff_stack
@@ -6956,7 +7386,7 @@ def gt_list_runs(ws_id, pipeline_id):
                 with open(str(meta_path)) as f:
                     meta = json.load(f)
                 plots_dir = run_path / 'plots'
-                plot_files = [p.name for p in plots_dir.iterdir() if p.suffix in ('.png', '.jpg')] if plots_dir.exists() else []
+                plot_files = [p.name for p in plots_dir.iterdir() if p.suffix in ('.png', '.jpg', '.mp4', '.gif')] if plots_dir.exists() else []
                 meta['plot_files'] = plot_files
                 meta['run_dir'] = run_path.name
                 runs.append(meta)
@@ -7000,6 +7430,48 @@ def gt_run_plot(ws_id, pipeline_id, run_id):
         IMMUNIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'immunia')
         if IMMUNIA_DIR not in sys.path:
             sys.path.insert(0, IMMUNIA_DIR)
+
+        # ── Network "glow" video: cells glow by a chosen node metric (several per run) ──
+        if plot_type == 'network_video':
+            import re as _re_nv, time as _t_nv
+            with open(pkl_path, 'rb') as f:
+                gt = pickle.load(f)
+            prm = body.get('params') or {}
+            net = prm.get('network', 'ccm')
+            metric = prm.get('metric', 'eigenvector_sqrtN')
+            bg = prm.get('background', 'none')
+            show_edges = str(prm.get('show_edges', 'true')).lower() == 'true'
+            netd = gt.get('networks', {}).get(net) or next(iter(gt.get('networks', {}).values()), None)
+            if not netd:
+                return api_error("No network in this run", 400)
+            gr = netd['graph_results']
+            G = gr['graphs']['aggregated']
+            nm = gr['node_metrics'][0]
+            if metric not in nm:
+                return api_error(f"Metric '{metric}' not in this run (available: {sorted(nm)}). "
+                                 f"Re-run graph theory for degree / eigenvector x sqrt(N).", 400)
+            tracks_df = gt.get('extraction_data', {}).get('tracks_df')
+            if tracks_df is None or len(tracks_df) == 0:
+                return api_error("No tracks stored in this run", 400)
+            tracks_df = tracks_df.reset_index(drop='frame' in tracks_df.columns)
+            stem = _re_nv.sub(r'[^A-Za-z0-9_]', '_', f"network_video_{net}_{metric}_{bg}{'_edges' if show_edges else ''}")
+            label = {'eigenvector_sqrtN': 'Eigenvector x sqrt(N)', 'degree': 'Degree (coupled cells)',
+                     'betweenness': 'Betweenness', 'clustering': 'Clustering', 'pagerank': 'PageRank',
+                     'eigenvector': 'Eigenvector', 'total_degree': 'Total degree',
+                     'in_degree': 'In-degree', 'out_degree': 'Out-degree'}.get(metric, metric)
+            for mod_name in [k for k in sys.modules if 'network_video' in k]:
+                importlib.reload(sys.modules[mod_name])
+            from plotters.network_video import render_network_video
+            fname, nfr = render_network_video(
+                tracks_df, nm[metric], G.to_undirected().edges(), str(run_dir / 'plots'), stem,
+                metric_label=label, background=bg,
+                seg_dir=str(project.get_results_dir(ws_id, pipeline_id, 'segment')), show_edges=show_edges)
+            with open(run_dir / 'plots' / f'{stem}.json', 'w') as f:
+                json.dump({'params': prm, 'file': fname}, f)
+            print(f"[IMMUNIA] GT network video: {fname} ({nfr} frames)")
+            url = f"/api/step/{ws_id}/{pipeline_id}/graph_theory/results/runs/{run_id}/plots/{fname}?t={int(_t_nv.time())}"
+            return api_response({'url': url, 'filename': fname})
+
         for mod_name in [k for k in sys.modules if 'graph_theory_plotter' in k]:
             importlib.reload(sys.modules[mod_name])
         from plotters.graph_theory_plotter import GraphTheoryPlotter
@@ -7103,7 +7575,7 @@ def examination_plot(ws_id, pipeline_id):
                 if not hasattr(app, '_tiff_cache'):
                     app._tiff_cache = {}
                 if cache_key not in app._tiff_cache:
-                    app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+                    app._tiff_cache[cache_key] = _read_movie(resolved)
                 raw = app._tiff_cache[cache_key]
                 det_params_all = project.load_params(ws_id, pipeline_id, 'detection') or {}
                 det_ch = 'vinculin'
@@ -7442,7 +7914,7 @@ def examination_dynamic_panels(ws_id, pipeline_id):
                 if not hasattr(app, '_tiff_cache'):
                     app._tiff_cache = {}
                 if ck not in app._tiff_cache:
-                    app._tiff_cache[ck] = tifffile.imread(str(resolved))
+                    app._tiff_cache[ck] = _read_movie(resolved)
                 raw_stack = app._tiff_cache[ck]
 
         if raw_stack is None:
@@ -7722,7 +8194,7 @@ def examination_track_frames(ws_id, pipeline_id):
                 if not hasattr(app, '_tiff_cache'):
                     app._tiff_cache = {}
                 if cache_key not in app._tiff_cache:
-                    app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+                    app._tiff_cache[cache_key] = _read_movie(resolved)
                 raw = app._tiff_cache[cache_key]
                 det_params_all = project.load_params(ws_id, pipeline_id, 'detection') or {}
                 det_ch = 'vinculin'
@@ -7885,6 +8357,59 @@ def examination_frame_data(ws_id, pipeline_id):
 # IMMUNIA — Segmentation Preview
 # ═══════════════════════════════════════════════
 
+
+# Distinct colours for labelled objects: random (not a gradient), and objects that touch or are
+# within a few pixels of each other never share a colour (greedy graph colouring).
+import numpy as np  # needed at import time for the label palette below
+_LABEL_PALETTE = np.array([
+    (230, 25, 75), (60, 180, 75), (255, 225, 25), (0, 130, 200), (245, 130, 48), (145, 30, 180),
+    (70, 240, 240), (240, 50, 230), (210, 245, 60), (250, 190, 212), (0, 128, 128), (220, 190, 255),
+    (170, 110, 40), (255, 250, 200), (128, 0, 0), (170, 255, 195), (128, 128, 0), (255, 215, 180),
+], dtype=np.float32)
+
+
+def _overlay_labels_distinct(rgb, labels, gap_px=3, alpha=0.45, seed=0):
+    from scipy.ndimage import grey_dilation, find_objects
+    lab = np.asarray(labels).astype(np.int64)
+    n = int(lab.max())
+    if n == 0:
+        return rgb
+    # neighbours: labels that meet after growing every object by gap_px
+    grown = grey_dilation(lab, size=(2 * gap_px + 1, 2 * gap_px + 1))
+    pairs = set()
+    for sh in ((0, 1), (1, 0), (1, 1), (1, -1)):
+        a = grown[max(sh[0], 0):grown.shape[0] + min(sh[0], 0), max(sh[1], 0):grown.shape[1] + min(sh[1], 0)]
+        b = grown[max(-sh[0], 0):grown.shape[0] + min(-sh[0], 0), max(-sh[1], 0):grown.shape[1] + min(-sh[1], 0)]
+        m = (a != b) & (a > 0) & (b > 0)
+        pairs.update(zip(a[m].tolist(), b[m].tolist()))
+    nbrs = {}
+    for i, j in pairs:
+        nbrs.setdefault(i, set()).add(j)
+        nbrs.setdefault(j, set()).add(i)
+    rng = np.random.RandomState(seed)
+    order = rng.permutation(np.arange(1, n + 1))
+    k = len(_LABEL_PALETTE)
+    colour = np.zeros(n + 1, dtype=np.int64)
+    for lbl in order:                                   # random start colour, then avoid neighbours
+        used = {colour[o] for o in nbrs.get(int(lbl), ()) if colour[o] > 0}
+        start = rng.randint(k)
+        for d in range(k):
+            c = (start + d) % k + 1
+            if c not in used:
+                colour[lbl] = c
+                break
+        else:
+            colour[lbl] = start + 1
+    lut = np.vstack([np.zeros((1, 3), np.float32), _LABEL_PALETTE])
+    col_img = lut[colour[lab]]
+    inside = lab > 0
+    out = rgb.astype(np.float32)
+    out[inside] = out[inside] * (1 - alpha) + col_img[inside] * alpha
+    # thin outline in the object's own colour
+    edge = inside & (grey_dilation(lab, size=(3, 3)) != lab) | inside & (-grey_dilation(-lab, size=(3, 3)) != lab)
+    out[edge] = col_img[edge]
+    return np.clip(out, 0, 255).astype(np.uint8)
+
 @app.route('/api/immunia/<ws_id>/<pipeline_id>/seg_preview', methods=['POST'])
 def immunia_seg_preview(ws_id, pipeline_id):
     """Preview segmentation for a single channel/role on one frame."""
@@ -7910,7 +8435,9 @@ def immunia_seg_preview(ws_id, pipeline_id):
             elif k.endswith('_channel_idx') or k.endswith('_channel_name'):
                 ch_setup[k] = v
 
-        ch_idx = int(ch_setup.get(f'{role}_channel_idx', 0))
+        _role_default = {'dead': 0, 'tumor': 1, 'tissue': 2, 'nk': 3}.get(role, 0)
+        _ci = str(ch_setup.get(f'{role}_channel_idx', '')).strip()
+        ch_idx = int(float(_ci)) if _ci not in ('', 'None', '?') else _role_default
         ch_name = ch_setup.get(f'{role}_channel_name', role)
 
         # Get seg params for this role
@@ -7921,6 +8448,8 @@ def immunia_seg_preview(ws_id, pipeline_id):
                 role_params.update(v)
             elif k.startswith(f'{role}_'):
                 role_params[k] = v
+        # settings as currently shown in the panel take precedence over saved ones
+        role_params.update({k: v for k, v in (body.get('params') or {}).items() if v is not None})
 
         threshold_factor = float(role_params.get(f'{role}_threshold_factor', 0.8))
         min_size = int(role_params.get(f'{role}_min_size', 30))
@@ -7954,16 +8483,26 @@ def immunia_seg_preview(ws_id, pipeline_id):
         resolved = project.resolve_data_path(file_path)
         if resolved is None:
             return jsonify({'success': False, 'error': f'File not found: {file_path}'})
+        _flat_imp = {}
+        for _k, _v in import_params.items():
+            _flat_imp.update(_v) if isinstance(_v, dict) else _flat_imp.__setitem__(_k, _v)
+        _apply_stack_layout(resolved, _flat_imp)
 
         cache_key = str(resolved)
         if not hasattr(app, '_tiff_cache'):
             app._tiff_cache = {}
         if cache_key not in app._tiff_cache:
-            app._tiff_cache[cache_key] = tifffile.imread(str(resolved))
+            app._tiff_cache[cache_key] = _read_movie(resolved)
         stack = app._tiff_cache[cache_key]
 
-        # Extract single channel frame
-        if stack.ndim == 4:
+        # Extract single channel frame (3D movies: max projection over z)
+        if stack.ndim == 5:
+            n_frames, n_channels = stack.shape[0], stack.shape[2]
+            frame_idx = min(frame_idx, n_frames - 1)
+            if ch_idx >= n_channels:
+                return jsonify({'success': False, 'error': f'Channel {ch_idx} out of range (max {n_channels-1})'})
+            raw = stack[frame_idx, :, ch_idx].max(axis=0).astype(np.float32)
+        elif stack.ndim == 4:
             n_frames, n_channels = stack.shape[0], stack.shape[1]
             frame_idx = min(frame_idx, n_frames - 1)
             if ch_idx >= n_channels:
@@ -7980,15 +8519,23 @@ def immunia_seg_preview(ws_id, pipeline_id):
             if IMMUNIA_DIR not in sys.path:
                 sys.path.insert(0, IMMUNIA_DIR)
             from components.immunia_preprocessor_segmentor import Preprocessor_Segmentor
-            segmentor = Preprocessor_Segmentor()
-            segmentor.config['gaussian_sigma'] = sigma
-            mask = segmentor.segment_adaptive_threshold(
-                image=raw, min_size=min_size, threshold_factor=threshold_factor,
-                method=method, separate_objects=separate,
-                manual_threshold=manual_threshold,
-                intensity_min=intensity_min, intensity_max=intensity_max
-            )
-            print(f"[IMMUNIA seg_preview] Used Preprocessor_Segmentor")
+            if method == 'cellade':
+                from components.immunia_preprocessor_segmentor import cellade_config_from_params, cellade_segment_frame
+                _ccfg = cellade_config_from_params(role, role_params, separate)
+                mask = cellade_segment_frame(raw, _ccfg, os.path.dirname(os.path.abspath(__file__)))
+                if separate:
+                    mask = mask.astype(np.uint16)
+                print(f"[IMMUNIA seg_preview] CellADE {_ccfg['cellade_params']}")
+            else:
+                segmentor = Preprocessor_Segmentor()
+                segmentor.config['gaussian_sigma'] = sigma
+                mask = segmentor.segment_adaptive_threshold(
+                    image=raw, min_size=min_size, threshold_factor=threshold_factor,
+                    method=method, separate_objects=separate,
+                    manual_threshold=manual_threshold,
+                    intensity_min=intensity_min, intensity_max=intensity_max
+                )
+                print(f"[IMMUNIA seg_preview] Used Preprocessor_Segmentor")
         except Exception as seg_err:
             print(f"[IMMUNIA seg_preview] Fallback: {seg_err}")
             from scipy.ndimage import gaussian_filter, binary_fill_holes
@@ -8073,11 +8620,14 @@ def immunia_seg_preview(ws_id, pipeline_id):
 
         from scipy.ndimage import binary_erosion
         mask_bool = mask.astype(bool)
-        boundary = mask_bool & ~binary_erosion(mask_bool, iterations=2)
-        rgb[boundary] = color
-        mask_rgb = np.zeros_like(rgb, dtype=np.float32)
-        mask_rgb[mask_bool] = color
-        rgb = (rgb.astype(np.float32) * 0.7 + mask_rgb * 0.3).astype(np.uint8)
+        if separate and int(mask.max()) > 1:
+            rgb = _overlay_labels_distinct(rgb, mask)
+        else:
+            boundary = mask_bool & ~binary_erosion(mask_bool, iterations=2)
+            rgb[boundary] = color
+            mask_rgb = np.zeros_like(rgb, dtype=np.float32)
+            mask_rgb[mask_bool] = color
+            rgb = (rgb.astype(np.float32) * 0.7 + mask_rgb * 0.3).astype(np.uint8)
 
         img = Image.fromarray(rgb)
         buf = io.BytesIO()
@@ -8085,7 +8635,8 @@ def immunia_seg_preview(ws_id, pipeline_id):
         b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
         area_pct = round(np.sum(mask_bool) / mask_bool.size * 100, 1)
-        info = f"Objects: {n_obj} | Area: {area_pct}% | Method: {method} | Factor: {threshold_factor} | Min: {min_size}px | \u03c3={sigma}"
+        info = (f"Channel {ch_idx} ({ch_name}) | Objects: {n_obj} | Area: {area_pct}% | Method: {method}"
+                + ("" if method == 'cellade' else f" | Factor: {threshold_factor} | Min: {min_size}px | \u03c3={sigma}"))
 
         return jsonify({
             'success': True,
