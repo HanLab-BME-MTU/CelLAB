@@ -4480,21 +4480,44 @@ def step_generate_plot(ws_id, pipeline_id, step_id):
                 plotter = TrackingPlotter()
                 immunia_plots_dir = results_dir / "plots"
                 immunia_plots_dir.mkdir(parents=True, exist_ok=True)
-                fig = plotter.plot(results_dir, plot_type=plot_type, plots_dir=str(immunia_plots_dir))
+                _anim_kw = {}
+                if plot_type == 'trajectory_animation':
+                    # Several animations can be inserted (one per background): each instance writes
+                    # its own files, named after the instance id sent by the GUI.
+                    import re as _re_anim
+                    _inst = _re_anim.sub(r'[^A-Za-z0-9_]', '_', str(body_raw.get('instance_id') or 'trajectory_animation'))
+                    _aparams = body_raw.get('params') or {}
+                    _anim_kw = {
+                        'out_name': _inst,
+                        'background': _aparams.get('background', 'none'),
+                        'seg_dir': str(project.get_results_dir(ws_id, pipeline_id, 'segment')),
+                    }
+                fig = plotter.plot(results_dir, plot_type=plot_type, plots_dir=str(immunia_plots_dir), **_anim_kw)
 
                 # Animation returns MP4 URL, others return PNG
                 if plot_type == 'trajectory_animation':
-                    filename = 'trajectory_animation.png'  # static preview
+                    _stem = _anim_kw['out_name']
+                    filename = f'{_stem}.png'  # static preview
+                    try:   # settings sidecar, so the GUI can restore this animation after reopening
+                        import json as _json_anim
+                        with open(immunia_plots_dir / f'{_stem}.json', 'w') as _fa:
+                            _json_anim.dump({'instance_id': _stem, 'params': body_raw.get('params') or {}}, _fa)
+                    except Exception as _e_anim:
+                        print(f"[IMMUNIA] could not write animation settings: {_e_anim}")
                     fig.savefig(immunia_plots_dir / filename, dpi=150, bbox_inches='tight',
                                 facecolor='white', edgecolor='none')
                     plt.close(fig)
-                    # Return the MP4 URL (video file), not the PNG
-                    mp4_url = f"/api/step/{ws_id}/{pipeline_id}/{step_id}/results/plots/trajectory_animation.mp4"
+                    # Return the video (MP4 if H.264 was available, else browser-safe WebM)
+                    _mp4 = immunia_plots_dir / f'{_stem}.mp4'
+                    _mp4_ok = _mp4.exists() and _mp4.stat().st_size > 1024     # empty = failed writer
+                    vid = f'{_stem}.mp4' if _mp4_ok else f'{_stem}.gif'
+                    import time as _t_anim   # cache-buster: same file name after a re-render
+                    mp4_url = f"/api/step/{ws_id}/{pipeline_id}/{step_id}/results/plots/{vid}?t={int(_t_anim.time())}"
                     sys.stdout = _old_stdout
                     return api_response({
-                        "plot_path": str((immunia_plots_dir / 'trajectory_animation.mp4').relative_to(project.root)),
+                        "plot_path": str((immunia_plots_dir / vid).relative_to(project.root)),
                         "url": mp4_url,
-                        "filename": "trajectory_animation.mp4",
+                        "filename": vid,
                     })
                 else:
                     filename = f'{plot_type}.png'
@@ -5164,11 +5187,50 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
             if not masks_path.exists():
                 return {"status": "error", "error_msg": f"No {track_target} masks found. Run segmentation first."}
 
-            if progress_cb:
-                progress_cb(0, 4, 'loading', f'Loading {track_target} masks...')
+            # ── Live board (rendered by the GUI like the Signal Associa / Cornealia boards) ──
+            import time as _t_board
+            _tb_t0 = _t_board.time()
+            _tb = {
+                'title': 'Tracking', 'status': 'running', 'pct': 0.0,
+                'stats': {'Frames': '—', 'Detections': '—', 'Tracks': '—', 'Kept': '—',
+                          'Elapsed': 0, 'ETA': None},
+                'stages': [
+                    {'id': 'load',   'label': 'Load masks',        'status': 'running', 'detail': ''},
+                    {'id': 'detect', 'label': 'Detect cells',      'status': 'pending', 'detail': ''},
+                    {'id': 'link',   'label': 'Link trajectories', 'status': 'pending', 'detail': ''},
+                    {'id': 'filter', 'label': 'Filter tracks',     'status': 'pending', 'detail': ''},
+                    {'id': 'stats',  'label': 'Track statistics',  'status': 'pending', 'detail': ''},
+                    {'id': 'save',   'label': 'Save results',      'status': 'pending', 'detail': ''},
+                ],
+            }
+            _tb_w = {'load': 5, 'detect': 45, 'link': 30, 'filter': 5, 'stats': 5, 'save': 10}
+
+            def _tb_stage(sid, status=None, detail=None, frac=None):
+                for st in _tb['stages']:
+                    if st['id'] == sid:
+                        if status: st['status'] = status
+                        if detail is not None: st['detail'] = detail
+                pct = 0.0
+                for st in _tb['stages']:
+                    w = _tb_w[st['id']]
+                    if st['status'] == 'done':
+                        pct += w
+                    elif st['id'] == sid and frac is not None:
+                        pct += w * max(0.0, min(1.0, frac))
+                _tb['pct'] = round(pct, 1)
+                _tb['stats']['Elapsed'] = round(_t_board.time() - _tb_t0, 1)
+
+            def _tb_emit(message=''):
+                if progress_cb:
+                    progress_cb(_tb['pct'], 100, 'tracking', message, stage_board=_tb)
+
+            _tb_emit(f'Loading {track_target} masks...')
             print(f"[IMMUNIA] Loading masks: {masks_path}")
             masks = np.load(masks_path)
             n_frames = masks.shape[0]
+            _tb['stats']['Frames'] = n_frames
+            _tb_stage('load', 'done', f'{n_frames} frames · {masks.shape[2]}×{masks.shape[1]} px')
+            _tb_emit('Masks loaded')
             print(f"[IMMUNIA] Masks shape: {masks.shape} — {n_frames} frames")
 
             # ── Build tracker config ──
@@ -5215,8 +5277,40 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                   f"min_frames={tracker_config['filtering']['min_frames']}")
 
             # ── Run tracker ──
-            if progress_cb:
-                progress_cb(1, 4, 'tracking', 'Detecting features + linking trajectories...')
+            _link_method = tracker_config['linking'].get('method', 'trackpy')
+            _tb['stats']['Method'] = 'LapTrack' if _link_method == 'laptrack' else 'trackpy'
+
+            def _tracker_progress(stage, **info):
+                if stage == 'detect':
+                    done, total = info.get('done', 0), max(info.get('total', 1), 1)
+                    _tb['stats']['Detections'] = info.get('detections', '—')
+                    if info.get('finished'):
+                        _tb_stage('detect', 'done', f"{info.get('detections', 0)} detections in {total} frames")
+                        _tb['stats']['ETA'] = None
+                        _tb_emit('Detection done')
+                    else:
+                        el = _t_board.time() - _tb_t0
+                        _tb['stats']['ETA'] = round(el / max(done, 1) * (total - done), 1) if done else None
+                        _tb_stage('detect', 'running', f'frame {done}/{total}', frac=done / total)
+                        _tb_emit(f'Detecting cells: frame {done}/{total}')
+                elif stage == 'link':
+                    if info.get('finished'):
+                        _tb['stats']['Tracks'] = info.get('n_tracks', '—')
+                        _tb_stage('link', 'done', f"{info.get('n_tracks', 0)} trajectories")
+                        _tb_emit('Linking done')
+                    else:
+                        _tb_stage('link', 'running', f"{_tb['stats']['Method']} — linking all frames (one step)", frac=0.0)
+                        _tb_emit('Linking trajectories...')
+                elif stage == 'filter':
+                    _tb['stats']['Kept'] = info.get('kept', '—')
+                    _tb_stage('filter', 'done', f"kept {info.get('kept', 0)}, removed {info.get('removed', 0)} short tracks")
+                    _tb_emit('Filtering done')
+                elif stage == 'stats':
+                    _tb_stage('stats', 'done', 'speed, persistence, MSD')
+                    _tb_emit('Statistics done')
+
+            _tb_stage('detect', 'running', 'starting', frac=0.0)
+            _tb_emit('Detecting cells...')
 
             try:
                 IMMUNIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'immunia')
@@ -5225,9 +5319,13 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 from components.immunia_tracker import Tracker
 
                 tracker = Tracker(config=tracker_config)
-                results = tracker.track_cells(nk_masks=masks, use_masks=use_masks)
+                results = tracker.track_cells(nk_masks=masks, use_masks=use_masks, cancel_evt=cancel_evt,
+                                              progress=_tracker_progress)
                 print(f"[IMMUNIA] Tracker returned: {list(results.keys())}")
             except Exception as track_err:
+                if type(track_err).__name__ == 'TrackingCancelled':
+                    return {"status": "cancelled",
+                            "outputs": {"message": "Tracking stopped by user; nothing saved — previous results kept."}}
                 print(f"[IMMUNIA] Tracker import failed: {track_err}, using trackpy fallback")
                 import trackpy as tp
 
@@ -5285,8 +5383,8 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 }
 
             # ── Save results ──
-            if progress_cb:
-                progress_cb(3, 4, 'saving', 'Saving tracking results...')
+            _tb_stage('save', 'running', 'tracks.csv, statistics', frac=0.0)
+            _tb_emit('Saving tracking results...')
 
             os.makedirs(results_dir, exist_ok=True)
 
@@ -5321,10 +5419,16 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 msg += f", avg length {avg_len:.1f} frames"
             print(f"\n[IMMUNIA] ✅ {msg}")
 
-            if progress_cb:
-                progress_cb(4, 4, 'done', msg)
+            _tb_stage('save', 'done', 'tracks.csv, tracks.pkl, statistics')
+            for st in _tb['stages']:
+                if st['status'] != 'done':
+                    st['status'] = 'done'
+            _tb['status'], _tb['pct'], _tb['stats']['ETA'] = 'done', 100.0, None
+            if isinstance(avg_len, (int, float)) and avg_len > 0:
+                _tb['stats']['Avg length'] = f'{avg_len:.1f} fr'
+            _tb_emit(msg)
 
-            return {"status": "done", "outputs": {"message": msg}}
+            return {"status": "done", "outputs": {"message": msg, "stage_board": _tb}}
 
         elif step_id == 'signal_association':
             import pandas as pd
@@ -5372,6 +5476,13 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 # CCM-specific
                 'ccm_embedding_dim': int(all_params.get('ccm_embedding_dim', 2)),
                 'ccm_n_boot': int(all_params.get('ccm_n_boot', 20)),
+                # Lag-scanned Pearson
+                'lag_max_lag': int(float(all_params.get('lag_max_lag', 15) or 15)),
+                # Compute + early stopping
+                'n_jobs': int(float(all_params.get('n_jobs', 0) or 0)),
+                'gpu_enabled': str(all_params.get('ccm_gpu', 'false')).lower() == 'true',
+                'early_stop': str(all_params.get('early_stop', 'false')).lower() == 'true',
+                'early_stop_chunk': int(float(all_params.get('early_stop_chunk', 10) or 10)),
             }
 
             print(f"[IMMUNIA] Config: signal={assoc_config['signal_type']}, "
@@ -5388,6 +5499,9 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 results = analyzer.run(tracks_df, progress_cb=progress_cb, cancel_evt=cancel_evt)
 
                 if 'error' in results:
+                    if 'Cancelled' in str(results['error']):
+                        return {"status": "cancelled",
+                                "outputs": {"message": "Signal association stopped by user; nothing saved — previous results kept."}}
                     return {"status": "error", "error_msg": results['error']}
 
                 # Save results
@@ -5408,7 +5522,10 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                 if progress_cb:
                     progress_cb(100, 100, 'done', msg)
 
-                return {"status": "done", "outputs": {"message": msg}}
+                _outs = {"message": msg}
+                if results.get('sa_board'):
+                    _outs['sa_board'] = results['sa_board']      # finished live board stays in the run log
+                return {"status": "done", "outputs": _outs}
 
             except Exception as e:
                 import traceback

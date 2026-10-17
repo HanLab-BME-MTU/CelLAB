@@ -4736,14 +4736,28 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
     }
 
     if (moduleType === 'immunia' && id === 'track-linking') {
+        const _u = 'font-size:var(--fs-xs);color:var(--text-tertiary)';
         return wrap(`
         <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">Linking Parameters</p>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-bottom:10px">Controls how detections are linked across frames into trajectories.</p>
-        <div class="form-row"><span class="form-label">Search Range</span><input class="form-input" data-param="search_range" type="number" step="1" value="15" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">px max displacement</span></div>
-        <div class="form-row"><span class="form-label">Memory</span><input class="form-input" data-param="memory" type="number" step="1" value="3" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">frames gap allowed</span></div>
-        <div class="form-row"><span class="form-label">Adaptive Stop</span><input class="form-input" data-param="adaptive_stop" type="number" step="1" value="5" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">iterations</span></div>
-        <div class="form-row"><span class="form-label">Adaptive Step</span><input class="form-input" data-param="adaptive_step" type="number" step="0.01" value="0.95" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">shrink factor</span></div>
-        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Search Range: max px a cell can move between frames. Memory: how many frames a cell can disappear and be re-linked.</p>
+        <p style="${_u};margin-bottom:10px">Controls how detections are linked across frames into trajectories.</p>
+        <div class="form-row"><span class="form-label">Linking Method</span><select class="form-select" data-param="link_method">
+            <option value="laptrack" selected>LapTrack — global assignment + gap closing (recommended)</option>
+            <option value="trackpy">trackpy — frame-to-frame</option>
+        </select></div>
+        <div class="form-row"><span class="form-label">Search Range</span><input class="form-input" data-param="search_range" type="number" step="1" value="25" style="width:70px"><span style="${_u}">px max displacement per frame</span></div>
+        <p style="${_u};margin:8px 0 2px;font-weight:600">LapTrack</p>
+        <div>
+            <div class="form-row"><span class="form-label">Gap Closing</span><input class="form-input" data-param="gap_closing_max_frames" type="number" step="1" value="10" style="width:70px"><span style="${_u}">frames a cell may disappear</span></div>
+            <div class="form-row"><span class="form-label">Gap Range</span><input class="form-input" data-param="gap_closing_range" type="number" step="1" value="40" style="width:70px"><span style="${_u}">px max displacement across a gap</span></div>
+        </div>
+        <p style="${_u};margin:8px 0 2px;font-weight:600">trackpy</p>
+        <div>
+            <div class="form-row"><span class="form-label">Memory</span><input class="form-input" data-param="memory" type="number" step="1" value="3" style="width:70px"><span style="${_u}">frames gap allowed</span></div>
+            <div class="form-row"><span class="form-label">Adaptive Stop</span><input class="form-input" data-param="adaptive_stop" type="number" step="1" value="5" style="width:70px"><span style="${_u}">iterations</span></div>
+            <div class="form-row"><span class="form-label">Adaptive Step</span><input class="form-input" data-param="adaptive_step" type="number" step="0.01" value="0.95" style="width:70px"><span style="${_u}">shrink factor</span></div>
+        </div>
+        <div class="form-row"><span class="form-label">Merge Distance</span><input class="form-input" data-param="merge_distance" type="number" step="1" placeholder="off" style="width:70px"><span style="${_u}">px; merge detections closer than this (blank = off)</span></div>
+        <p style="${_u};margin-top:8px">LapTrack solves frame-to-frame linking globally and re-links cells that vanish for up to <b>Gap Closing</b> frames within <b>Gap Range</b> px (settings used in the paper: 25 px, 10 frames, 40 px). trackpy links frame by frame and re-links within <b>Memory</b> frames.</p>
         `);
     }
 
@@ -4782,6 +4796,7 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <option value="ccm" selected>CCM — Convergent Cross Mapping</option>
             <option value="granger">Granger Causality</option>
             <option value="correlation">Pearson Correlation</option>
+            <option value="lagscan">Lag-scanned Pearson (Danuser)</option>
             <option value="mutual_info">Mutual Information</option>
             <option value="transfer_entropy">Transfer Entropy</option>
         </select></div>
@@ -4812,6 +4827,9 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <div class="form-row"><span class="form-label">Bootstraps</span><input class="form-input" data-param="ccm_n_boot" type="number" step="1" value="20" style="width:70px"></div>
         </div>
 
+<div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Lag-scanned Pearson</div>
+        <div class="form-row"><span class="form-label">Max lag (±)</span><input class="form-input" data-param="lag_max_lag" type="number" step="1" value="15" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">frames</span></div>
+
         <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">Enable methods in Method Selection to configure their parameters.</p>
         `);
     }
@@ -4837,6 +4855,17 @@ function renderSettingsContent(moduleType, stepId, activeItem) {
             <option value="shuffle">Random Shuffle</option>
         </select></div>
         <div class="form-row"><span class="form-label">α (significance)</span><input class="form-input" data-param="alpha" type="number" step="0.01" value="0.05" style="width:70px"></div>
+
+        <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Early stopping</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);cursor:pointer"><input type="checkbox" data-param="early_stop"> Stop when a pair can no longer be significant</label>
+        <div class="form-row"><span class="form-label">Chunk size</span><input class="form-input" data-param="early_stop_chunk" type="number" min="1" value="10" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">surrogates</span></div>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary)">Sequential test (Besag &amp; Clifford 1991): same significance decisions as the full test, far fewer surrogates for uncoupled pairs.</p>
+
+        <div style="background:linear-gradient(180deg,var(--surface-3) 0%,var(--surface-2) 100%);border-bottom:1px solid rgba(0,0,0,.25);padding:5px 10px;margin:12px -12px 8px;font-size:var(--fs-xs);font-weight:700;color:#42a5f5;text-transform:uppercase;letter-spacing:1px">Compute</div>
+        <div class="form-row"><span class="form-label">CPU workers</span><input class="form-input" data-param="n_jobs" type="number" min="-1" step="1" value="0" style="width:70px"><span style="font-size:var(--fs-xs);color:var(--text-tertiary)">0 = auto · 1 = serial · −1 = all cores</span></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);cursor:pointer"><input type="checkbox" data-param="ccm_gpu"> Use GPU for the CCM surrogate test</label>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary)">GPU needs an NVIDIA card with CuPy; pairs then run one at a time. On modest GPUs the CPU workers are usually faster.</p>
+
         <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:8px">
             <strong>IAAFT:</strong> preserves power spectrum + amplitude distribution. Gold standard for nonlinear systems.
             <strong>Circular:</strong> preserves autocorrelation structure via random time shift.
@@ -6390,9 +6419,9 @@ async function discoverExistingResults(subId) {
         r.relative.replace(/\\/g, '/').startsWith('plots/')
     );
 
-    // Also discover video files
+    // Also discover video files (GIF too, for animations written without an H.264 encoder)
     const videos = files.filter(r =>
-        ['.mp4', '.webm', '.avi'].includes(r.type) &&
+        ['.mp4', '.webm', '.avi', '.gif'].includes(r.type) &&
         r.relative.replace(/\\/g, '/').startsWith('plots/')
     );
 
@@ -6400,11 +6429,28 @@ async function discoverExistingResults(subId) {
 
     // Process videos first (they take priority over static previews)
     for (const vid of videos) {
-        const baseName = vid.name.replace(/\.(mp4|webm|avi)$/i, '');
-        const plotType = PLOT_FILENAME_MAP[baseName];
+        const baseName = vid.name.replace(/\.(mp4|webm|avi|gif)$/i, '');
+        const [stem, inst] = baseName.split('__');
+        const plotType = PLOT_FILENAME_MAP[stem];
         if (!plotType) continue;
         const plotDef = available.find(p => p.id === plotType);
         if (!plotDef) continue;
+        // Multi-instance plots (trajectory animations): one tree entry per saved instance
+        if (plotDef.multi && inst) {
+            if (sub.insertedResults.find(r => r.plotType === baseName)) continue;
+            let params = { background: 'none' };
+            const side = files.find(f => f.name === `${baseName}.json`);
+            if (side) {
+                try { params = (await (await fetch(`${side.url}?t=${Date.now()}`)).json()).params || params; } catch (e) {}
+            }
+            const bg = params.background || 'none';
+            const bgLabel = (typeof ANIM_BACKGROUNDS !== 'undefined' ? (ANIM_BACKGROUNDS.find(b => b[0] === bg) || [bg, bg])[1] : bg);
+            sub.insertedResults.push({
+                plotType: baseName, label: `${plotDef.label} #${inst}${bg !== 'none' ? ' — ' + bgLabel : ''}`,
+                icon: plotDef.icon, url: vid.url, status: 'done', params,
+            });
+            continue;
+        }
         if (sub.insertedResults.find(r => r.plotType === plotType)) continue;
         sub.insertedResults.push({
             plotType, label: plotDef.label, icon: plotDef.icon,
@@ -6525,6 +6571,44 @@ async function _saRestoreBatchMeta(sub) {
 }
 
 // Signal Associa: live progress board (fixed template) shown while the run is going.
+// Generic live board: progress bar + stat cells + ordered stages (used by Immunia tracking)
+function renderStageBoard(b) {
+    if (!b) return '';
+    const isDone = b.status === 'done';
+    const pct = b.pct || 0;
+    const barColor = isDone ? 'var(--status-ok)' : 'var(--brand-accent)';
+    const fmtTime = (s) => {
+        if (s == null || s === '—') return '—';
+        if (s < 60) return `${Math.round(s)}s`;
+        if (s < 3600) return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
+        return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+    };
+    const icon = { done: '✓', running: '⏳', pending: '○', failed: '✗' };
+    const color = { done: 'var(--status-ok)', running: 'var(--brand-accent)', pending: 'var(--text-tertiary)', failed: 'var(--status-error)' };
+    const cell = (label, val) => `<div style="flex:1;min-width:80px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-tertiary)">${label}</div>
+        <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text-secondary);font-family:var(--font-mono)">${val}</div></div>`;
+    const stats = b.stats || {};
+    const nDone = (b.stages || []).filter(s => s.status === 'done').length;
+    let html = `<div style="border:1px solid var(--chrome-border);border-radius:6px;overflow:hidden">`;
+    html += `<div style="padding:6px 10px;background:var(--surface-3);font-weight:700;font-size:var(--fs-xs);color:var(--text-secondary);display:flex;justify-content:space-between">
+        <span>${isDone ? `✅ ${b.title || 'Run'} — complete` : `⏳ ${b.title || 'Run'}`}</span>
+        <span style="color:var(--text-tertiary);font-weight:400">${nDone}/${(b.stages || []).length} stages · ${Math.round(pct)}%</span></div>`;
+    html += `<div style="height:6px;background:var(--surface-1)"><div style="height:100%;width:${pct}%;background:${barColor};transition:width .3s"></div></div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 10px">${Object.entries(stats).map(([k, v]) =>
+        cell(k, (k === 'Elapsed' || k === 'ETA') ? (k === 'ETA' && isDone ? '0s' : fmtTime(v)) : (v ?? '—'))).join('')}</div>`;
+    html += `<div style="padding:0 10px 8px">`;
+    for (const st of (b.stages || [])) {
+        const c = color[st.status] || 'var(--text-tertiary)';
+        html += `<div style="display:flex;gap:8px;align-items:baseline;padding:2px 0;font-size:var(--fs-xs)">
+            <span style="color:${c};width:14px;text-align:center">${icon[st.status] || '○'}</span>
+            <span style="color:${st.status === 'pending' ? 'var(--text-tertiary)' : 'var(--text-secondary)'};min-width:130px;font-weight:${st.status === 'running' ? 700 : 400}">${st.label}</span>
+            <span style="color:var(--text-tertiary)">${st.detail || ''}</span></div>`;
+    }
+    html += `</div></div>`;
+    return html;
+}
+
 function renderSaBoard(b) {
     if (!b) return '';
     const isDone = b.status === 'done';
@@ -6867,6 +6951,8 @@ async function doRunAnalysis(moduleType, stepId) {
                             saHtml += `<div style="margin-top:8px">${renderSaReport(outputs.sa_report, outputs.alpha, outputs.elapsed_s)}</div>`;
                         }
                         logHtml = saHtml;
+                    } else if (outputs.stage_board) {
+                        logHtml += renderStageBoard(outputs.stage_board);
                     } else if (outputs.batch_board) {
                         logHtml += renderBatchBoard(outputs.batch_board);
                     } else if (outputs.pipeline_board) {
@@ -6927,6 +7013,8 @@ async function doRunAnalysis(moduleType, stepId) {
                 // Render pipeline board or batch board if available (real-time)
                 if (p.sa_board && labelEl) {
                     labelEl.innerHTML = renderSaBoard(p.sa_board);
+                } else if (p.stage_board && labelEl) {
+                    labelEl.innerHTML = renderStageBoard(p.stage_board);
                 } else if (p.batch_board && labelEl) {
                     labelEl.innerHTML = renderBatchBoard(p.batch_board);
                 } else if (p.pipeline_board && labelEl) {
@@ -7132,7 +7220,7 @@ function showResultImage(url, name) {
     console.log(`showResultImage: url=${url}, gfxId=${gfxId}, found=${!!gfx}`);
     if (gfx) {
         gfx.style.background = 'var(--surface-0)';
-        const isVideo = url.match(/\.(mp4|webm|avi|mov)$/i);
+        const isVideo = url.match(/\.(mp4|webm|avi|mov)(\?|$)/i);
         const content = isVideo
             ? `<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000">
                    <video id="resultVideo" src="${url}" loop style="max-width:100%;max-height:100%"></video>
@@ -11390,7 +11478,7 @@ function getAvailablePlots(moduleType, stepId) {
             { id: 'enhanced_histograms',       icon: '📊', label: 'Enhanced Histograms' },
             { id: 'quality_dashboard',         icon: '🔬', label: 'Quality Dashboard' },
             { id: 'spatial_metrics',           icon: '🗺', label: 'Spatial Metrics' },
-            { id: 'trajectory_animation',      icon: '🎬', label: 'Trajectory Animation (MP4)' },
+            { id: 'trajectory_animation',      icon: '🎬', label: 'Trajectory Animation', multi: true },
         ];
         if (stepId === 'signal_association') return [];  // plots handled per-run via right-click
         if (stepId === 'particle_tracking') return [
@@ -11512,7 +11600,7 @@ function showContextMenu(x, y, subId, moduleType, stepId) {
             <span class="ctx-arrow">▶</span>
             <div class="ctx-submenu">
                 ${plots.map(p => {
-                    const already = inserted.includes(p.id);
+                    const already = !p.multi && inserted.includes(p.id);
                     return `<div class="ctx-item ${already ? 'ctx-disabled' : ''}" 
                                  onclick="${already ? '' : `ctxInsertPlot('${moduleType}','${stepId}','${p.id}')`}">
                         <span class="ctx-icon">${p.icon}</span>
@@ -11567,6 +11655,22 @@ function ctxInsertPlot(moduleType, stepId, plotType) {
         }
         selectInsertedResultInTree(sub.id, 'batch_table');
         showBatchTable(moduleType, stepId);
+        return;
+    }
+
+    // Multi-instance plots (e.g. several trajectory animations with different backgrounds)
+    const _pdef = getAvailablePlots(moduleType, stepId).find(p => p.id === plotType);
+    if (_pdef && _pdef.multi) {
+        const n = 1 + Math.max(0, ...sub.insertedResults
+            .filter(r => (r.plotType || '').split('__')[0] === plotType)
+            .map(r => parseInt((r.plotType.split('__')[1]) || '0') || 0));
+        const inst = `${plotType}__${n}`;
+        sub.insertedResults.push({ plotType: inst, label: `${_pdef.label} #${n}`, icon: _pdef.icon,
+                                   status: 'pending', url: null, params: { background: 'none' } });
+        renderModuleTree(sub);
+        selectInsertedResultInTree(sub.id, inst);
+        _showAnimSettings(sub, inst);
+        doInsertPlot(sub, moduleType, stepId, inst);
         return;
     }
 
@@ -11636,7 +11740,9 @@ async function doInsertPlot(sub, moduleType, stepId, plotType) {
     console.log(`doInsertPlot: calling ${plotUrl} with plot_type=${plotType}`);
 
     const res = await api(plotUrl, 'POST', {
-        plot_type: plotType,
+        plot_type: plotType.split('__')[0],
+        instance_id: plotType,
+        params: entry?.params || {},
     });
 
     console.log('doInsertPlot response:', res.success, res.error);
@@ -11664,6 +11770,49 @@ function selectInsertedResultInTree(subId, plotType) {
     treeBody.querySelectorAll('.mtree-item').forEach(i => i.classList.remove('active'));
     const item = treeBody.querySelector(`[data-result="${plotType}"]`);
     if (item) item.classList.add('active');
+}
+
+// Settings panel for one inserted trajectory animation (background layer + re-render)
+const ANIM_BACKGROUNDS = [
+    ['none',   'None (black)'],
+    ['tumor',  'Target cells (tumor)'],
+    ['tissue', 'Substrate (tissue)'],
+    ['dead',   'Cytotoxicity'],
+    ['nk',     'Effector cells (NK)'],
+    ['all',    'All layers'],
+];
+function _showAnimSettings(sub, plotType) {
+    const entry = sub.insertedResults?.find(r => r.plotType === plotType);
+    const body = document.getElementById(`settingsBody-${sub.id}`);
+    const title = document.getElementById(`settingsTitle-${sub.id}`);
+    if (!entry || !body) return;
+    entry.params = entry.params || { background: 'none' };
+    if (title) title.textContent = entry.label;
+    const bg = entry.params.background || 'none';
+    body.innerHTML = `<div class="settings-form" style="padding:10px">
+        <p style="font-size:var(--fs-sm);font-weight:600;color:var(--text-secondary);margin-bottom:6px">🎬 Animation settings</p>
+        <div class="form-row"><span class="form-label">Background</span>
+            <select class="form-select" id="animBg-${sub.id}">
+                ${ANIM_BACKGROUNDS.map(([v, l]) => `<option value="${v}" ${v === bg ? 'selected' : ''}>${l}</option>`).join('')}
+            </select></div>
+        <button class="btn btn-primary" style="margin-top:8px" onclick="_rerenderAnim('${sub.id}','${plotType}')">▶ Render</button>
+        <p style="font-size:var(--fs-xs);color:var(--text-tertiary);margin-top:10px">Tracks are drawn over the segmentation masks of the chosen channel, frame by frame.
+        Insert <b>Trajectory Animation</b> again from the right-click menu to compare several backgrounds side by side.</p>
+    </div>`;
+}
+function _rerenderAnim(subId, plotType) {
+    const ws = getActiveWorkspace();
+    const sub = ws?.subtabs.get(subId);
+    const entry = sub?.insertedResults?.find(r => r.plotType === plotType);
+    if (!entry) return;
+    const bg = document.getElementById(`animBg-${subId}`)?.value || 'none';
+    entry.params = { ...(entry.params || {}), background: bg };
+    const n = plotType.split('__')[1];
+    const bgLabel = (ANIM_BACKGROUNDS.find(b => b[0] === bg) || [bg, bg])[1];
+    entry.label = `Trajectory Animation${n ? ' #' + n : ''}${bg !== 'none' ? ' — ' + bgLabel : ''}`;
+    entry.url = null;
+    _showAnimSettings(sub, plotType);
+    doInsertPlot(sub, sub.moduleType, sub.stepId, plotType);
 }
 
 function onInsertedResultClick(subId, plotType) {
@@ -11696,6 +11845,11 @@ function onInsertedResultClick(subId, plotType) {
     // Special: association run folder — just show settings panel, no image
     if (plotType.startsWith('run_meta_')) {
         return;
+    }
+
+    // Trajectory animation instances: show their settings (background) next to the video
+    if (plotType.startsWith('trajectory_animation')) {
+        _showAnimSettings(sub, plotType);
     }
 
     // Stale results auto-regenerate on click
