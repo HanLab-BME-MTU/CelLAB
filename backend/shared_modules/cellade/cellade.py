@@ -77,6 +77,9 @@ except ImportError:
 # =================================================================
 
 PRESET_CORNEALIA = {
+    # keep Cornealia's published behaviour: local FCM includes the zero padding outside
+    # each patch (legacy). Set True to cluster only the pixels inside each patch.
+    'fcm_patch_pixels_only': False,
     # Seed detection
     'seeding_method': 'blob_log',
     'log_min_sigma': 6,
@@ -411,17 +414,26 @@ class CellADE:
     # =============================================================
 
     def detect_seeds(self) -> None:
-        """Detect cell centers via blob_log or h_maxima."""
+        """Detect cell centers via blob_log, glog (elongated objects) or h_maxima."""
         method = self.params.get('seeding_method', 'blob_log')
 
-        if method == 'blob_log' and self.params.get('use_fft_sigma', False):
+        if method in ('blob_log', 'glog') and self.params.get('use_fft_sigma', False):
             self._detect_seeds_two_stage()
         elif method == 'blob_log':
             self._detect_seeds_blob_log()
+        elif method == 'glog':
+            self._detect_seeds_glog()
         elif method == 'h_maxima':
             self._detect_seeds_h_maxima()
+        elif method == 'ridge':
+            self._detect_seeds_ridge()
         else:
             raise ValueError(f"Unknown seeding_method: '{method}'")
+
+        if self.params.get('seed_fit_test', False):
+            self._filter_seeds_fit_significance()
+        if self.params.get('seed_population_filter', False):
+            self._filter_seeds_population()
 
     def _detect_seeds_two_stage(self) -> None:
         """Two-stage seed detection: strip jaggedness ROI → FFT → final LoG."""
@@ -477,7 +489,7 @@ class CellADE:
                 'reason': f'low_coverage_{coverage:.0%}',
                 'coverage': float(coverage),
             }
-            self._detect_seeds_blob_log()
+            self._detect_seeds_scale_space()
         else:
             # Stage 2: FFT on cell region centroid
             cell_x = [strip_centers[i] for i in range(n_strips) if has_cells[i]]
@@ -492,8 +504,8 @@ class CellADE:
 
             self._estimate_sigma_fft(crop_box=(y0, x0, ch, cw))
 
-            # Stage 3: LoG with FFT-derived range
-            self._detect_seeds_blob_log()
+            # Stage 3: LoG / gLoG with FFT-derived range
+            self._detect_seeds_scale_space()
 
         # Stage 4: Remove seeds in empty strips
         if any(not hc for hc in has_cells):
@@ -629,6 +641,455 @@ class CellADE:
         self.seeds = blobs
         self._seed_coords = blobs[:, :2].astype(int)  # (y, x)
 
+    def _detect_seeds_scale_space(self) -> None:
+        """Final seed detection of the two-stage path: LoG or gLoG."""
+        if self.params.get('seeding_method', 'blob_log') == 'glog':
+            self._detect_seeds_glog()
+        else:
+            self._detect_seeds_blob_log()
+
+    @staticmethod
+    def _glog_kernel(s_minor, ratio, theta):
+        """Scale-normalised anisotropic LoG, sign flipped so bright blobs are positive.
+        K = G * (2 - u^2/su^2 - v^2/sv^2), u along theta (long axis); zero mean."""
+        su, sv = s_minor * ratio, s_minor
+        r = int(np.ceil(3 * su))
+        y, x = np.mgrid[-r:r + 1, -r:r + 1].astype(float)
+        u = x * np.cos(theta) + y * np.sin(theta)
+        v = -x * np.sin(theta) + y * np.cos(theta)
+        g = np.exp(-0.5 * (u ** 2 / su ** 2 + v ** 2 / sv ** 2)) / (2 * np.pi * su * sv)
+        k = g * (2 - u ** 2 / su ** 2 - v ** 2 / sv ** 2)
+        return k - k.mean()
+
+    def _detect_seeds_glog(self) -> None:
+        """Generalized LoG (gLoG) seeds for elongated objects (e.g. rod-shaped bacteria).
+        A bank of elliptical LoG kernels (short-axis sigma in [log_min_sigma, log_max_sigma],
+        long/short ratios glog_ratios, glog_n_angles orientations) is applied to the
+        enhanced image; seeds are peaks of the per-pixel maximum response.
+        Seeds are stored as (y, x, sigma_eq) with sigma_eq = sqrt(sigma_minor * sigma_major),
+        so downstream steps (FCM patch radius) are unchanged; the fitted ellipse of each
+        seed is kept in self.seed_shapes as (sigma_minor, ratio, theta)."""
+        from scipy.signal import fftconvolve
+        from skimage.feature import peak_local_max
+
+        s_min = float(self.params.get('log_min_sigma', 5))
+        s_max = float(self.params.get('log_max_sigma', 30))
+        n_s = int(self.params.get('glog_num_sigma', 4))
+        ratios = list(self.params.get('glog_ratios', (1.0, 1.5, 2.5)))
+        n_ang = int(self.params.get('glog_n_angles', 8))
+        thr_rel = float(self.params.get('glog_threshold_rel', 0.10))
+        min_dist = int(self.params.get('glog_min_dist', max(2, round(s_min))))
+
+        bank = []
+        for s in np.linspace(s_min, s_max, max(1, n_s)):
+            for rt in ratios:
+                angles = [0.0] if rt == 1.0 else np.arange(n_ang) * np.pi / n_ang
+                for th in angles:
+                    bank.append((s, rt, th))
+
+        img = self.enhanced
+        best = np.full(img.shape, -np.inf)
+        arg = np.zeros(img.shape, dtype=np.int32)
+        for k, (s, rt, th) in enumerate(bank):
+            resp = fftconvolve(img, self._glog_kernel(s, rt, th), mode='same')
+            better = resp > best
+            best[better] = resp[better]
+            arg[better] = k
+
+        pk = peak_local_max(best, min_distance=min_dist, threshold_rel=thr_rel,
+                            exclude_border=False)
+        if len(pk) == 0:
+            self.seeds = np.empty((0, 3))
+            self._seed_coords = np.empty((0, 2), dtype=int)
+            self.seed_shapes = np.empty((0, 3))
+            return
+        shapes = np.array([bank[arg[y, x]] for y, x in pk])
+        sig_eq = shapes[:, 0] * np.sqrt(shapes[:, 1])
+        self.seeds = np.column_stack([pk[:, 0], pk[:, 1], sig_eq]).astype(float)
+        self._seed_coords = pk.astype(int)
+        self.seed_shapes = shapes
+
+    def _vlog(self, tag, msg):
+        """Print filtering diagnostics when params['filter_verbose'] is True."""
+        if self.params.get('filter_verbose', False):
+            print(f'[{tag}] {msg}')
+
+    @staticmethod
+    def _q(a):
+        a = np.asarray(a, dtype=float)
+        if a.size == 0:
+            return 'n/a'
+        q = np.percentile(a, [0, 25, 50, 75, 100])
+        return 'min {:.3f} | q25 {:.3f} | med {:.3f} | q75 {:.3f} | max {:.3f}'.format(*q)
+
+    def _blob_fit(self, y, x, s):
+        """Fit a*G + b to the patch around (y, x); G is a Gaussian of width s centred there.
+        Returns signed R^2 (positive for a bright blob, negative for a dark one)."""
+        img = self.enhanced
+        H, W = img.shape
+        R = int(np.ceil(2 * s * np.sqrt(2))) + 1
+        y0, y1, x0, x1 = max(0, int(y) - R), min(H, int(y) + R + 1), max(0, int(x) - R), min(W, int(x) + R + 1)
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        d2 = (yy - y) ** 2 + (xx - x) ** 2
+        m = d2 <= R ** 2
+        z = img[y0:y1, x0:x1][m]
+        if z.size < 5 or z.std() == 0:
+            return 0.0
+        g = np.exp(-d2[m] / (2.0 * s ** 2))
+        A = np.column_stack([g, np.ones_like(g)])
+        (a, b), *_ = np.linalg.lstsq(A, z, rcond=None)
+        r2 = 1.0 - np.sum((z - (a * g + b)) ** 2) / np.sum((z - z.mean()) ** 2)
+        return float(np.sign(a) * max(r2, 0.0))
+
+    def _filter_seeds_fit_significance(self) -> None:
+        """Optional step right after seed detection: is each seed a significant blob?
+
+        For every seed, a Gaussian blob (centre and sigma fixed by the detector; height and
+        background fitted) is fitted to its local patch; the score is the signed R^2.
+        The same fit at seed_fit_n_random random positions away from all seeds (sigma drawn
+        from the seeds' own sigmas) gives the background distribution of scores. A seed is
+        kept if its score is positive (bright blob) and its empirical p-value against the
+        background is below seed_fit_alpha (default 0.05). Skipped when fewer than
+        seed_fit_min_background valid background positions exist (very dense images).
+        Details in self._seed_fit_info."""
+        n = len(self.seeds)
+        info = {'applied': False, 'n_before': int(n), 'n_removed': 0}
+        self._seed_fit_info = info
+        if n == 0:
+            info['reason'] = 'no_seeds'
+            return
+        img = self.enhanced
+        H, W = img.shape
+        sig = np.where(self.seeds[:, 2] > 0, self.seeds[:, 2], 2.0)
+
+        # background positions: outside a 2-radius disk around every seed, away from the border
+        excl = np.zeros((H, W), dtype=bool)
+        for (y, x), s in zip(self.seeds[:, :2], sig):
+            r = 2 * s * np.sqrt(2)
+            y0, y1, x0, x1 = max(0, int(y - r)), min(H, int(y + r) + 1), max(0, int(x - r)), min(W, int(x + r) + 1)
+            yy, xx = np.ogrid[y0:y1, x0:x1]
+            excl[y0:y1, x0:x1] |= (yy - y) ** 2 + (xx - x) ** 2 <= r ** 2
+        b = int(np.ceil(np.median(sig) * np.sqrt(2)))
+        excl[:b, :] = excl[-b:, :] = True
+        excl[:, :b] = excl[:, -b:] = True
+        cand = np.flatnonzero(~excl)
+        if cand.size < int(self.params.get('seed_fit_min_background', 50)):
+            info['reason'] = 'too_little_background'
+            self._vlog('seed-fit', f'{n} seeds | skipped: only {cand.size} background positions')
+            return
+
+        rng = np.random.default_rng(int(self.params.get('seed_fit_rng', 0)))
+        k = min(int(self.params.get('seed_fit_n_random', 500)), cand.size)
+        pos = rng.choice(cand, size=k, replace=False)
+        null = np.array([self._blob_fit(p // W, p % W, s)
+                         for p, s in zip(pos, rng.choice(sig, size=k))])
+        score = np.array([self._blob_fit(y, x, s) for (y, x), s in zip(self.seeds[:, :2], sig)])
+        pval = (1 + (null[None, :] >= score[:, None]).sum(axis=1)) / (k + 1)
+        keep = (score > 0) & (pval < float(self.params.get('seed_fit_alpha', 0.05)))
+
+        info.update(applied=True, n_removed=int((~keep).sum()), n_null=int(k),
+                    null_q95=float(np.quantile(null, 0.95)), reason='tested')
+        self._vlog('seed-fit', f'{n} seeds | {k} random background fits | background q95 = {info["null_q95"]:.3f}')
+        self._vlog('seed-fit', f'  seed scores:       {self._q(score)}')
+        self._vlog('seed-fit', f'  background scores: {self._q(null)}')
+        self._vlog('seed-fit', f'  removed {int((~keep).sum())}: {int((score <= 0).sum())} dark/no blob, '
+                               f'{int(((score > 0) & ~keep).sum())} not significant (p >= alpha) | kept {int(keep.sum())}')
+        self._seed_fit_score, self._seed_fit_pvalue = score, pval
+        self.seeds = self.seeds[keep]
+        self._seed_coords = self._seed_coords[keep]
+        if getattr(self, 'seed_shapes', None) is not None and len(self.seed_shapes) == n:
+            self.seed_shapes = self.seed_shapes[keep]
+
+    @staticmethod
+    def _fcm_1d(z, m=2.0, n_iter=100, tol=1e-6):
+        """Two-class fuzzy C-means on a 1-D feature.
+        Returns (centers [low, high], membership of the HIGH class per sample)."""
+        z = np.asarray(z, dtype=float)
+        v = np.array([np.percentile(z, 25), np.percentile(z, 75)], dtype=float)
+        if v[0] == v[1]:
+            v = np.array([z.min(), z.max()], dtype=float)
+        for _ in range(n_iter):
+            d = np.abs(z[None, :] - v[:, None]) + 1e-12
+            u = 1.0 / np.sum((d[:, None, :] / d[None, :, :]) ** (2.0 / (m - 1.0)), axis=1)
+            v_new = (u ** m @ z) / (u ** m).sum(axis=1)
+            done = np.abs(v_new - v).max() < tol
+            v = v_new
+            if done:
+                break
+        hi = int(np.argmax(v))
+        return np.sort(v), u[hi]
+
+    def _bright_group_keep(self, feat, info, tag):
+        """Shared grouping used by the seed and object population filters.
+
+        2-class fuzzy C-means on the brightness values `feat`, refined by EM with free
+        group weights (seed_filter_refine = 'em'), then BIC: one Gaussian vs. the two-group
+        model. If two groups are clearly better (delta BIC > seed_filter_min_delta_bic,
+        default 10) and the dim group holds >= seed_filter_min_fraction of the items,
+        returns a boolean keep-mask (bright membership >= seed_filter_membership, default
+        0.75); otherwise returns None (keep everything). seed_filter_test = 'ashman' uses
+        Ashman's D >= seed_filter_min_separation (default 4.5) instead of BIC.
+        Diagnostics go into `info` and, with filter_verbose, are printed under `tag`."""
+        feat = np.asarray(feat, dtype=float)
+        n = feat.size
+        p = self.params
+        centers, u_high = self._fcm_1d(feat)
+        self._vlog(tag, f'{n} items | brightness: {self._q(feat)}')
+        self._vlog(tag, f'  FCM centres: dim {centers[0]:.3f}, bright {centers[1]:.3f} | '
+                        f'FCM bright share {(u_high >= 0.5).mean():.2f}')
+        hard_high = u_high >= 0.5
+        lo, hi = feat[~hard_high], feat[hard_high]
+        if lo.size < 2 or hi.size < 2:
+            info.update(reason='one_group', centers=centers.tolist())
+            return None
+        D = np.sqrt(2) * abs(hi.mean() - lo.mean()) / np.sqrt(lo.var() + hi.var() + 1e-12)
+        info.update(centers=centers.tolist(), ashman_D=float(D))
+
+        if p.get('seed_filter_test', 'bic') == 'bic':
+            mu, sd = feat.mean(), max(feat.std(), 1e-9)
+            ll1 = np.sum(-0.5 * ((feat - mu) / sd) ** 2 - np.log(sd * np.sqrt(2 * np.pi)))
+            resp = np.vstack([1.0 - u_high, u_high])           # rows: dim, bright
+
+            def _mix(resp):
+                w = resp.mean(axis=1)
+                m = (resp @ feat) / np.maximum(resp.sum(axis=1), 1e-12)
+                s = np.sqrt((resp * (feat[None, :] - m[:, None]) ** 2).sum(axis=1)
+                            / np.maximum(resp.sum(axis=1), 1e-12))
+                s = np.maximum(s, 0.05 * sd)                    # avoid degenerate spreads
+                comp = w[:, None] * np.exp(-0.5 * ((feat[None, :] - m[:, None]) / s[:, None]) ** 2) \
+                    / (s[:, None] * np.sqrt(2 * np.pi))
+                return comp, m
+
+            comp, means = _mix(resp)
+            if p.get('seed_filter_refine', 'em') == 'em':
+                ll_old = -np.inf
+                for _ in range(int(p.get('seed_filter_em_iter', 200))):
+                    resp = comp / np.maximum(comp.sum(axis=0, keepdims=True), 1e-300)
+                    comp, means = _mix(resp)
+                    ll = np.sum(np.log(comp.sum(axis=0) + 1e-300))
+                    if ll - ll_old < 1e-8:
+                        break
+                    ll_old = ll
+                resp = comp / np.maximum(comp.sum(axis=0, keepdims=True), 1e-300)
+                hi_row = int(np.argmax(means))
+                u_high = resp[hi_row]
+                info.update(em_weight_bright=float(resp[hi_row].mean()))
+                self._vlog(tag, f'  EM: means dim {means[1 - hi_row]:.3f}, bright {means[hi_row]:.3f} | '
+                                f'bright weight {resp[hi_row].mean():.2f}')
+            ll2 = np.sum(np.log(comp.sum(axis=0) + 1e-300))
+            bic1 = 2 * np.log(n) - 2 * ll1
+            bic2 = 5 * np.log(n) - 2 * ll2
+            min_d = float(p.get('seed_filter_min_delta_bic', 10.0))
+            info.update(bic_one=float(bic1), bic_two=float(bic2), delta_bic=float(bic1 - bic2))
+            self._vlog(tag, f'  BIC one group {bic1:.1f} | two groups {bic2:.1f} | delta {bic1 - bic2:.1f} '
+                            f'(needs > {min_d:.0f})')
+            if bic1 - bic2 <= min_d:
+                info['reason'] = 'one_group_bic'
+                self._vlog(tag, '  decision: one group -> all kept')
+                return None
+        else:
+            if D < float(p.get('seed_filter_min_separation', 4.5)):
+                info['reason'] = 'groups_not_separated'
+                return None
+        frac_low = float((u_high < 0.5).mean())
+        info['frac_dim'] = frac_low
+        if frac_low < float(p.get('seed_filter_min_fraction', 0.05)):
+            info['reason'] = 'dim_group_too_small'
+            return None
+        mb = float(p.get('seed_filter_membership', 0.75))
+        keep = u_high >= mb
+        info.update(applied=True, n_removed=int((~keep).sum()), reason='two_groups')
+        self._vlog(tag, f'  decision: two groups -> removed {int((~keep).sum())}, kept {int(keep.sum())} '
+                        f'(bright membership >= {mb:.2f})')
+        return keep
+
+    def _filter_seeds_population(self) -> None:
+        """Optional: population-level brightness grouping of the SEEDS (before segmentation).
+        Feature: mean enhanced intensity in each seed's disk (radius sigma*sqrt2).
+        Grouping and decision: _bright_group_keep. Details in self._seed_filter_info."""
+        n = len(self.seeds)
+        info = {'applied': False, 'n_before': int(n), 'n_removed': 0}
+        self._seed_filter_info = info
+        if n < int(self.params.get('seed_filter_min_seeds', 10)):
+            info['reason'] = 'too_few_seeds'
+            self._vlog('seed-pop', f'{n} seeds | skipped: too few seeds')
+            return
+        img = self.enhanced
+        H, W = img.shape
+        feat = np.empty(n)
+        for j, (y, x, s) in enumerate(self.seeds):
+            r = max(1.5, float(s) * np.sqrt(2)) if s > 0 else 2.0
+            y0, y1 = int(max(0, y - r)), int(min(H, y + r + 1))
+            x0, x1 = int(max(0, x - r)), int(min(W, x + r + 1))
+            yy, xx = np.ogrid[y0:y1, x0:x1]
+            disk = (yy - y) ** 2 + (xx - x) ** 2 <= r ** 2
+            patch = img[y0:y1, x0:x1][disk]
+            feat[j] = patch.mean() if patch.size else img[int(y), int(x)]
+        keep = self._bright_group_keep(feat, info, 'seed-pop')
+        if keep is None:
+            return
+        self.seeds = self.seeds[keep]
+        self._seed_coords = self._seed_coords[keep]
+        if getattr(self, 'seed_shapes', None) is not None and len(self.seed_shapes) == n:
+            self.seed_shapes = self.seed_shapes[keep]
+
+    def _filter_objects_width(self) -> None:
+        """Optional: remove objects that are not elongated (after watershed).
+
+        Aspect ratio of an object = major / minor principal-axis length (second moments).
+        Objects with aspect ratio below shape_min_aspect (default 3.0) are removed.
+        Details in self._shape_filter_info."""
+        from skimage.measure import regionprops
+        from skimage.segmentation import relabel_sequential
+        limit = float(self.params.get('shape_min_aspect', 3.0))
+        lab = self.labels
+        aspects, drop = [], []
+        for r in regionprops(lab):
+            major = r.axis_major_length if hasattr(r, 'axis_major_length') else r.major_axis_length
+            minor = r.axis_minor_length if hasattr(r, 'axis_minor_length') else r.minor_axis_length
+            ar = major / max(minor, 1e-6)
+            aspects.append(ar)
+            if ar < limit:
+                drop.append(r.label)
+        out = lab.copy()
+        if drop:
+            out[np.isin(out, drop)] = 0
+        self.labels = relabel_sequential(out)[0]
+        self._shape_filter_info = {'applied': True, 'n_before': len(aspects), 'n_removed': len(drop),
+                                   'min_aspect': limit,
+                                   'aspect_median': float(np.median(aspects)) if aspects else np.nan}
+        self._vlog('shape', f'{len(aspects)} objects | aspect ratio: {self._q(aspects)} | min {limit:.1f} '
+                            f'-> removed {len(drop)}, kept {len(aspects) - len(drop)}')
+
+    def _filter_objects_population(self) -> None:
+        """Optional: population-level brightness grouping of the OBJECTS (after watershed).
+        Feature: mean intensity over each watershed object, measured on
+        object_filter_image = 'raw' (default: min-max normalised input, before CLAHE;
+        inverted when invert_image is on) or 'enhanced' (after CLAHE).
+        Same grouping and decision as the seed filter (_bright_group_keep); objects in the
+        dim group are deleted and labels renumbered, but only if the dim group is
+        background-like: (c_bright - bg) / (c_dim - bg) >= object_filter_min_ratio (default 5;
+        0 or None switches the safeguard off), with c_* the FCM centres and bg the median
+        brightness outside all objects. Details in self._object_filter_info."""
+        from scipy import ndimage as ndi
+        from skimage.segmentation import relabel_sequential
+        lab = self.labels
+        ids = np.unique(lab[lab > 0])
+        n = ids.size
+        info = {'applied': False, 'n_before': int(n), 'n_removed': 0}
+        self._object_filter_info = info
+        if n < int(self.params.get('seed_filter_min_seeds', 10)):
+            info['reason'] = 'too_few_objects'
+            self._vlog('object-pop', f'{n} objects | skipped: too few objects')
+            return
+        if self.params.get('object_filter_image', 'raw') == 'raw':
+            src = self.normalized
+            if self.params.get('invert_image', False):
+                src = 1.0 - src
+        else:
+            src = self.enhanced
+        feat = np.asarray(ndi.mean(src, labels=lab, index=ids), dtype=float)
+        keep = self._bright_group_keep(feat, info, 'object-pop')
+        if keep is None:
+            return
+        # safeguard: the dim group must be background-like. With FCM centres c_dim, c_bright and
+        # the background level bg (median of pixels outside all objects), the filter acts only if
+        # (c_bright - bg) / (c_dim - bg) >= object_filter_min_ratio (default 5): the dim group is
+        # much closer to the background than the bright group is. Dim but real cells give ratios
+        # near 1.5-2; background clutter gives large ratios.
+        min_ratio = self.params.get('object_filter_min_ratio', 5.0)
+        if min_ratio and 'centers' in info:
+            bg_px = src[lab == 0]
+            bg = float(np.median(bg_px)) if bg_px.size else float(np.min(feat))
+            c_dim, c_bright = float(min(info['centers'])), float(max(info['centers']))
+            ratio = (c_bright - bg) / (c_dim - bg) if c_dim > bg else np.inf
+            info.update(background=bg, bg_ratio=float(ratio))
+            if ratio < float(min_ratio):
+                info.update(applied=False, n_removed=0, reason='dim_group_not_background')
+                self._vlog('object-pop', f'  safeguard: (bright - bg)/(dim - bg) = {ratio:.2f} < {float(min_ratio):.2f} '
+                                         f'(bg {bg:.3f}, dim {c_dim:.3f}, bright {c_bright:.3f}) -> all objects kept')
+                return
+            self._vlog('object-pop', f'  safeguard passed: (bright - bg)/(dim - bg) = {ratio:.2f}')
+        drop = ids[~keep]
+        out = lab.copy()
+        out[np.isin(out, drop)] = 0
+        self.labels = relabel_sequential(out)[0]
+
+    def _detect_seeds_ridge(self) -> None:
+        """Line seeds for rod-shaped objects (aspect ratio >= 3).
+
+        A Sato ridge filter at scale ridge_sigma (set from the rod width) highlights bright
+        rod centrelines on ridge_image = 'raw' (default: normalised input before CLAHE, inverted
+        when invert_image is on; CLAHE amplifies background noise into false ridges) or
+        'enhanced'. ridge_sigma may be a single value or a range
+        (min, max): the filter then runs at ridge_num_sigma scales (default 3), keeps the
+        strongest response per pixel, and each segment takes the median best scale of its
+        pixels (which sets its own FCM band, 2 x that scale, unless ridge_band is given). Ridge pixels above ridge_threshold (default:
+        Otsu on the ridge response) are thinned to centrelines, which are cut at junctions;
+        segments shorter than ridge_min_length px are dropped. Each segment is one seed:
+          - self.seeds[i] = (y, x, sigma_eq) at the segment's middle pixel,
+          - self._seed_marker_image: the segments as watershed markers (whole lines),
+          - self._ridge_geometry[i] = (a, b, theta): an ellipse along the segment
+            (a = half length + ridge_band, b = ridge_band) used as the local FCM patch."""
+        from scipy.ndimage import convolve, binary_dilation
+        from skimage.filters import sato, threshold_otsu
+        from skimage.morphology import skeletonize
+        from skimage.measure import label as cc_label
+
+        rs = self.params.get('ridge_sigma', 2.0)
+        if np.ndim(rs) == 0:
+            sig_list = [float(rs)]
+        else:
+            lo_s, hi_s = float(min(rs)), float(max(rs))
+            sig_list = list(np.linspace(lo_s, hi_s, int(self.params.get('ridge_num_sigma', 3))))
+        fixed_band = self.params.get('ridge_band', None)
+        min_len = int(self.params.get('ridge_min_length', round(4 * min(sig_list))))
+        if self.params.get('ridge_image', 'raw') == 'raw':
+            src = 1.0 - self.normalized if self.params.get('invert_image', False) else self.normalized
+        else:
+            src = self.enhanced
+        stack = np.stack([sato(src, sigmas=[sg], black_ridges=False) for sg in sig_list])
+        R = stack.max(axis=0)
+        self._ridge_response = R                                   # kept for figures / inspection
+        best_scale = np.asarray(sig_list)[stack.argmax(axis=0)]
+        thr = self.params.get('ridge_threshold', None)
+        thr = float(threshold_otsu(R)) if thr is None else float(thr)
+        skel = skeletonize(R > thr)
+        # cut at junctions: pixels with >= 3 skeleton neighbours
+        nb = convolve(skel.astype(np.int32), np.ones((3, 3), np.int32), mode='constant') - skel
+        junction = skel & (nb >= 3)
+        skel &= ~binary_dilation(junction)
+        seg = cc_label(skel, connectivity=2)
+        sizes = np.bincount(seg.ravel())
+        keep_ids = [k for k in range(1, seg.max() + 1) if sizes[k] >= min_len]
+
+        markers = np.zeros(seg.shape, dtype=np.int32)
+        seeds, geom = [], []
+        for j, k in enumerate(keep_ids, start=1):
+            yy, xx = np.nonzero(seg == k)
+            markers[yy, xx] = j
+            cy, cx = yy.mean(), xx.mean()
+            mid = int(np.argmin((yy - cy) ** 2 + (xx - cx) ** 2))
+            cov = np.cov(np.vstack([xx - cx, yy - cy])) if yy.size > 2 else np.eye(2)
+            evals, evecs = np.linalg.eigh(cov)
+            vx, vy = evecs[:, int(np.argmax(evals))]
+            theta = float(np.arctan2(vy, vx))
+            proj = (xx - cx) * np.cos(theta) + (yy - cy) * np.sin(theta)
+            half_len = 0.5 * float(proj.max() - proj.min()) if proj.size else 0.0
+            s_seg = float(np.median(best_scale[yy, xx]))
+            band = float(fixed_band) if fixed_band is not None else 2.0 * s_seg
+            a, b = half_len + band, band
+            geom.append((a, b, theta))
+            seeds.append((float(yy[mid]), float(xx[mid]), b / (1.5 * np.sqrt(2))))
+
+        self.seeds = np.array(seeds, dtype=float) if seeds else np.empty((0, 3))
+        self._seed_coords = self.seeds[:, :2].astype(int) if seeds else np.empty((0, 2), dtype=int)
+        self._seed_marker_image = markers
+        self._ridge_geometry = geom
+        self._ridge_info = {'threshold': round(thr, 4), 'sigmas': [round(float(x), 2) for x in sig_list],
+                            'n_segments': len(keep_ids),
+                            'n_dropped_short': int(seg.max() - len(keep_ids))}
+
     def _detect_seeds_h_maxima(self) -> None:
         """H-maxima seed detection (from benchmark pipeline)."""
         from skimage.morphology import reconstruction
@@ -691,7 +1152,10 @@ class CellADE:
         fg = np.zeros((H, W), dtype=bool)
 
         # Precompute Hessian geometry for all seeds if elliptical
-        if use_ellipse:
+        if getattr(self, '_ridge_geometry', None) is not None and len(self._ridge_geometry) == len(self.seeds):
+            self._seed_geometry = self._ridge_geometry          # line seeds: ellipse along each segment
+            use_ellipse = True
+        elif use_ellipse:
             self._seed_geometry = self._compute_hessian_geometry()
 
         for i in range(len(self.seeds)):
@@ -712,8 +1176,15 @@ class CellADE:
             yy, xx = np.ogrid[y0:y1, x0:x1]
             patch_mask = self._ellipse_mask(yy, xx, y, x, a, b, theta)
 
-            patch = np.where(patch_mask, self.enhanced[y0:y1, x0:x1], 0)
-            data = patch.reshape(-1, 1).T.astype(np.float64)
+            region = self.enhanced[y0:y1, x0:x1]
+            if self.params.get('fcm_patch_pixels_only', True):
+                # cluster only the pixels inside the circle/ellipse
+                data = region[patch_mask].reshape(1, -1).astype(np.float64)
+            else:
+                # legacy: pixels outside the patch enter the clustering as zeros
+                data = np.where(patch_mask, region, 0).reshape(1, -1).astype(np.float64)
+            if data.shape[1] < 3:
+                continue
 
             try:
                 cntr, u, *_ = cmeans(
@@ -721,7 +1192,11 @@ class CellADE:
                     m=2, error=0.005, maxiter=100, init=None)
 
                 fg_idx = np.argmax(cntr.flatten())
-                patch_fg = (u[fg_idx] > threshold).reshape(patch.shape)
+                patch_fg = np.zeros(patch_mask.shape, dtype=bool)
+                if self.params.get('fcm_patch_pixels_only', True):
+                    patch_fg[patch_mask] = u[fg_idx] > threshold
+                else:
+                    patch_fg = (u[fg_idx] > threshold).reshape(patch_mask.shape)
                 fg[y0:y1, x0:x1] |= (patch_fg & patch_mask)
             except Exception:
                 continue
@@ -958,11 +1433,15 @@ class CellADE:
 
     def initial_segmentation(self) -> None:
         """Marker-controlled watershed on distance transform."""
-        markers = np.zeros((self.H, self.W), dtype=np.int32)
-        for i, (y, x) in enumerate(self._seed_coords):
-            y, x = int(y), int(x)
-            if 0 <= y < self.H and 0 <= x < self.W:
-                markers[y, x] = i + 1
+        mk = getattr(self, '_seed_marker_image', None)
+        if mk is not None and mk.shape == (self.H, self.W) and mk.max() == len(self.seeds):
+            markers = mk.astype(np.int32).copy()                # line seeds: whole segments
+        else:
+            markers = np.zeros((self.H, self.W), dtype=np.int32)
+            for i, (y, x) in enumerate(self._seed_coords):
+                y, x = int(y), int(x)
+                if 0 <= y < self.H and 0 <= x < self.W:
+                    markers[y, x] = i + 1
 
         seed_mask = markers > 0
         dist = distance_transform_edt(~seed_mask)
@@ -1189,6 +1668,16 @@ class CellADE:
         self.initial_segmentation()
         if detail:
             info['n_initial'] = int(self.labels.max())
+
+        self.labels_watershed = self.labels.copy()                 # before the object filters
+        if p.get('object_shape_filter', False):
+            _step(0.18, 'Filtering objects (aspect ratio)...')
+            self._filter_objects_width()
+
+        if p.get('object_population_filter', False):
+            _step(0.20, 'Filtering objects (population brightness)...')
+            self._filter_objects_population()
+        self.labels_filtered = self.labels.copy()                  # after the object filters (diagnostics)
 
         # --- Post-processing (conditional on flags) ---
 
