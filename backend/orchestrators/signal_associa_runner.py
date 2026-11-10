@@ -398,7 +398,7 @@ def _run_pairs_parallel(signals, pairs, assoc_config, alpha, n_jobs, progress_cb
     import sys as _sys
     backend = 'multiprocessing' if getattr(_sys, 'frozen', False) else 'loky'
     try:
-        gen = Parallel(n_jobs=int(n_jobs), backend=backend, return_as='generator')(tasks)
+        gen = Parallel(n_jobs=int(n_jobs), backend=backend, return_as=('list' if getattr(_sys, 'frozen', False) else 'generator'))(tasks)
     except TypeError:
         # Older joblib without return_as: fall back to blocking list
         gen = Parallel(n_jobs=int(n_jobs), backend=backend)(tasks)
