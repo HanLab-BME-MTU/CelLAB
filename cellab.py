@@ -5227,21 +5227,37 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                     _nj = int(float(all_params.get('cellade_n_jobs', -1) or -1))
                     print(f"[IMMUNIA]   CellADE {_ccfg['cellade_params']} min_size={_ccfg['min_size']} "
                           f"frames={'union of ' + str(_frames) if _ccfg['temporal_mode'] == 'union5' else 'all'}")
-                    try:
-                        from joblib import Parallel, delayed
-                        _gen = Parallel(n_jobs=_nj, backend='loky', return_as='generator')(
-                            delayed(cellade_segment_frame)(channel_data[t], _ccfg, _root) for t in _frames)
-                    except TypeError:          # older joblib: no generator output
-                        _gen = iter(Parallel(n_jobs=_nj, backend='loky')(
-                            delayed(cellade_segment_frame)(channel_data[t], _ccfg, _root) for t in _frames))
+                    _std_pool = None
+                    if getattr(sys, 'frozen', False):
+                        # Packaged app: Python's own process pool (as Cornealia). joblib's process
+                        # backends start a helper process that re-launches the executable there.
+                        import multiprocessing as _mp
+                        from components.immunia_preprocessor_segmentor import cellade_segment_frame_args
+                        _np_ = (os.cpu_count() or 2) if _nj < 0 else max(1, _nj)
+                        _std_pool = _mp.get_context('spawn').Pool(processes=min(_np_, len(_frames)))
+                        _gen = _std_pool.imap(cellade_segment_frame_args,
+                                              ((np.ascontiguousarray(channel_data[t]), _ccfg, _root) for t in _frames))
+                    else:
+                        try:
+                            from joblib import Parallel, delayed
+                            _gen = Parallel(n_jobs=_nj, backend='loky', return_as='generator')(
+                                delayed(cellade_segment_frame)(channel_data[t], _ccfg, _root) for t in _frames)
+                        except TypeError:          # older joblib: no generator output
+                            _gen = iter(Parallel(n_jobs=_nj, backend='loky')(
+                                delayed(cellade_segment_frame)(channel_data[t], _ccfg, _root) for t in _frames))
                     _out = []
                     for _k, _m in enumerate(_gen):
                         if cancel_evt and cancel_evt.is_set():
+                            if _std_pool is not None:
+                                _std_pool.terminate()
                             return {"status": "cancelled", "outputs": {"message": "Cancelled by user"}}
                         _out.append(_m)
                         if _k % 3 == 0 or _k == len(_frames) - 1:
                             _sg_stage(rk, 'running', f"{_sg_base} · frame {_k + 1}/{len(_frames)}",
                                       frac=(_k + 1) / len(_frames), msg=f'{ch_name}: CellADE frame {_k + 1}/{len(_frames)}')
+                    if _std_pool is not None:
+                        _std_pool.close()
+                        _std_pool.join()
                     if _ccfg['temporal_mode'] == 'union5':
                         # static structure: union of start/middle/end frames, same mask for every frame
                         _u = binary_fill_holes(np.any(np.stack(_out) > 0, axis=0)) if not separate else np.any(np.stack(_out) > 0, axis=0)
@@ -5443,14 +5459,14 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
                     'merge_distance': _opt_num('merge_distance', float),   # px; None = no merging
                 },
                 'linking': {
-                    'method': all_params.get('link_method', 'trackpy'),    # 'trackpy' or 'laptrack'
-                    'search_range': int(all_params.get('search_range', 15)),
+                    'method': all_params.get('link_method', 'laptrack') or 'laptrack',   # same default as the GUI
+                    'search_range': int(all_params.get('search_range', 25)),
                     'memory': int(all_params.get('memory', 3)),
                     'adaptive_stop': int(all_params.get('adaptive_stop', 5)),
                     'adaptive_step': float(all_params.get('adaptive_step', 0.95)),
                     # LapTrack only (None -> search_range / memory)
-                    'gap_closing_range': _opt_num('gap_closing_range', float),
-                    'gap_closing_max_frames': _opt_num('gap_closing_max_frames', int),
+                    'gap_closing_range': _opt_num('gap_closing_range', float) or 40.0,
+                    'gap_closing_max_frames': _opt_num('gap_closing_max_frames', int) or 10,
                 },
                 'filtering': {
                     'min_frames': int(all_params.get('min_frames', 10)),
@@ -5552,7 +5568,8 @@ def _run_immunia(project, ws_id, pipeline_id, step_id, params, results_dir, prog
 
                 sr = int(all_params.get('search_range', 15))
                 mem = int(all_params.get('memory', 3))
-                linked = tp.link(features_df, search_range=sr, memory=mem)
+                linked = tp.link(features_df, search_range=sr, memory=mem,
+                                 adaptive_stop=max(1.0, sr * 0.2), adaptive_step=0.9)
 
                 min_frames = int(all_params.get('min_frames', 10))
                 filtered = tp.filter_stubs(linked, min_frames)
